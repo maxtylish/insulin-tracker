@@ -1,4 +1,4 @@
-const CACHE = 'insulin-tracker-v1';
+const CACHE = 'insulin-tracker-v2';
 const CORE = [
   '/insulin-tracker/',
   '/insulin-tracker/index.html'
@@ -19,12 +19,22 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Network-first for Supabase API calls
   if (e.request.url.includes('supabase.co')) {
     e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
     return;
   }
-  // Cache-first for app shell
+  // Network-first for HTML (always get fresh code)
+  if (e.request.destination === 'document') {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return res;
+      }).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+  // Cache-first for assets
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request))
   );
