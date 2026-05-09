@@ -961,6 +961,7 @@
     .badge-side  { background: #dcfce7; color: #166534; }
     .badge-fruit { background: #fef3c7; color: #92400e; }
     .badge-drink { background: #f3e8ff; color: #6d28d9; }
+    .badge-other { background: #f1f5f9; color: #475569; }
     .calc-food-row select {
       border: 1.5px solid var(--border); border-radius: 8px;
       padding: 6px 8px; font-size: 0.8rem; outline: none; color: var(--text); width: 100%;
@@ -2457,6 +2458,10 @@ function calcRecalc() {
       hasFood = true;
     }
   });
+  // 加上「其他」手動輸入的碳水
+  const otherCarbs = parseFloat(document.getElementById('calc-other-carbs').value) || 0;
+  if (otherCarbs > 0) { totalCarbs += otherCarbs; hasFood = true; }
+
   if (hasFood) {
     document.getElementById('calc-carbs').value = Math.round(totalCarbs * 10) / 10;
   }
@@ -2512,6 +2517,9 @@ function calcApply() {
       foodLines.push(lbl + ' x' + qty);
     }
   });
+  const otherCarbs = document.getElementById('calc-other-carbs').value;
+  const otherName  = document.getElementById('calc-other-name').value.trim();
+  if (otherCarbs) foodLines.push((otherName || '其他') + ' ' + otherCarbs + 'g');
 
   const preset = CALC_MEAL_PRESETS[meal];
   const noteLines = [];
@@ -2610,6 +2618,14 @@ if ('serviceWorker' in navigator) {
             <option value="yakult">養樂多 90ML (碳水14.7g)</option>
           </select>
           <input type="number" id="calc-qty-4" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-other">其他</span>
+          <input type="text" id="calc-other-name" placeholder="食物名稱（選填）"
+                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 8px;font-size:0.8rem;outline:none;width:100%;color:var(--text);" />
+          <input type="number" id="calc-other-carbs" min="0" step="1" placeholder="克"
+                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 4px;font-size:0.82rem;outline:none;text-align:center;width:100%;"
+                 oninput="calcRecalc()" />
         </div>
       </div>
 
