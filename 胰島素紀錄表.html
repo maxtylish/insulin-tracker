@@ -2388,6 +2388,10 @@ function openCalcModal(periodId) {
   document.getElementById('calc-food-3').value = '';
   document.getElementById('calc-food-4').value = '';
   document.getElementById('calc-iob').value = 0;
+  const otherCarbsEl = document.getElementById('calc-other-carbs');
+  const otherNameEl  = document.getElementById('calc-other-name');
+  if (otherCarbsEl) otherCarbsEl.value = '';
+  if (otherNameEl)  otherNameEl.value  = '';
   document.getElementById('calc-carbs').value = 60;
   document.getElementById('calc-warnings').innerHTML = '';
 
@@ -2459,7 +2463,8 @@ function calcRecalc() {
     }
   });
   // 加上「其他」手動輸入的碳水
-  const otherCarbs = parseFloat(document.getElementById('calc-other-carbs').value) || 0;
+  const otherEl = document.getElementById('calc-other-carbs');
+  const otherCarbs = otherEl ? (parseFloat(otherEl.value) || 0) : 0;
   if (otherCarbs > 0) { totalCarbs += otherCarbs; hasFood = true; }
 
   if (hasFood) {
@@ -2601,8 +2606,4 @@ if ('serviceWorker' in navigator) {
             <option value="cherry">櫻桃 100g (碳水19.12g)</option>
             <option value="banana_peel">香蕉帶皮 100g (碳水10.6g)</option>
             <option value="banana">香蕉去皮 100g (碳水22.1g)</option>
-            <option value="pineapple">鳳梨 100g (碳水13.6g)</option>
-            <option value="dragon_fruit">火龍果 100g (碳水12.36g)</option>
-            <option value="strawberry">草莓去蒂 100g (碳水9.3g)</option>
-          </select>
-          <input type="number" id="calc-qty-3" min="0" step="0.1" v
+            <option value="pineapple">鳳梨 100g (

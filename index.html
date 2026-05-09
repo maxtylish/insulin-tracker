@@ -2388,6 +2388,10 @@ function openCalcModal(periodId) {
   document.getElementById('calc-food-3').value = '';
   document.getElementById('calc-food-4').value = '';
   document.getElementById('calc-iob').value = 0;
+  const otherCarbsEl = document.getElementById('calc-other-carbs');
+  const otherNameEl  = document.getElementById('calc-other-name');
+  if (otherCarbsEl) otherCarbsEl.value = '';
+  if (otherNameEl)  otherNameEl.value  = '';
   document.getElementById('calc-carbs').value = 60;
   document.getElementById('calc-warnings').innerHTML = '';
 
@@ -2459,7 +2463,8 @@ function calcRecalc() {
     }
   });
   // 加上「其他」手動輸入的碳水
-  const otherCarbs = parseFloat(document.getElementById('calc-other-carbs').value) || 0;
+  const otherEl = document.getElementById('calc-other-carbs');
+  const otherCarbs = otherEl ? (parseFloat(otherEl.value) || 0) : 0;
   if (otherCarbs > 0) { totalCarbs += otherCarbs; hasFood = true; }
 
   if (hasFood) {
