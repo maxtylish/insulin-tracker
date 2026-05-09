@@ -1233,21 +1233,25 @@
 
   <!-- Account ID -->
   <div class="settings-section">
-    <h3>🔑 帳號 ID（跨裝置共用）</h3>
-    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:10px;">
-      這是您的唯一識別碼。在新裝置上貼入此 ID 即可同步所有資料。
+    <h3>🔑 個人帳號 ID</h3>
+    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">
+      設定一個好記的 ID（如 <code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;">max-insulin</code>），所有裝置輸入同一個 ID 即可自動同步資料。
     </p>
-    <label style="font-size:0.78rem;color:var(--text-muted);font-weight:600;">我的帳號 ID</label>
-    <div class="user-id-box">
-      <input type="text" id="myUserId" readonly />
-      <button class="copy-btn" onclick="copyUserId()">複製</button>
+    <label style="font-size:0.78rem;color:var(--text-muted);font-weight:600;">目前使用的帳號 ID</label>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:6px;">
+      <div id="currentIdDisplay" style="flex:1;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:0.9rem;font-weight:700;color:var(--text);font-family:monospace;">尚未設定</div>
+      <button class="copy-btn" onclick="showCustomIdInput()" style="background:#f1f5f9;color:var(--text);border:1px solid var(--border);">變更</button>
     </div>
-    <div style="margin-top:12px;">
-      <label style="font-size:0.78rem;color:var(--text-muted);font-weight:600;">在此裝置使用其他帳號</label>
+    <div id="customIdRow" style="display:none;margin-top:12px;">
+      <label style="font-size:0.78rem;color:var(--text-muted);font-weight:600;">輸入新的帳號 ID</label>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin:4px 0 8px;">只能使用英文、數字、連字號（-），建議 4～20 個字元</p>
       <div class="import-id-row">
-        <input type="text" id="importUserId" placeholder="貼上帳號 ID…" />
-        <button class="import-btn" onclick="importUserId()">套用</button>
+        <input type="text" id="customIdInput" placeholder="例如：max-insulin-2024"
+               style="font-family:monospace;" maxlength="40"
+               oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9\-]/g,'')" />
+        <button class="import-btn" onclick="applyCustomId()">確認</button>
       </div>
+      <p style="font-size:0.75rem;color:#f59e0b;margin-top:6px;">⚠️ 切換 ID 後將讀取該 ID 的雲端資料</p>
     </div>
   </div>
 
@@ -1348,7 +1352,9 @@ function initSupabase() {
   // User ID
   currentUserId = localStorage.getItem('user_id');
   if (!currentUserId) {
-    currentUserId = 'uid-' + Date.now() + '-' + Math.random().toString(36).slice(2,8);
+    // No ID yet — user will set one in Settings
+    // Generate a temporary one so cloud sync still works
+    currentUserId = 'tmp-' + Math.random().toString(36).slice(2,10);
     localStorage.setItem('user_id', currentUserId);
   }
   // Load local cache first
@@ -2140,6 +2146,8 @@ function loadCloudConfigUI() {
   if (el_url) el_url.value = url;
   if (el_key) el_key.value = key;
   if (el_id)  el_id.value  = currentUserId || '';
+  const dispEl = document.getElementById('currentIdDisplay');
+  if (dispEl) dispEl.textContent = currentUserId || '尚未設定';
 
   const status = document.getElementById('cloudStatus');
   if (status) {
