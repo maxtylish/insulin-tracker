@@ -4,6 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>胰島素紀錄表</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1d4ed8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="胰島素紀錄表" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
@@ -2183,27 +2189,62 @@ async function saveCloudConfig() {
 
 function copyUserId() {
   const id = currentUserId || '';
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(id).then(() => showToast('✅ 帳號 ID 已複製！'));
-  } else {
-    document.getElementById('myUserId').select();
-    document.execCommand('copy');
-    showToast('✅ 帳號 ID 已複製！');
+  if (!id) return;
+  navigator.clipboard.writeText(id).catch(() => {});
+  showToast('📋 帳號 ID 已複製！');
+}
+
+function showCustomIdInput() {
+  const row = document.getElementById('customIdRow');
+  if (!row) return;
+  const isHidden = row.style.display === 'none' || row.style.display === '';
+  row.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    const inp = document.getElementById('customIdInput');
+    if (inp) { inp.value = currentUserId || ''; inp.focus(); inp.select(); }
   }
 }
 
-function importUserId() {
-  const newId = (document.getElementById('importUserId').value || '').trim();
-  if (!newId) { showToast('⚠️ 請先貼入帳號 ID'); return; }
-  if (!confirm('套用新帳號 ID 後，此裝置將使用該帳號的雲端資料。確定繼續？')) return;
+async function applyCustomId() {
+  const newId = (document.getElementById('customIdInput').value || '').trim();
+  if (!newId) { showToast('⚠️ 請輸入帳號 ID'); return; }
+  if (newId.length < 3) { showToast('⚠️ ID 至少需要 3 個字元'); return; }
+  if (newId === currentUserId) {
+    document.getElementById('customIdRow').style.display = 'none';
+    return;
+  }
+  if (!confirm('確定要將帳號 ID 設定為「' + newId + '」嗎？\n現有資料會一起搬移到新 ID。')) return;
+
+  // 搬移現有資料到新 ID
+  const existingData = getAllData();
+  const dates = Object.keys(existingData);
+  if (sbClient && dates.length > 0) {
+    setSyncBadge('⏳ 搬移資料中…', 'sync-busy');
+    try {
+      const rows = dates.map(d => ({
+        user_id: newId,
+        date: d,
+        data: existingData[d],
+        updated_at: new Date().toISOString()
+      }));
+      await sbClient.from('insulin_records').upsert(rows, { onConflict: 'user_id,date' });
+    } catch(e) { console.warn('Migration failed:', e); }
+  }
+
+  // 切換 ID
   localStorage.setItem('user_id', newId);
   currentUserId = newId;
-  document.getElementById('myUserId').value = newId;
-  document.getElementById('importUserId').value = '';
-  loadFromCloud().then(() => {
-    loadDayData();
-    showToast('✅ 帳號已切換，資料同步完成！');
-  });
+  const dispEl = document.getElementById('currentIdDisplay');
+  if (dispEl) dispEl.textContent = newId;
+  document.getElementById('customIdRow').style.display = 'none';
+
+  await loadFromCloud();
+  loadDayData();
+  showToast('✅ 帳號 ID 已設定，資料已同步！');
+}
+
+function importUserId() {
+  applyCustomId();
 }
 
 // ════════════════════════════════
@@ -2472,6 +2513,15 @@ function calcApply() {
 
 
 init();
+
+// ── PWA Service Worker ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/insulin-tracker/sw.js')
+      .then(() => console.log('SW registered'))
+      .catch(e => console.log('SW error:', e));
+  });
+}
 </script>
 
 <!-- ══════════════ CALCULATOR MODAL ══════════════ -->
@@ -2554,51 +2604,4 @@ init();
           </div>
           <div class="calc-field">
             <label>有效胰島素 IOB (單位)</label>
-            <input type="number" id="calc-iob" min="0" step="0.1" value="0" oninput="calcRecalc()" />
-          </div>
-        </div>
-        <div class="calc-preset-row">
-          <div class="calc-preset-item">
-            <span>CIR 醣類係數</span>
-            <strong id="calc-cir-display">10</strong>
-            <span>g / 單位</span>
-          </div>
-          <div class="calc-preset-item">
-            <span>ISF 敏感係數</span>
-            <strong id="calc-isf-display">50</strong>
-            <span>mg/dL / 單位</span>
-          </div>
-          <div class="calc-preset-item">
-            <span>目標血糖</span>
-            <strong id="calc-target-display">110</strong>
-            <span>mg/dL</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 警示 -->
-      <div id="calc-warnings"></div>
-
-      <!-- 計算結果 -->
-      <div class="calc-result-box">
-        <div class="calc-result-main"><span id="calc-result-dose">0</span><small> 單位</small></div>
-        <div class="calc-result-label">建議估算劑量</div>
-        <div class="calc-breakdown">
-          <div class="calc-breakdown-item"><span>碳水劑量</span><strong id="calc-meal-dose">0</strong></div>
-          <div class="calc-breakdown-item"><span>血糖校正</span><strong id="calc-corr-dose">0</strong></div>
-          <div class="calc-breakdown-item"><span>扣除 IOB</span><strong id="calc-iob-dose">0</strong></div>
-          <div class="calc-breakdown-item"><span>計算值</span><strong id="calc-raw-dose">0</strong></div>
-        </div>
-      </div>
-
-      <!-- 餐別備註 -->
-      <div id="calc-meal-notes" class="calc-notes" style="display:none"></div>
-
-      <!-- 帶入按鈕 -->
-      <button class="calc-apply-btn" type="button" onclick="calcApply()">✅ 帶入紀錄表</button>
-    </div>
-  </div>
-</div>
-
-</body>
-</html>
+            <input type="number" id="calc-iob" min="0" step="0.1" value="0" oninput="
