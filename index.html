@@ -1451,6 +1451,10 @@ function getBGColor(cls) {
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
+function getNowTime() {
+  const now = new Date();
+  return now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+}
 function currentMonthStr() {
   return new Date().toISOString().slice(0, 7);
 }
@@ -1491,7 +1495,7 @@ function buildPeriodCards() {
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
             <div class="period-time-input">
               <span>注射時間</span>
-              <input type="time" id="${p.id}-time" value="${p.defaultTime}" />
+              <input type="time" id="${p.id}-time" value="${getNowTime()}" />
             </div>
             ${p.id !== 'bedtime' ? `<button class="calc-open-btn" type="button" onclick="openCalcModal('${p.id}')">💊 計算劑量</button>` : ''}
           </div>
@@ -1548,7 +1552,7 @@ function loadDayData() {
 
   PERIODS.forEach(p => {
     const rec = dayData[p.id] || {};
-    document.getElementById(p.id + '-time').value    = rec.time    || p.defaultTime;
+    document.getElementById(p.id + '-time').value    = rec.time    || getNowTime();
     document.getElementById(p.id + '-bg').value      = rec.bg      || '';
     document.getElementById(p.id + '-insulin').value = rec.insulin || '';
     document.getElementById(p.id + '-note').value    = rec.note    || '';
@@ -2839,6 +2843,10 @@ function getBGColor(cls) {
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
+function getNowTime() {
+  const now = new Date();
+  return now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+}
 function currentMonthStr() {
   return new Date().toISOString().slice(0, 7);
 }
@@ -2879,7 +2887,7 @@ function buildPeriodCards() {
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
             <div class="period-time-input">
               <span>注射時間</span>
-              <input type="time" id="${p.id}-time" value="${p.defaultTime}" />
+              <input type="time" id="${p.id}-time" value="${getNowTime()}" />
             </div>
             ${p.id !== 'bedtime' ? `<button class="calc-open-btn" type="button" onclick="openCalcModal('${p.id}')">💊 計算劑量</button>` : ''}
           </div>
@@ -2936,7 +2944,7 @@ function loadDayData() {
 
   PERIODS.forEach(p => {
     const rec = dayData[p.id] || {};
-    document.getElementById(p.id + '-time').value    = rec.time    || p.defaultTime;
+    document.getElementById(p.id + '-time').value    = rec.time    || getNowTime();
     document.getElementById(p.id + '-bg').value      = rec.bg      || '';
     document.getElementById(p.id + '-insulin').value = rec.insulin || '';
     document.getElementById(p.id + '-note').value    = rec.note    || '';
@@ -3948,16 +3956,4 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// ── PWA Service Worker ──
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/insulin-tracker/sw.js')
-      .then(() => console.log('SW registered'))
-      .catch(e => console.log('SW error:', e));
-  });
-}
-
-init();
-</script>
-</body>
-</html>
+// �
