@@ -2269,6 +2269,7 @@ function importUserId() {
 //  INIT
 // ════════════════════════════════
 function init() {
+  initSupabase();   // ← 每次載入頁面都自動連線
   buildPeriodCards();
   var today = todayStr();
   statAnchor = today;

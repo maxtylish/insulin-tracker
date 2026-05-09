@@ -2269,6 +2269,7 @@ function importUserId() {
 //  INIT
 // ════════════════════════════════
 function init() {
+  initSupabase();   // ← 每次載入頁面都自動連線
   buildPeriodCards();
   var today = todayStr();
   statAnchor = today;
@@ -2605,5 +2606,4 @@ if ('serviceWorker' in navigator) {
             <option value="milk_100">牛奶 100g (碳水4.8g)</option>
             <option value="milk_150">牛奶 150g (碳水7g)</option>
             <option value="milk_200">牛奶 200g (碳水10g)</option>
-            <option value="yogurt_100">優酪乳 100g (碳水12g)</option>
-           
+            <option value
