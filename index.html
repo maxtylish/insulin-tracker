@@ -1355,14 +1355,12 @@ function initSupabase() {
       sbClient = window.supabase.createClient(url, key);
     } catch(e) { sbClient = null; }
   }
-  // User ID
-  currentUserId = localStorage.getItem('user_id');
+  // User ID — stored in both localStorage AND cookie for Android persistence
+  currentUserId = localStorage.getItem('user_id') || getCookie('insulin_uid');
   if (!currentUserId) {
-    // No ID yet — user will set one in Settings
-    // Generate a temporary one so cloud sync still works
     currentUserId = 'tmp-' + Math.random().toString(36).slice(2,10);
-    localStorage.setItem('user_id', currentUserId);
   }
+  saveUserId(currentUserId);
   // Load local cache first
   try { allDataCache = JSON.parse(localStorage.getItem('insulin_records') || '{}'); }
   catch { allDataCache = {}; }
@@ -2187,6 +2185,21 @@ async function saveCloudConfig() {
   }
 }
 
+// ── Cookie helpers for persistent user_id ──
+function setCookie(name, value, days) {
+  const exp = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = name + '=' + encodeURIComponent(value) +
+    '; expires=' + exp + '; path=/; SameSite=Lax';
+}
+function getCookie(name) {
+  const m = document.cookie.match('(?:^|;)\\s*' + name + '=([^;]*)');
+  return m ? decodeURIComponent(m[1]) : null;
+}
+function saveUserId(id) {
+  localStorage.setItem('user_id', id);
+  setCookie('insulin_uid', id, 365);
+}
+
 function copyUserId() {
   const id = currentUserId || '';
   if (!id) return;
@@ -2232,7 +2245,7 @@ async function applyCustomId() {
   }
 
   // 切換 ID
-  localStorage.setItem('user_id', newId);
+  saveUserId(newId);
   currentUserId = newId;
   const dispEl = document.getElementById('currentIdDisplay');
   if (dispEl) dispEl.textContent = newId;
