@@ -2183,27 +2183,62 @@ async function saveCloudConfig() {
 
 function copyUserId() {
   const id = currentUserId || '';
-  if (navigator.clipboard) {
-    navigator.clipboard.writeText(id).then(() => showToast('✅ 帳號 ID 已複製！'));
-  } else {
-    document.getElementById('myUserId').select();
-    document.execCommand('copy');
-    showToast('✅ 帳號 ID 已複製！');
+  if (!id) return;
+  navigator.clipboard.writeText(id).catch(() => {});
+  showToast('📋 帳號 ID 已複製！');
+}
+
+function showCustomIdInput() {
+  const row = document.getElementById('customIdRow');
+  if (!row) return;
+  const isHidden = row.style.display === 'none' || row.style.display === '';
+  row.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    const inp = document.getElementById('customIdInput');
+    if (inp) { inp.value = currentUserId || ''; inp.focus(); inp.select(); }
   }
 }
 
-function importUserId() {
-  const newId = (document.getElementById('importUserId').value || '').trim();
-  if (!newId) { showToast('⚠️ 請先貼入帳號 ID'); return; }
-  if (!confirm('套用新帳號 ID 後，此裝置將使用該帳號的雲端資料。確定繼續？')) return;
+async function applyCustomId() {
+  const newId = (document.getElementById('customIdInput').value || '').trim();
+  if (!newId) { showToast('⚠️ 請輸入帳號 ID'); return; }
+  if (newId.length < 3) { showToast('⚠️ ID 至少需要 3 個字元'); return; }
+  if (newId === currentUserId) {
+    document.getElementById('customIdRow').style.display = 'none';
+    return;
+  }
+  if (!confirm('確定要將帳號 ID 設定為「' + newId + '」嗎？\n現有資料會一起搬移到新 ID。')) return;
+
+  // 搬移現有資料到新 ID
+  const existingData = getAllData();
+  const dates = Object.keys(existingData);
+  if (sbClient && dates.length > 0) {
+    setSyncBadge('⏳ 搬移資料中…', 'sync-busy');
+    try {
+      const rows = dates.map(d => ({
+        user_id: newId,
+        date: d,
+        data: existingData[d],
+        updated_at: new Date().toISOString()
+      }));
+      await sbClient.from('insulin_records').upsert(rows, { onConflict: 'user_id,date' });
+    } catch(e) { console.warn('Migration failed:', e); }
+  }
+
+  // 切換 ID
   localStorage.setItem('user_id', newId);
   currentUserId = newId;
-  document.getElementById('myUserId').value = newId;
-  document.getElementById('importUserId').value = '';
-  loadFromCloud().then(() => {
-    loadDayData();
-    showToast('✅ 帳號已切換，資料同步完成！');
-  });
+  const dispEl = document.getElementById('currentIdDisplay');
+  if (dispEl) dispEl.textContent = newId;
+  document.getElementById('customIdRow').style.display = 'none';
+
+  await loadFromCloud();
+  loadDayData();
+  showToast('✅ 帳號 ID 已設定，資料已同步！');
+}
+
+function importUserId() {
+  applyCustomId();
 }
 
 // ════════════════════════════════
