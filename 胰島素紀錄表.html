@@ -1345,14 +1345,19 @@ function setSyncBadge(msg, cls) {
 
 // ── 預設 Supabase 設定（已內建，無需手動填入）──
 const DEFAULT_SB_URL = 'https://nbslellpcqsqbsdjkiqa.supabase.co';
-const DEFAULT_SB_KEY = 'sb_publishable_56KUX1enUqWQiaXbee-jhg_8hkW62dX';
+const DEFAULT_SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ic2xlbGxwY3FzcWJzZGpraXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMjgyMzAsImV4cCI6MjA5MzkwNDIzMH0.QpAP8Mdsi69R6zo8ruBXsQmJ7D2wfFJdYWXSlcv1Ya4';
 
 function initSupabase() {
-  const url = localStorage.getItem('sb_url') || DEFAULT_SB_URL;
-  const key = localStorage.getItem('sb_key') || DEFAULT_SB_KEY;
+  const url = localStorage.getItem('sb_url') || getCookie('sb_url') || DEFAULT_SB_URL;
+  const key = localStorage.getItem('sb_key') || getCookie('sb_key') || DEFAULT_SB_KEY;
   if (url && key && window.supabase) {
     try {
       sbClient = window.supabase.createClient(url, key);
+      // Persist in both localStorage and cookie so Android doesn't forget
+      localStorage.setItem('sb_url', url);
+      localStorage.setItem('sb_key', key);
+      setCookie('sb_url', url, 365);
+      setCookie('sb_key', key, 365);
     } catch(e) { sbClient = null; }
   }
   // User ID — stored in both localStorage AND cookie for Android persistence
@@ -2601,12 +2606,4 @@ if ('serviceWorker' in navigator) {
             <option value="milk_150">牛奶 150g (碳水7g)</option>
             <option value="milk_200">牛奶 200g (碳水10g)</option>
             <option value="yogurt_100">優酪乳 100g (碳水12g)</option>
-            <option value="yakult">養樂多 90ML (碳水14.7g)</option>
-          </select>
-          <input type="number" id="calc-qty-4" min="0" step="0.1" value="1" oninput="calcRecalc()" />
-        </div>
-      </div>
-
-      <!-- 劑量計算 -->
-      <div class="calc-section">
-       
+           

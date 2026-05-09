@@ -1345,14 +1345,19 @@ function setSyncBadge(msg, cls) {
 
 // ── 預設 Supabase 設定（已內建，無需手動填入）──
 const DEFAULT_SB_URL = 'https://nbslellpcqsqbsdjkiqa.supabase.co';
-const DEFAULT_SB_KEY = 'sb_publishable_56KUX1enUqWQiaXbee-jhg_8hkW62dX';
+const DEFAULT_SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ic2xlbGxwY3FzcWJzZGpraXFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgzMjgyMzAsImV4cCI6MjA5MzkwNDIzMH0.QpAP8Mdsi69R6zo8ruBXsQmJ7D2wfFJdYWXSlcv1Ya4';
 
 function initSupabase() {
-  const url = localStorage.getItem('sb_url') || DEFAULT_SB_URL;
-  const key = localStorage.getItem('sb_key') || DEFAULT_SB_KEY;
+  const url = localStorage.getItem('sb_url') || getCookie('sb_url') || DEFAULT_SB_URL;
+  const key = localStorage.getItem('sb_key') || getCookie('sb_key') || DEFAULT_SB_KEY;
   if (url && key && window.supabase) {
     try {
       sbClient = window.supabase.createClient(url, key);
+      // Persist in both localStorage and cookie so Android doesn't forget
+      localStorage.setItem('sb_url', url);
+      localStorage.setItem('sb_key', key);
+      setCookie('sb_url', url, 365);
+      setCookie('sb_key', key, 365);
     } catch(e) { sbClient = null; }
   }
   // User ID — stored in both localStorage AND cookie for Android persistence
@@ -2609,59 +2614,4 @@ if ('serviceWorker' in navigator) {
 
       <!-- 劑量計算 -->
       <div class="calc-section">
-        <div class="calc-section-title">劑量計算</div>
-        <div class="calc-grid-2">
-          <div class="calc-field">
-            <label>預計碳水量 (克)</label>
-            <input type="number" id="calc-carbs" min="0" step="1" value="60" oninput="calcRecalc()" />
-          </div>
-          <div class="calc-field">
-            <label>有效胰島素 IOB (單位)</label>
-            <input type="number" id="calc-iob" min="0" step="0.1" value="0" oninput="calcRecalc()" />
-          </div>
-        </div>
-        <div class="calc-preset-row">
-          <div class="calc-preset-item">
-            <span>CIR 醣類係數</span>
-            <strong id="calc-cir-display">10</strong>
-            <span>g / 單位</span>
-          </div>
-          <div class="calc-preset-item">
-            <span>ISF 敏感係數</span>
-            <strong id="calc-isf-display">50</strong>
-            <span>mg/dL / 單位</span>
-          </div>
-          <div class="calc-preset-item">
-            <span>目標血糖</span>
-            <strong id="calc-target-display">110</strong>
-            <span>mg/dL</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 警示 -->
-      <div id="calc-warnings"></div>
-
-      <!-- 計算結果 -->
-      <div class="calc-result-box">
-        <div class="calc-result-main"><span id="calc-result-dose">0</span><small> 單位</small></div>
-        <div class="calc-result-label">建議估算劑量</div>
-        <div class="calc-breakdown">
-          <div class="calc-breakdown-item"><span>碳水劑量</span><strong id="calc-meal-dose">0</strong></div>
-          <div class="calc-breakdown-item"><span>血糖校正</span><strong id="calc-corr-dose">0</strong></div>
-          <div class="calc-breakdown-item"><span>扣除 IOB</span><strong id="calc-iob-dose">0</strong></div>
-          <div class="calc-breakdown-item"><span>計算值</span><strong id="calc-raw-dose">0</strong></div>
-        </div>
-      </div>
-
-      <!-- 餐別備註 -->
-      <div id="calc-meal-notes" class="calc-notes" style="display:none"></div>
-
-      <!-- 帶入按鈕 -->
-      <button class="calc-apply-btn" type="button" onclick="calcApply()">✅ 帶入紀錄表</button>
-    </div>
-  </div>
-</div>
-
-</body>
-</html>
+       
