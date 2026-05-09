@@ -1,0 +1,2596 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>胰島素紀錄表</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <style>
+    :root {
+      --bg: #f0f4f8;
+      --card: #ffffff;
+      --primary: #3b82f6;
+      --primary-dark: #2563eb;
+      --text: #1e293b;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --normal: #22c55e;
+      --normal-bg: #f0fdf4;
+      --warn: #f59e0b;
+      --warn-bg: #fffbeb;
+      --danger: #ef4444;
+      --danger-bg: #fef2f2;
+      --low: #8b5cf6;
+      --low-bg: #f5f3ff;
+      --radius: 12px;
+      --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(29,78,216,0.3);
+    }
+    header h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.5px; }
+    header .subtitle { font-size: 0.75rem; opacity: 0.8; margin-top: 2px; }
+
+    /* ── Nav Tabs ── */
+    nav {
+      background: white;
+      display: flex;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    nav button {
+      flex: 1;
+      padding: 12px 4px;
+      border: none;
+      background: none;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.2s;
+      font-weight: 500;
+    }
+    nav button.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      font-weight: 700;
+    }
+    nav button:hover { background: #f8fafc; }
+
+    /* ── Page Container ── */
+    .page { display: none; padding: 16px; max-width: 560px; margin: 0 auto; }
+    .page.active { display: block; }
+
+    /* ── Date Selector ── */
+    .date-bar {
+      background: white;
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+    }
+    .date-bar label { font-size: 0.85rem; color: var(--text-muted); white-space: nowrap; }
+    .date-bar input[type="date"] {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.9rem;
+      color: var(--text);
+      outline: none;
+    }
+    .date-bar input[type="date"]:focus { border-color: var(--primary); }
+    .date-nav-btn {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 32px;
+      height: 32px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+    .date-nav-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+    /* ── Period Card ── */
+    .period-card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      border-left: 4px solid var(--primary);
+      transition: box-shadow 0.2s;
+    }
+    .period-card:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.12); }
+    .period-card.morning { border-left-color: #f59e0b; }
+    .period-card.noon    { border-left-color: #10b981; }
+    .period-card.evening { border-left-color: #f97316; }
+    .period-card.bedtime { border-left-color: #6366f1; }
+
+    .period-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .period-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .period-icon {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }
+    .morning  .period-icon { background: #fff7ed; }
+    .noon     .period-icon { background: #ecfdf5; }
+    .evening  .period-icon { background: #fff7ed; }
+    .bedtime  .period-icon { background: #eef2ff; }
+
+    .period-time-input {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .period-time-input input[type="time"] {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 8px;
+      font-size: 0.82rem;
+      color: var(--text);
+      outline: none;
+      width: 90px;
+    }
+    .period-time-input input[type="time"]:focus { border-color: var(--primary); }
+
+    .fields-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .field-group label {
+      display: block;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+    .field-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .field-input-wrap input[type="number"] {
+      width: 100%;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 40px 10px 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .field-input-wrap input[type="number"]:focus { border-color: var(--primary); }
+    .field-unit {
+      position: absolute;
+      right: 10px;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      pointer-events: none;
+    }
+
+    /* Blood sugar badge */
+    .bg-badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 20px;
+      margin-top: 4px;
+    }
+    .bg-badge.normal  { background: var(--normal-bg); color: var(--normal); }
+    .bg-badge.warn    { background: var(--warn-bg);   color: var(--warn);   }
+    .bg-badge.high    { background: var(--danger-bg); color: var(--danger); }
+    .bg-badge.low     { background: var(--low-bg);    color: var(--low);    }
+
+    /* Blood sugar color on input */
+    .field-input-wrap input.bg-normal { border-color: var(--normal); }
+    .field-input-wrap input.bg-warn   { border-color: var(--warn);   }
+    .field-input-wrap input.bg-high   { border-color: var(--danger); }
+    .field-input-wrap input.bg-low    { border-color: var(--low);    }
+
+    /* ── Supplemental Records (補打 / 補糖) ── */
+    .suppl-section {
+      background: white;
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+    }
+    .suppl-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .suppl-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+    .suppl-tag {
+      font-size: 0.68rem;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 700;
+    }
+    .tag-correction { background:#dbeafe; color:#2563eb; }
+    .tag-carb       { background:#fef3c7; color:#b45309; }
+    .suppl-add-btn {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: none;
+      border: 1.5px dashed var(--border);
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .suppl-add-btn:hover { border-color: var(--primary); color: var(--primary); background: #eff6ff; }
+    .suppl-row {
+      background: #f8fafc;
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+      position: relative;
+    }
+    .suppl-row:last-child { margin-bottom: 0; }
+    .suppl-row-top {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 10px;
+      align-items: end;
+      margin-bottom: 8px;
+    }
+    .suppl-field label {
+      display: block;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    .suppl-field .field-input-wrap input[type="number"],
+    .suppl-field input[type="time"] {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text);
+      outline: none;
+      background: white;
+      transition: border-color 0.2s;
+    }
+    .suppl-field .field-input-wrap input:focus,
+    .suppl-field input[type="time"]:focus { border-color: var(--primary); }
+    .suppl-del-btn {
+      background: none;
+      border: 1.5px solid #fca5a5;
+      color: #ef4444;
+      border-radius: 8px;
+      width: 34px; height: 34px;
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .suppl-del-btn:hover { background: #ef4444; color: white; border-color: #ef4444; }
+    .suppl-note textarea {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 0.83rem;
+      color: var(--text);
+      resize: none;
+      outline: none;
+      font-family: inherit;
+      background: white;
+      transition: border-color 0.2s;
+    }
+    .suppl-note textarea:focus { border-color: var(--primary); }
+    .suppl-empty {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.82rem;
+      padding: 10px 0;
+    }
+
+    .period-note {
+      margin-top: 12px;
+    }
+    .period-note textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.85rem;
+      color: var(--text);
+      resize: none;
+      outline: none;
+      font-family: inherit;
+      transition: border-color 0.2s;
+    }
+    .period-note textarea:focus { border-color: var(--primary); }
+
+    /* ── Save Button ── */
+    .save-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      padding: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 4px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 12px rgba(59,130,246,0.4);
+      transition: all 0.2s;
+      letter-spacing: 0.5px;
+    }
+    .save-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(59,130,246,0.5); }
+    .save-btn:active { transform: translateY(0); }
+
+    /* ── Blood Sugar Legend ── */
+    .legend-card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+    }
+    .legend-card h3 { font-size: 0.85rem; font-weight: 700; margin-bottom: 10px; color: var(--text-muted); }
+    .legend-items { display: flex; gap: 8px; flex-wrap: wrap; }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.75rem;
+    }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #1e293b;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 24px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      z-index: 9999;
+      transition: transform 0.3s ease;
+      white-space: nowrap;
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); }
+
+    /* ── History Page ── */
+    .history-filter {
+      background: white;
+      border-radius: var(--radius);
+      padding: 12px 16px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .history-filter label { font-size: 0.83rem; color: var(--text-muted); white-space: nowrap; }
+    .history-filter input[type="month"] {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .history-filter input:focus { border-color: var(--primary); }
+    .export-btn {
+      background: #10b981;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+    .export-btn:hover { background: #059669; }
+
+    .history-day {
+      background: white;
+      border-radius: var(--radius);
+      margin-bottom: 10px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .history-day-header {
+      background: #f8fafc;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+    }
+    .history-day-header h4 { font-size: 0.9rem; font-weight: 700; }
+    .history-day-header .summary { font-size: 0.75rem; color: var(--text-muted); }
+    .history-day-header .toggle-arrow { color: var(--text-muted); transition: transform 0.2s; }
+    .history-day-header.open .toggle-arrow { transform: rotate(180deg); }
+
+    .history-day-body { display: none; }
+    .history-day-body.open { display: block; }
+
+    .history-row {
+      display: grid;
+      grid-template-columns: 70px 1fr 1fr 1fr;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.83rem;
+      align-items: center;
+    }
+    .history-row:last-child { border-bottom: none; }
+    .history-row .period-label { font-weight: 700; color: var(--text-muted); }
+    .history-row .bg-val { font-weight: 700; }
+    .history-row .insulin-val { color: var(--primary); font-weight: 700; }
+    .history-row .time-val { color: var(--text-muted); font-size: 0.78rem; }
+    .history-row .empty { color: #cbd5e1; }
+
+    .history-empty {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    /* ── Statistics Page ── */
+    .period-tabs {
+      display: flex;
+      background: white;
+      border-radius: var(--radius);
+      padding: 4px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      gap: 2px;
+    }
+    .period-tab {
+      flex: 1;
+      border: none;
+      background: none;
+      border-radius: 8px;
+      padding: 8px 4px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .period-tab.active {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 2px 6px rgba(59,130,246,0.4);
+    }
+
+    .stat-date-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: white;
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+    }
+    .stat-date-nav .nav-label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--text);
+    }
+    .stat-date-nav button {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      width: 30px; height: 30px;
+      font-size: 1rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .stat-date-nav button:hover { background: var(--primary); color: white; border-color: var(--primary); }
+
+    /* Overview 4-grid */
+    .overview-card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+    }
+    .overview-card h3 {
+      font-size: 0.88rem; font-weight: 700; margin-bottom: 12px;
+      padding-bottom: 8px; border-bottom: 1px solid var(--border);
+    }
+    .overview-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .overview-item { padding: 4px 0; }
+    .overview-item .ov-label {
+      font-size: 0.72rem; color: var(--text-muted); margin-bottom: 3px;
+    }
+    .overview-item .ov-value {
+      font-size: 1.35rem; font-weight: 800; line-height: 1.1;
+    }
+    .overview-item .ov-unit {
+      font-size: 0.65rem; color: var(--text-muted); font-weight: 400; margin-left: 2px;
+    }
+
+    /* HbA1c card */
+    .hba1c-card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .hba1c-card .hba1c-label { font-size: 0.85rem; font-weight: 600; }
+    .hba1c-card .hba1c-desc  { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+    .hba1c-card .hba1c-value {
+      font-size: 1.8rem; font-weight: 800;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hba1c-card .hba1c-unit { font-size: 0.75rem; color: var(--text-muted); }
+
+    /* TIR donut */
+    .tir-card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+    }
+    .tir-card h3 { font-size: 0.88rem; font-weight: 700; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+    .tir-inner {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .tir-chart-wrap {
+      position: relative;
+      width: 130px;
+      height: 130px;
+      flex-shrink: 0;
+    }
+    .tir-chart-wrap canvas { width: 130px !important; height: 130px !important; }
+    .tir-center-label {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+    }
+    .tir-center-pct { font-size: 1.35rem; font-weight: 800; color: var(--text); }
+    .tir-center-sub { font-size: 0.62rem; color: var(--text-muted); margin-top: 1px; }
+
+    .tir-legend { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+    .tir-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+    }
+    .tir-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .tir-name { flex: 1; color: var(--text-muted); }
+    .tir-pct  { font-weight: 700; min-width: 36px; text-align: right; }
+    .tir-bar-wrap { flex: 1.5; height: 5px; background: #f1f5f9; border-radius: 3px; overflow: hidden; }
+    .tir-bar { height: 100%; border-radius: 3px; transition: width 0.6s ease; }
+
+    /* Chart cards */
+    .chart-card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .chart-card h3 { font-size: 0.9rem; font-weight: 700; margin-bottom: 14px; color: var(--text); }
+    .chart-card .chart-sub { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px; }
+
+    .chart-period-sel {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .chart-period-sel select {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 0.82rem;
+      outline: none;
+      background: white;
+    }
+    .chart-period-sel select:focus { border-color: var(--primary); }
+
+    /* Old stats-grid kept for compat */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .stat-card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: var(--shadow);
+      text-align: center;
+    }
+    .stat-card .stat-value { font-size: 1.6rem; font-weight: 800; color: var(--primary); }
+    .stat-card .stat-label { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; }
+
+    /* ── Settings Page ── */
+    .settings-section {
+      background: white;
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 14px;
+      box-shadow: var(--shadow);
+    }
+    .settings-section h3 {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .settings-row:last-child { margin-bottom: 0; }
+    .settings-row label { font-size: 0.88rem; font-weight: 500; }
+    .settings-row .settings-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 1px; }
+    .settings-row input[type="number"] {
+      width: 80px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-align: center;
+      outline: none;
+    }
+    .settings-row input[type="number"]:focus { border-color: var(--primary); }
+    .settings-save-btn {
+      width: 100%;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: var(--radius);
+      padding: 12px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .settings-save-btn:hover { background: var(--primary-dark); }
+
+    .danger-btn {
+      width: 100%;
+      background: white;
+      color: var(--danger);
+      border: 2px solid var(--danger);
+      border-radius: var(--radius);
+      padding: 12px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
+    }
+    .danger-btn:hover { background: var(--danger); color: white; }
+
+
+
+    /* Responsive */
+    @media (max-width: 400px) {
+      .fields-row { grid-template-columns: 1fr; }
+      .history-row { grid-template-columns: 60px 1fr 1fr 1fr; font-size: 0.78rem; }
+    }
+
+    /* ── Sync Status ── */
+    .sync-badge {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .sync-ok   { background: rgba(255,255,255,0.2); color: #bbf7d0; }
+    .sync-err  { background: rgba(255,255,255,0.2); color: #fca5a5; }
+    .sync-busy { background: rgba(255,255,255,0.2); color: #fde68a; }
+
+    /* ── Settings Cloud Section ── */
+    .cloud-setup-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 14px;
+      font-size: 0.83rem;
+      color: #1e40af;
+      line-height: 1.6;
+    }
+    .cloud-setup-box code {
+      background: #dbeafe;
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+    }
+    .settings-input-full {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      outline: none;
+      margin-top: 4px;
+      font-family: monospace;
+    }
+    .settings-input-full:focus { border-color: var(--primary); }
+    .user-id-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .user-id-box input {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 0.78rem;
+      font-family: monospace;
+      color: var(--text-muted);
+      background: #f8fafc;
+      outline: none;
+    }
+    .copy-btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+    .copy-btn:hover { background: var(--primary-dark); }
+    .import-id-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      align-items: center;
+    }
+    .import-id-row input {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 0.78rem;
+      font-family: monospace;
+      outline: none;
+    }
+    .import-id-row input:focus { border-color: var(--primary); }
+    .import-btn {
+      background: #10b981;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 7px 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+    .import-btn:hover { background: #059669; }
+
+    /* ── Calculator Modal ── */
+    .calc-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 1000;
+      overflow-y: auto;
+      padding: 20px 16px;
+      align-items: flex-start;
+      justify-content: center;
+    }
+    .calc-overlay.open { display: flex; }
+    .calc-modal {
+      background: white;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 520px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      margin: auto;
+    }
+    .calc-modal-header {
+      background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .calc-modal-header h2 { font-size: 1rem; font-weight: 700; margin: 0; }
+    .calc-close-btn {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      font-size: 1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .calc-close-btn:hover { background: rgba(255,255,255,0.35); }
+    .calc-body { padding: 16px; }
+    .calc-section { margin-bottom: 16px; }
+    .calc-section-title {
+      font-size: 0.72rem; font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .calc-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .calc-field label { display: block; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 4px; font-weight: 600; }
+    .calc-field select,
+    .calc-field input[type="number"] {
+      width: 100%; border: 1.5px solid var(--border);
+      border-radius: 8px; padding: 8px 10px;
+      font-size: 0.9rem; outline: none; color: var(--text); background: white;
+    }
+    .calc-field select:focus,
+    .calc-field input[type="number"]:focus { border-color: #7c3aed; }
+    .calc-food-row {
+      display: grid; grid-template-columns: 48px 1fr 60px;
+      align-items: center; gap: 6px; margin-bottom: 7px;
+    }
+    .calc-food-badge {
+      font-size: 0.62rem; font-weight: 700;
+      padding: 2px 5px; border-radius: 20px; white-space: nowrap; text-align: center;
+    }
+    .badge-main  { background: #dbeafe; color: #1d4ed8; }
+    .badge-side  { background: #dcfce7; color: #166534; }
+    .badge-fruit { background: #fef3c7; color: #92400e; }
+    .badge-drink { background: #f3e8ff; color: #6d28d9; }
+    .calc-food-row select {
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 6px 8px; font-size: 0.8rem; outline: none; color: var(--text); width: 100%;
+    }
+    .calc-food-row select:focus { border-color: #7c3aed; }
+    .calc-food-row input[type="number"] {
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 6px 4px; font-size: 0.82rem; outline: none; text-align: center; width: 100%;
+    }
+    .calc-food-row input[type="number"]:focus { border-color: #7c3aed; }
+    .calc-preset-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 10px; }
+    .calc-preset-item {
+      background: #f8fafc; border-radius: 8px;
+      padding: 8px; text-align: center; font-size: 0.68rem; color: var(--text-muted);
+    }
+    .calc-preset-item strong { display: block; font-size: 1rem; color: var(--text); }
+    .calc-result-box {
+      background: #f5f3ff; border: 1.5px solid #c4b5fd;
+      border-radius: 12px; padding: 14px; text-align: center; margin-bottom: 12px;
+    }
+    .calc-result-main { font-size: 2.4rem; font-weight: 800; color: #6d28d9; line-height: 1; }
+    .calc-result-main small { font-size: 1rem; font-weight: 500; }
+    .calc-result-label { font-size: 0.78rem; color: #7c3aed; margin-top: 4px; }
+    .calc-breakdown {
+      display: grid; grid-template-columns: repeat(2,1fr);
+      gap: 5px; margin-top: 10px; font-size: 0.72rem;
+    }
+    .calc-breakdown-item {
+      background: white; border-radius: 6px;
+      padding: 5px 8px; display: flex; justify-content: space-between;
+    }
+    .calc-breakdown-item span { color: var(--text-muted); }
+    .calc-breakdown-item strong { color: var(--text); }
+    .calc-notes {
+      background: #fffbeb; border: 1px solid #fde68a;
+      border-radius: 8px; padding: 10px 12px;
+      font-size: 0.77rem; color: #92400e; line-height: 1.6; margin-bottom: 10px;
+    }
+    .calc-notes p { margin: 2px 0; }
+    .calc-warning {
+      background: #fef2f2; border: 1px solid #fecaca;
+      border-radius: 8px; padding: 8px 12px;
+      font-size: 0.77rem; color: #dc2626; margin-bottom: 6px;
+    }
+    .calc-apply-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+      color: white; border: none; border-radius: 10px;
+      padding: 14px; font-size: 1rem; font-weight: 700;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    .calc-apply-btn:hover { opacity: 0.88; }
+    .calc-open-btn {
+      display: flex; align-items: center; gap: 4px;
+      background: #f5f3ff; border: 1.5px solid #c4b5fd;
+      color: #7c3aed; border-radius: 8px; padding: 4px 10px;
+      font-size: 0.72rem; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .calc-open-btn:hover { background: #7c3aed; color: white; border-color: #7c3aed; }
+
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>💉 胰島素紀錄表</h1>
+    <div class="subtitle">血糖與胰島素注射管理</div>
+  </div>
+  <div style="text-align:right;">
+    <div style="font-size:0.8rem; opacity:0.85;" id="headerDate">--</div>
+    <div id="syncBadge" class="sync-badge sync-busy" style="margin-top:3px;">⏳ 初始化</div>
+  </div>
+</header>
+
+<nav>
+  <button class="active" onclick="switchTab('today')">📋 今日記錄</button>
+  <button onclick="switchTab('history')">📅 歷史紀錄</button>
+  <button onclick="switchTab('chart')">📊 統計分析</button>
+  <button onclick="switchTab('settings')">⚙️ 設定</button>
+</nav>
+
+<!-- ══════════════ TODAY PAGE ══════════════ -->
+<div id="page-today" class="page active">
+
+  <!-- Legend -->
+  <div class="legend-card">
+    <h3>血糖範圍參考</h3>
+    <div class="legend-items">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#8b5cf6"></div>
+        <span style="color:#8b5cf6">低血糖 &lt;80</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#22c55e"></div>
+        <span style="color:#22c55e">正常 85–180</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#f59e0b"></div>
+        <span style="color:#f59e0b">警戒 180–250</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#ef4444"></div>
+        <span style="color:#ef4444">高血糖 &gt;250</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Date Bar -->
+  <div class="date-bar">
+    <button class="date-nav-btn" onclick="changeDate(-1)">‹</button>
+    <label>日期</label>
+    <input type="date" id="todayDate" onchange="loadDayData()" />
+    <button class="date-nav-btn" onclick="changeDate(1)">›</button>
+  </div>
+
+  <!-- Period Cards -->
+  <div id="period-cards"></div>
+
+  <!-- ── 補打記錄 ── -->
+  <div class="suppl-section" id="corrections-section">
+    <div class="suppl-header">
+      <div class="suppl-title">
+        💉 補打記錄
+        <span class="suppl-tag tag-correction">修正劑量</span>
+      </div>
+      <button class="suppl-add-btn" onclick="addSupplRow('corrections')">＋ 新增補打</button>
+    </div>
+    <div id="corrections-list"></div>
+  </div>
+
+  <!-- ── 補糖記錄 ── -->
+  <div class="suppl-section" id="carb-section">
+    <div class="suppl-header">
+      <div class="suppl-title">
+        🍬 補糖記錄
+        <span class="suppl-tag tag-carb">低血糖補充</span>
+      </div>
+      <button class="suppl-add-btn" onclick="addSupplRow('carbs')">＋ 新增補糖</button>
+    </div>
+    <div id="carbs-list"></div>
+  </div>
+
+  <button class="save-btn" onclick="saveDayData()">💾 儲存今日紀錄</button>
+</div>
+
+<!-- ══════════════ HISTORY PAGE ══════════════ -->
+<div id="page-history" class="page">
+  <div class="history-filter">
+    <label>月份</label>
+    <input type="month" id="historyMonth" onchange="renderHistory()" />
+    <button class="export-btn" onclick="exportCSV()">匯出 CSV</button>
+  </div>
+  <div id="historyList"></div>
+</div>
+
+<!-- ══════════════ STATISTICS PAGE ══════════════ -->
+<div id="page-chart" class="page">
+
+  <!-- Period Tabs -->
+  <div class="period-tabs">
+    <button class="period-tab active" onclick="setStatPeriod('day',this)">單日</button>
+    <button class="period-tab" onclick="setStatPeriod('week',this)">單週</button>
+    <button class="period-tab" onclick="setStatPeriod('biweek',this)">雙週</button>
+    <button class="period-tab" onclick="setStatPeriod('month',this)">月</button>
+    <button class="period-tab" onclick="setStatPeriod('quarter',this)">季</button>
+  </div>
+
+  <!-- Date navigation -->
+  <div class="stat-date-nav">
+    <button onclick="navigateStat(-1)">‹</button>
+    <span class="nav-label" id="statDateLabel">--</span>
+    <button onclick="navigateStat(1)">›</button>
+  </div>
+
+  <!-- Blood sugar overview -->
+  <div class="overview-card">
+    <h3>血糖概覽</h3>
+    <div class="overview-grid" id="overviewGrid">
+      <div class="overview-item">
+        <div class="ov-label">最高血糖</div>
+        <div class="ov-value" style="color:#ef4444">--<span class="ov-unit">mg/dL</span></div>
+      </div>
+      <div class="overview-item">
+        <div class="ov-label">最低血糖</div>
+        <div class="ov-value" style="color:#8b5cf6">--<span class="ov-unit">mg/dL</span></div>
+      </div>
+      <div class="overview-item">
+        <div class="ov-label">最大血糖波動</div>
+        <div class="ov-value" style="color:#f59e0b">--<span class="ov-unit">mg/dL</span></div>
+      </div>
+      <div class="overview-item">
+        <div class="ov-label">平均血糖</div>
+        <div class="ov-value" style="color:#3b82f6">--<span class="ov-unit">mg/dL</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- eHbA1c -->
+  <div class="hba1c-card">
+    <div>
+      <div class="hba1c-label">預估糖化血色素</div>
+      <div class="hba1c-desc">依平均血糖估算（Nathan 公式）</div>
+    </div>
+    <div style="text-align:right">
+      <div class="hba1c-value" id="hba1cValue">--</div>
+      <div class="hba1c-unit">%</div>
+    </div>
+  </div>
+
+  <!-- TIR Donut -->
+  <div class="tir-card">
+    <h3>血糖達標率 TIR</h3>
+    <div class="tir-inner">
+      <div class="tir-chart-wrap">
+        <canvas id="tirChart"></canvas>
+        <div class="tir-center-label">
+          <div class="tir-center-pct" id="tirCenterPct">--%</div>
+          <div class="tir-center-sub">達標率</div>
+        </div>
+      </div>
+      <div class="tir-legend" id="tirLegend"></div>
+    </div>
+  </div>
+
+  <!-- Trend charts -->
+  <div class="chart-card">
+    <h3>血糖趨勢</h3>
+    <div class="chart-period-sel">
+      <select id="chartPeriodSel" onchange="renderCharts()">
+        <option value="all">全部時段</option>
+        <option value="morning">早</option>
+        <option value="noon">中</option>
+        <option value="evening">晚</option>
+        <option value="bedtime">睡前</option>
+      </select>
+    </div>
+    <canvas id="bgChart" height="200"></canvas>
+  </div>
+
+  <div class="chart-card">
+    <h3>胰島素劑量趨勢</h3>
+    <div class="chart-sub">每日各時段劑量（含修正劑量）</div>
+    <canvas id="insulinChart" height="200"></canvas>
+  </div>
+
+</div>
+
+<!-- ══════════════ SETTINGS PAGE ══════════════ -->
+<div id="page-settings" class="page">
+
+  <!-- Cloud Sync -->
+  <div class="settings-section">
+    <h3>☁️ 雲端同步設定</h3>
+    <div class="cloud-setup-box">
+      <strong>跨裝置同步說明</strong><br>
+      請先到 <strong>supabase.com</strong> 建立免費專案，執行建表 SQL，再填入以下資訊。<br>
+      詳細步驟請參考隨附的「部署指南」文件。
+    </div>
+    <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
+      <label style="font-size:0.83rem;font-weight:600;">Supabase Project URL</label>
+      <input type="url" id="set-sb-url" class="settings-input-full"
+             placeholder="https://xxxxxxxxxxxx.supabase.co" />
+    </div>
+    <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-top:10px;">
+      <label style="font-size:0.83rem;font-weight:600;">Supabase Anon Key</label>
+      <input type="text" id="set-sb-key" class="settings-input-full"
+             placeholder="eyJhbGciOi..." />
+    </div>
+    <button class="settings-save-btn" style="margin-top:12px;" onclick="saveCloudConfig()">
+      💾 儲存並連線
+    </button>
+    <div id="cloudStatus" style="margin-top:8px;font-size:0.8rem;color:var(--text-muted);"></div>
+  </div>
+
+  <!-- Account ID -->
+  <div class="settings-section">
+    <h3>🔑 帳號 ID（跨裝置共用）</h3>
+    <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:10px;">
+      這是您的唯一識別碼。在新裝置上貼入此 ID 即可同步所有資料。
+    </p>
+    <label style="font-size:0.78rem;color:var(--text-muted);font-weight:600;">我的帳號 ID</label>
+    <div class="user-id-box">
+      <input type="text" id="myUserId" readonly />
+      <button class="copy-btn" onclick="copyUserId()">複製</button>
+    </div>
+    <div style="margin-top:12px;">
+      <label style="font-size:0.78rem;color:var(--text-muted);font-weight:600;">在此裝置使用其他帳號</label>
+      <div class="import-id-row">
+        <input type="text" id="importUserId" placeholder="貼上帳號 ID…" />
+        <button class="import-btn" onclick="importUserId()">套用</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-section">
+    <h3>血糖範圍設定</h3>
+    <div class="settings-row">
+      <div>
+        <div>低血糖警示值</div>
+        <div class="settings-desc">低於此值 → 低血糖</div>
+      </div>
+      <input type="number" id="set-low" min="40" max="100" step="1" />
+    </div>
+    <div class="settings-row">
+      <div>
+        <div>正常範圍下限</div>
+        <div class="settings-desc">正常血糖起始值</div>
+      </div>
+      <input type="number" id="set-normalLow" min="60" max="120" step="1" />
+    </div>
+    <div class="settings-row">
+      <div>
+        <div>正常範圍上限</div>
+        <div class="settings-desc">超過此值 → 警戒</div>
+      </div>
+      <input type="number" id="set-normalHigh" min="120" max="250" step="1" />
+    </div>
+    <div class="settings-row">
+      <div>
+        <div>高血糖警示值</div>
+        <div class="settings-desc">超過此值 → 高血糖</div>
+      </div>
+      <input type="number" id="set-high" min="150" max="400" step="1" />
+    </div>
+    <button class="settings-save-btn" onclick="saveSettings()">儲存設定</button>
+  </div>
+
+  <div class="settings-section">
+    <h3>資料管理</h3>
+    <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px;">
+      資料同步儲存於本機與雲端。建議定期匯出 CSV 備份。
+    </p>
+    <button class="export-btn" style="width:100%;padding:11px;font-size:0.9rem;" onclick="exportCSV()">📥 匯出全部資料 (CSV)</button>
+    <button class="danger-btn" onclick="clearAllData()">🗑️ 清除所有資料</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════════
+//  CONFIG & DEFAULTS
+// ══════════════════════════════════════════
+const PERIODS = [
+  { id: 'morning', label: '早',   icon: '🌅', cls: 'morning', defaultTime: '07:30' },
+  { id: 'noon',    label: '中',   icon: '☀️', cls: 'noon',    defaultTime: '12:00' },
+  { id: 'evening', label: '晚',   icon: '🌆', cls: 'evening', defaultTime: '18:00' },
+  { id: 'bedtime', label: '睡前', icon: '🌙', cls: 'bedtime', defaultTime: '22:00' },
+];
+
+const DEFAULT_SETTINGS = {
+  low: 80,
+  normalLow: 85,
+  normalHigh: 180,
+  high: 250,
+};
+
+let settings = loadSettings();
+let bgChart = null;
+let insulinChart = null;
+
+// ══════════════════════════════════════════
+//  CLOUD SYNC (SUPABASE)
+// ══════════════════════════════════════════
+let sbClient = null;
+let currentUserId = null;
+let allDataCache = {};
+
+function setSyncBadge(msg, cls) {
+  const el = document.getElementById('syncBadge');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'sync-badge ' + cls;
+}
+
+// ── 預設 Supabase 設定（已內建，無需手動填入）──
+const DEFAULT_SB_URL = 'https://nbslellpcqsqbsdjkiqa.supabase.co';
+const DEFAULT_SB_KEY = 'sb_publishable_56KUX1enUqWQiaXbee-jhg_8hkW62dX';
+
+function initSupabase() {
+  const url = localStorage.getItem('sb_url') || DEFAULT_SB_URL;
+  const key = localStorage.getItem('sb_key') || DEFAULT_SB_KEY;
+  if (url && key && window.supabase) {
+    try {
+      sbClient = window.supabase.createClient(url, key);
+    } catch(e) { sbClient = null; }
+  }
+  // User ID
+  currentUserId = localStorage.getItem('user_id');
+  if (!currentUserId) {
+    currentUserId = 'uid-' + Date.now() + '-' + Math.random().toString(36).slice(2,8);
+    localStorage.setItem('user_id', currentUserId);
+  }
+  // Load local cache first
+  try { allDataCache = JSON.parse(localStorage.getItem('insulin_records') || '{}'); }
+  catch { allDataCache = {}; }
+}
+
+async function loadFromCloud() {
+  if (!sbClient || !currentUserId) {
+    setSyncBadge('📱 本機模式', 'sync-err');
+    return;
+  }
+  setSyncBadge('⏳ 同步中…', 'sync-busy');
+  try {
+    const { data, error } = await sbClient
+      .from('insulin_records')
+      .select('date, data')
+      .eq('user_id', currentUserId);
+    if (error) throw error;
+    if (data && data.length > 0) {
+      data.forEach(row => { allDataCache[row.date] = row.data; });
+      localStorage.setItem('insulin_records', JSON.stringify(allDataCache));
+    }
+    setSyncBadge('☁️ 已同步', 'sync-ok');
+  } catch(e) {
+    setSyncBadge('⚠️ 同步失敗', 'sync-err');
+  }
+}
+
+async function syncDayToCloud(date, dayData) {
+  if (!sbClient || !currentUserId) return;
+  try {
+    await sbClient.from('insulin_records').upsert({
+      user_id: currentUserId,
+      date: date,
+      data: dayData,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,date' });
+    setSyncBadge('☁️ 已同步', 'sync-ok');
+  } catch(e) {
+    setSyncBadge('⚠️ 同步失敗', 'sync-err');
+  }
+}
+
+// ══════════════════════════════════════════
+//  STORAGE HELPERS
+// ══════════════════════════════════════════
+function getAllData() {
+  return allDataCache;
+}
+function setAllData(data) {
+  allDataCache = data;
+  localStorage.setItem('insulin_records', JSON.stringify(data));
+}
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem('insulin_settings') || '{}');
+    return Object.assign({}, DEFAULT_SETTINGS, s);
+  } catch { return { ...DEFAULT_SETTINGS }; }
+}
+function saveSettingsToStorage() {
+  localStorage.setItem('insulin_settings', JSON.stringify(settings));
+}
+
+// ══════════════════════════════════════════
+//  BLOOD SUGAR CLASSIFICATION
+// ══════════════════════════════════════════
+function classifyBG(val) {
+  if (!val || isNaN(val) || val === '') return null;
+  const n = parseFloat(val);
+  if (n < settings.low)         return { cls: 'low',    label: `低血糖 (${n})` };
+  if (n <= settings.normalHigh) return { cls: 'normal', label: `正常 (${n})` };
+  if (n <= settings.high)       return { cls: 'warn',   label: `警戒 (${n})` };
+  return                               { cls: 'high',   label: `高血糖 (${n})` };
+}
+function getBGColor(cls) {
+  const map = { normal: '#22c55e', warn: '#f59e0b', high: '#ef4444', low: '#8b5cf6' };
+  return map[cls] || '#94a3b8';
+}
+
+// ══════════════════════════════════════════
+//  DATE UTILITIES
+// ══════════════════════════════════════════
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+function currentMonthStr() {
+  return new Date().toISOString().slice(0, 7);
+}
+function formatDateDisplay(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  const days = ['日', '一', '二', '三', '四', '五', '六'];
+  return `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日（${days[d.getDay()]}）`;
+}
+
+// ══════════════════════════════════════════
+//  TAB NAVIGATION
+// ══════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + tab).classList.add('active');
+  event.currentTarget.classList.add('active');
+
+  if (tab === 'history')  renderHistory();
+  if (tab === 'chart')    renderCharts();
+  if (tab === 'settings') { loadSettingsUI(); loadCloudConfigUI(); }
+}
+
+// ══════════════════════════════════════════
+//  TODAY PAGE — BUILD CARDS
+// ══════════════════════════════════════════
+function buildPeriodCards() {
+  const container = document.getElementById('period-cards');
+  container.innerHTML = '';
+  PERIODS.forEach(p => {
+    container.innerHTML += `
+      <div class="period-card ${p.cls}" id="card-${p.id}">
+        <div class="period-header">
+          <div class="period-title">
+            <div class="period-icon">${p.icon}</div>
+            <span>${p.label}</span>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+            <div class="period-time-input">
+              <span>注射時間</span>
+              <input type="time" id="${p.id}-time" value="${p.defaultTime}" />
+            </div>
+            ${p.id !== 'bedtime' ? `<button class="calc-open-btn" type="button" onclick="openCalcModal('${p.id}')">💊 計算劑量</button>` : ''}
+          </div>
+        </div>
+        <div class="fields-row">
+          <div class="field-group">
+            <label>血糖值</label>
+            <div class="field-input-wrap">
+              <input type="number" id="${p.id}-bg" placeholder="--"
+                     min="20" max="600" step="1"
+                     oninput="onBGInput('${p.id}')" />
+              <span class="field-unit">mg/dL</span>
+            </div>
+            <div id="${p.id}-bg-badge"></div>
+          </div>
+          <div class="field-group">
+            <label>胰島素劑量</label>
+            <div class="field-input-wrap">
+              <input type="number" id="${p.id}-insulin" placeholder="--"
+                     min="0" max="100" step="0.5" />
+              <span class="field-unit">單位</span>
+            </div>
+          </div>
+        </div>
+        <div class="period-note">
+          <textarea id="${p.id}-note" rows="2" placeholder="備註（症狀、飲食、活動…）"></textarea>
+        </div>
+      </div>`;
+  });
+}
+
+function onBGInput(periodId) {
+  const input = document.getElementById(periodId + '-bg');
+  const badge = document.getElementById(periodId + '-bg-badge');
+  const val = input.value;
+  const result = classifyBG(val);
+
+  input.className = '';
+  badge.innerHTML = '';
+
+  if (result) {
+    input.classList.add('bg-' + result.cls);
+    badge.innerHTML = `<span class="bg-badge ${result.cls}">${result.label}</span>`;
+  }
+}
+
+// ══════════════════════════════════════════
+//  TODAY PAGE — LOAD / SAVE
+// ══════════════════════════════════════════
+function loadDayData() {
+  const date = document.getElementById('todayDate').value;
+  const all = getAllData();
+  const dayData = all[date] || {};
+
+  PERIODS.forEach(p => {
+    const rec = dayData[p.id] || {};
+    document.getElementById(p.id + '-time').value    = rec.time    || p.defaultTime;
+    document.getElementById(p.id + '-bg').value      = rec.bg      || '';
+    document.getElementById(p.id + '-insulin').value = rec.insulin || '';
+    document.getElementById(p.id + '-note').value    = rec.note    || '';
+    onBGInput(p.id);
+  });
+
+  // Load supplemental records
+  renderSupplList('corrections', dayData.corrections || []);
+  renderSupplList('carbs',       dayData.carbs       || []);
+}
+
+function saveDayData() {
+  const date = document.getElementById('todayDate').value;
+  const all = getAllData();
+  all[date] = all[date] || {};
+
+  PERIODS.forEach(p => {
+    all[date][p.id] = {
+      time:    document.getElementById(p.id + '-time').value,
+      bg:      document.getElementById(p.id + '-bg').value,
+      insulin: document.getElementById(p.id + '-insulin').value,
+      note:    document.getElementById(p.id + '-note').value,
+    };
+  });
+
+  // Save supplemental records
+  all[date].corrections = collectSupplRows('corrections');
+  all[date].carbs       = collectSupplRows('carbs');
+
+  setAllData(all);
+  syncDayToCloud(date, all[date]);
+  showToast('✅ 紀錄已儲存！');
+}
+
+function changeDate(delta) {
+  const input = document.getElementById('todayDate');
+  const d = new Date(input.value + 'T00:00:00');
+  d.setDate(d.getDate() + delta);
+  input.value = d.toISOString().slice(0, 10);
+  loadDayData();
+}
+
+// ══════════════════════════════════════════
+//  HISTORY PAGE
+// ══════════════════════════════════════════
+function renderHistory() {
+  const month = document.getElementById('historyMonth').value;
+  const all = getAllData();
+  const list = document.getElementById('historyList');
+
+  // Filter dates for this month
+  const dates = Object.keys(all)
+    .filter(d => d.startsWith(month))
+    .sort()
+    .reverse();
+
+  if (dates.length === 0) {
+    list.innerHTML = `<div class="history-empty">📭 本月尚無紀錄</div>`;
+    return;
+  }
+
+  list.innerHTML = dates.map(date => {
+    const dayData = all[date];
+    const periodRows = PERIODS.map(p => {
+      const rec = dayData[p.id] || {};
+      const bgResult = classifyBG(rec.bg);
+      const bgStyle = bgResult ? `color:${getBGColor(bgResult.cls)};` : '';
+      const correctionBadge = rec.correction
+        ? `<span style="font-size:0.7rem;background:#dbeafe;color:#2563eb;border-radius:4px;padding:1px 5px;margin-left:3px;">補打 ${rec.correction}U</span>` : '';
+      const carbBadge = rec.carb
+        ? `<span style="font-size:0.7rem;background:#fef3c7;color:#b45309;border-radius:4px;padding:1px 5px;margin-left:3px;">碳水 ${rec.carb}g</span>` : '';
+      return `
+        <div class="history-row" style="grid-template-columns:60px 1fr 1fr 1fr">
+          <span class="period-label">${p.icon} ${p.label}</span>
+          <span class="bg-val ${!rec.bg ? 'empty' : ''}" style="${bgStyle}">
+            ${rec.bg ? rec.bg + '<small style="font-weight:400"> mg/dL</small>' : '—'}
+            ${carbBadge}
+          </span>
+          <span class="insulin-val ${!rec.insulin ? 'empty' : ''}">
+            ${rec.insulin ? rec.insulin + '<small style="font-weight:400"> 單位</small>' : '—'}
+            ${correctionBadge}
+          </span>
+          <span class="time-val">${rec.time || '—'}</span>
+        </div>`;
+    }).join('');
+
+    // Summary
+    const bgs = PERIODS.map(p => parseFloat(all[date]?.[p.id]?.bg)).filter(n => !isNaN(n));
+    const insulins = PERIODS.map(p => parseFloat(all[date]?.[p.id]?.insulin)).filter(n => !isNaN(n));
+    const corrections = dayData.corrections || [];
+    const carbsData   = dayData.carbs       || [];
+    const totalCorr   = corrections.reduce((a,r) => a + (parseFloat(r.dose)||0), 0);
+    const avgBG = bgs.length ? (bgs.reduce((a,b)=>a+b,0)/bgs.length).toFixed(0) : null;
+    const totalInsulin = insulins.length ? (insulins.reduce((a,b)=>a+b,0) + totalCorr).toFixed(1) : null;
+    const summaryParts = [];
+    if (avgBG)        summaryParts.push(`平均血糖 ${avgBG}`);
+    if (totalInsulin) summaryParts.push(`總劑量 ${totalInsulin} 單位`);
+    if (corrections.length) summaryParts.push(`補打 ${corrections.length} 次`);
+    if (carbsData.length)   summaryParts.push(`補糖 ${carbsData.length} 次`);
+
+    // Supplemental HTML
+    const corrHTML = corrections.length ? corrections.map((r,i) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border);font-size:0.82rem;">
+        <span style="background:#dbeafe;color:#2563eb;border-radius:4px;padding:1px 7px;font-weight:700;font-size:0.75rem;">補打${i+1}</span>
+        <span style="font-weight:700;color:#2563eb;">${r.dose || '--'}<small style="font-weight:400"> 單位</small></span>
+        <span style="color:var(--text-muted);">${r.time || '--'}</span>
+        ${r.note ? `<span style="color:var(--text-muted);font-size:0.78rem;">｜${r.note}</span>` : ''}
+      </div>`).join('') : '';
+
+    const carbHTML = carbsData.length ? carbsData.map((r,i) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:7px 16px;border-bottom:1px solid var(--border);font-size:0.82rem;">
+        <span style="background:#fef3c7;color:#b45309;border-radius:4px;padding:1px 7px;font-weight:700;font-size:0.75rem;">補糖${i+1}</span>
+        <span style="font-weight:700;color:#b45309;">${r.carb || '--'}<small style="font-weight:400"> 克</small></span>
+        <span style="color:var(--text-muted);">${r.time || '--'}</span>
+        ${r.note ? `<span style="color:var(--text-muted);font-size:0.78rem;">｜${r.note}</span>` : ''}
+      </div>`).join('') : '';
+
+    const supplSection = (corrHTML || carbHTML) ? `
+      <div style="background:#f8fafc;padding:8px 0;">
+        ${corrHTML ? `<div style="padding:6px 16px 2px;font-size:0.72rem;color:var(--text-muted);font-weight:700;">💉 補打記錄</div>${corrHTML}` : ''}
+        ${carbHTML ? `<div style="padding:6px 16px 2px;font-size:0.72rem;color:var(--text-muted);font-weight:700;">🍬 補糖記錄</div>${carbHTML}` : ''}
+      </div>` : '';
+
+    const id = 'hist-' + date;
+    return `
+      <div class="history-day">
+        <div class="history-day-header" onclick="toggleDay('${id}')">
+          <h4>${formatDateDisplay(date)}</h4>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="summary">${summaryParts.join('　')}</span>
+            <span class="toggle-arrow">▾</span>
+          </div>
+        </div>
+        <div class="history-day-body" id="${id}">
+          <div style="display:grid;grid-template-columns:70px 1fr 1fr 1fr;padding:8px 16px;background:#f8fafc;border-bottom:1px solid var(--border);font-size:0.72rem;color:var(--text-muted);font-weight:700;">
+            <span>時段</span><span>血糖</span><span>胰島素</span><span>時間</span>
+          </div>
+          ${periodRows}
+          ${supplSection}
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function toggleDay(id) {
+  const body = document.getElementById(id);
+  const header = body.previousElementSibling;
+  body.classList.toggle('open');
+  header.classList.toggle('open');
+}
+
+// ══════════════════════════════════════════
+//  STATISTICS PAGE
+// ══════════════════════════════════════════
+
+// State for statistics page
+let statPeriod = 'day';        // day | week | biweek | month | quarter
+let statAnchor = todayStr();   // anchor date (ISO string)
+let tirChart   = null;
+
+// TIR category colors & labels
+const TIR_CATS = [
+  { key: 'vhigh', label: '極高', color: '#ef4444' },
+  { key: 'high',  label: '偏高', color: '#f97316' },
+  { key: 'inrange', label: '達標', color: '#22c55e' },
+  { key: 'low',   label: '偏低', color: '#facc15' },
+  { key: 'vlow',  label: '極低', color: '#8b5cf6' },
+];
+
+// TIR thresholds (mg/dL) — aligned with international standards & user settings
+function getTIRThresholds() {
+  return {
+    vlow:    54,
+    low:     settings.low,          // default 80
+    inrange: settings.normalHigh,   // default 180
+    high:    settings.high,         // default 250
+  };
+}
+
+function classifyTIR(val) {
+  const t = getTIRThresholds();
+  const n = parseFloat(val);
+  if (isNaN(n) || n <= 0) return null;
+  if (n < t.vlow)     return 'vlow';
+  if (n < t.low)      return 'low';
+  if (n <= t.inrange) return 'inrange';
+  if (n <= t.high)    return 'high';
+  return 'vhigh';
+}
+
+// Compute date range for the current statAnchor + statPeriod
+function getStatDateRange() {
+  const anchor = new Date(statAnchor + 'T00:00:00');
+  let start, end;
+  if (statPeriod === 'day') {
+    start = end = statAnchor;
+  } else if (statPeriod === 'week') {
+    end = statAnchor;
+    const s = new Date(anchor); s.setDate(s.getDate() - 6);
+    start = s.toISOString().slice(0, 10);
+  } else if (statPeriod === 'biweek') {
+    end = statAnchor;
+    const s = new Date(anchor); s.setDate(s.getDate() - 13);
+    start = s.toISOString().slice(0, 10);
+  } else if (statPeriod === 'month') {
+    end = statAnchor;
+    const s = new Date(anchor); s.setDate(s.getDate() - 29);
+    start = s.toISOString().slice(0, 10);
+  } else {
+    end = statAnchor;
+    const s = new Date(anchor); s.setDate(s.getDate() - 89);
+    start = s.toISOString().slice(0, 10);
+  }
+  return { start, end };
+}
+
+function getDatesBetween(start, end) {
+  const dates = [];
+  const cur = new Date(start + 'T00:00:00');
+  const last = new Date(end + 'T00:00:00');
+  while (cur <= last) {
+    dates.push(cur.toISOString().slice(0, 10));
+    cur.setDate(cur.getDate() + 1);
+  }
+  return dates;
+}
+
+function formatStatLabel(start, end) {
+  if (statPeriod === 'day') return formatDateDisplay(start);
+  const fmt = d => {
+    const o = new Date(d + 'T00:00:00');
+    return (o.getMonth()+1) + '/' + o.getDate();
+  };
+  return fmt(start) + ' – ' + fmt(end);
+}
+
+function setStatPeriod(period, btn) {
+  statPeriod = period;
+  document.querySelectorAll('.period-tab').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderCharts();
+}
+
+function navigateStat(dir) {
+  const anchor = new Date(statAnchor + 'T00:00:00');
+  const steps = { day:1, week:7, biweek:14, month:30, quarter:90 };
+  anchor.setDate(anchor.getDate() + dir * steps[statPeriod]);
+  if (anchor > new Date()) anchor.setTime(new Date().getTime());
+  statAnchor = anchor.toISOString().slice(0, 10);
+  renderCharts();
+}
+
+function calcEHbA1c(avgBG) {
+  if (!avgBG || isNaN(avgBG)) return null;
+  return ((avgBG + 46.7) / 28.7).toFixed(1);
+}
+
+function renderCharts() {
+  const all = getAllData();
+  const range = getStatDateRange();
+  const start = range.start;
+  const end = range.end;
+  const dates = getDatesBetween(start, end).filter(function(d){ return all[d]; });
+
+  document.getElementById('statDateLabel').textContent = formatStatLabel(start, end);
+
+  const allBG = [];
+  dates.forEach(function(d) {
+    PERIODS.forEach(function(p) {
+      const v = parseFloat(all[d] && all[d][p.id] ? all[d][p.id].bg : '');
+      if (!isNaN(v) && v > 0) allBG.push(v);
+    });
+  });
+
+  const maxBG  = allBG.length ? Math.max.apply(null, allBG) : null;
+  const minBG  = allBG.length ? Math.min.apply(null, allBG) : null;
+  const fluct  = (maxBG !== null && minBG !== null) ? (maxBG - minBG) : null;
+  const sumBG  = allBG.reduce(function(a,b){ return a+b; }, 0);
+  const avgBGv = allBG.length ? sumBG / allBG.length : null;
+
+  document.getElementById('overviewGrid').innerHTML =
+    '<div class="overview-item"><div class="ov-label">最高血糖</div><div class="ov-value" style="color:#ef4444">' +
+    (maxBG !== null ? maxBG : '--') + '<span class="ov-unit">mg/dL</span></div></div>' +
+    '<div class="overview-item"><div class="ov-label">最低血糖</div><div class="ov-value" style="color:#8b5cf6">' +
+    (minBG !== null ? minBG : '--') + '<span class="ov-unit">mg/dL</span></div></div>' +
+    '<div class="overview-item"><div class="ov-label">最大血糖波動</div><div class="ov-value" style="color:#f59e0b">' +
+    (fluct !== null ? fluct : '--') + '<span class="ov-unit">mg/dL</span></div></div>' +
+    '<div class="overview-item"><div class="ov-label">平均血糖</div><div class="ov-value" style="color:#3b82f6">' +
+    (avgBGv ? avgBGv.toFixed(1) : '--') + '<span class="ov-unit">mg/dL</span></div></div>';
+
+  var ehba1c = calcEHbA1c(avgBGv);
+  document.getElementById('hba1cValue').textContent = ehba1c !== null ? ehba1c : '--';
+
+  var tirCounts = { vhigh:0, high:0, inrange:0, low:0, vlow:0 };
+  allBG.forEach(function(v){ var c = classifyTIR(v); if (c) tirCounts[c]++; });
+  var total = allBG.length || 1;
+  var tirPcts = {};
+  TIR_CATS.forEach(function(c){ tirPcts[c.key] = Math.round(tirCounts[c.key] / total * 100); });
+  var inRangePct = tirPcts.inrange || 0;
+  document.getElementById('tirCenterPct').textContent = inRangePct + '%';
+
+  if (tirChart) tirChart.destroy();
+  tirChart = new Chart(document.getElementById('tirChart'), {
+    type: 'doughnut',
+    data: {
+      labels: TIR_CATS.map(function(c){ return c.label; }),
+      datasets: [{
+        data: TIR_CATS.map(function(c){ return tirCounts[c.key] || 0.001; }),
+        backgroundColor: TIR_CATS.map(function(c){ return c.color; }),
+        borderWidth: 2,
+        borderColor: '#fff'
+      }]
+    },
+    options: {
+      cutout: '62%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          label: function(ctx){ return ' ' + ctx.label + ': ' + tirPcts[TIR_CATS[ctx.dataIndex].key] + '%'; }
+        }}
+      },
+      animation: { duration: 600 }
+    }
+  });
+
+  document.getElementById('tirLegend').innerHTML = TIR_CATS.map(function(c) {
+    return '<div class="tir-row">' +
+      '<div class="tir-dot" style="background:' + c.color + '"></div>' +
+      '<span class="tir-name">' + c.label + '</span>' +
+      '<div class="tir-bar-wrap"><div class="tir-bar" style="width:' + tirPcts[c.key] + '%;background:' + c.color + '"></div></div>' +
+      '<span class="tir-pct" style="color:' + c.color + '">' + tirPcts[c.key] + '%</span>' +
+      '</div>';
+  }).join('');
+
+  var periodSel = (document.getElementById('chartPeriodSel') || {}).value || 'all';
+  var periodList = periodSel === 'all' ? PERIODS : PERIODS.filter(function(p){ return p.id === periodSel; });
+  var labels = dates.map(function(d){ return d.slice(5); });
+  var COLORS = { morning:'#f59e0b', noon:'#10b981', evening:'#f97316', bedtime:'#6366f1' };
+
+  var bgDatasets = [];
+  var insulinDatasets = [];
+
+  periodList.forEach(function(p) {
+    var color = COLORS[p.id];
+    bgDatasets.push({
+      label: p.label,
+      data: dates.map(function(d){ return parseFloat(all[d] && all[d][p.id] ? all[d][p.id].bg : '') || null; }),
+      borderColor: color, backgroundColor: color+'33',
+      tension: 0.3, fill: false, pointRadius: 4, spanGaps: true
+    });
+    insulinDatasets.push({
+      label: p.label,
+      data: dates.map(function(d){
+        var base = parseFloat(all[d] && all[d][p.id] ? all[d][p.id].insulin : '') || 0;
+        return base || null;
+      }),
+      borderColor: color, backgroundColor: color+'99',
+      tension: 0.3, fill: false, pointRadius: 4, spanGaps: true
+    });
+  });
+
+  var baseOpts = {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } } },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 10 }, maxTicksLimit: 12 } },
+      y: { grid: { color: '#f1f5f9' } }
+    }
+  };
+
+  if (bgChart) bgChart.destroy();
+  bgChart = new Chart(document.getElementById('bgChart'), {
+    type: 'line',
+    data: { labels: labels, datasets: bgDatasets },
+    options: Object.assign({}, baseOpts, {
+      scales: Object.assign({}, baseOpts.scales, {
+        y: Object.assign({}, baseOpts.scales.y, {
+          title: { display: true, text: 'mg/dL', font: { size: 10 } },
+          min: 0
+        })
+      })
+    }),
+    plugins: [{
+      id: 'bgZones',
+      afterDraw: function(chart) {
+        var ctx = chart.ctx;
+        var chartArea = chart.chartArea;
+        var y = chart.scales.y;
+        if (!y || !chartArea) return;
+        function drawLine(val, color) {
+          var yPos = y.getPixelForValue(val);
+          if (yPos < chartArea.top || yPos > chartArea.bottom) return;
+          ctx.save();
+          ctx.beginPath();
+          ctx.setLineDash([4, 3]);
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1;
+          ctx.moveTo(chartArea.left, yPos);
+          ctx.lineTo(chartArea.right, yPos);
+          ctx.stroke();
+          ctx.restore();
+        }
+        drawLine(settings.normalHigh, '#22c55e88');
+        drawLine(settings.low,        '#8b5cf688');
+        drawLine(settings.high,       '#ef444488');
+      }
+    }]
+  });
+
+  if (insulinChart) insulinChart.destroy();
+  insulinChart = new Chart(document.getElementById('insulinChart'), {
+    type: 'bar',
+    data: { labels: labels, datasets: insulinDatasets },
+    options: Object.assign({}, baseOpts, {
+      scales: Object.assign({}, baseOpts.scales, {
+        y: Object.assign({}, baseOpts.scales.y, {
+          title: { display: true, text: '單位', font: { size: 10 } },
+          stacked: true
+        }),
+        x: Object.assign({}, baseOpts.scales.x, { stacked: true })
+      })
+    })
+  });
+}
+
+// ════════════════════════════════
+//  SETTINGS
+// ════════════════════════════════
+function loadSettingsUI() {
+  document.getElementById('set-low').value        = settings.low;
+  document.getElementById('set-normalLow').value  = settings.normalLow;
+  document.getElementById('set-normalHigh').value = settings.normalHigh;
+  document.getElementById('set-high').value       = settings.high;
+}
+
+function saveSettings() {
+  settings.low        = parseFloat(document.getElementById('set-low').value)        || DEFAULT_SETTINGS.low;
+  settings.normalLow  = parseFloat(document.getElementById('set-normalLow').value)  || DEFAULT_SETTINGS.normalLow;
+  settings.normalHigh = parseFloat(document.getElementById('set-normalHigh').value) || DEFAULT_SETTINGS.normalHigh;
+  settings.high       = parseFloat(document.getElementById('set-high').value)       || DEFAULT_SETTINGS.high;
+  saveSettingsToStorage();
+  showToast('✅ 設定已儲存！');
+}
+
+function clearAllData() {
+  if (confirm('確定要清除所有胰島素紀錄資料？此動作無法復原。')) {
+    localStorage.removeItem('insulin_records');
+    showToast('🗑️ 所有資料已清除');
+    loadDayData();
+  }
+}
+
+// ════════════════════════════════
+//  CSV EXPORT
+// ════════════════════════════════
+function exportCSV() {
+  var all = getAllData();
+  var dates = Object.keys(all).sort();
+  if (dates.length === 0) { showToast('⚠️ 目前尚無資料可匯出'); return; }
+
+  var header = '日期,時段,注射時間,血糖(mg/dL),血糖狀態,胰島素劑量(單位),修正劑量(單位),補充碳水(克),備註';
+  var rows = [];
+
+  dates.forEach(function(date) {
+    PERIODS.forEach(function(p) {
+      var rec = (all[date] && all[date][p.id]) ? all[date][p.id] : {};
+      var bgResult = classifyBG(rec.bg);
+      var statusMap = { normal:'正常', warn:'警戒', high:'高血糖', low:'低血糖' };
+      var bgStatus = bgResult ? (statusMap[bgResult.cls] || '') : '';
+      rows.push([
+        date,
+        p.label,
+        rec.time       || '',
+        rec.bg         || '',
+        bgStatus,
+        rec.insulin    || '',
+        rec.correction || '',
+        rec.carb       || '',
+        (rec.note || '').replace(/,/g, '，').replace(/\n/g, ' ')
+      ].join(','));
+    });
+  });
+
+  var csv = '﻿' + header + '\n' + rows.join('\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '胰島素紀錄_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📥 CSV 匯出成功！');
+}
+
+// ════════════════════════════════
+//  TOAST
+// ════════════════════════════════
+var toastTimer = null;
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2500);
+}
+
+// ════════════════════════════════
+//  SUPPLEMENTAL RECORDS (補打/補糖)
+// ════════════════════════════════
+
+function renderSupplList(type, items) {
+  const listEl = document.getElementById(type + '-list');
+  if (!listEl) return;
+
+  if (items.length === 0) {
+    const labels = { corrections: '尚無補打記錄', carbs: '尚無補糖記錄' };
+    listEl.innerHTML = `<div class="suppl-empty">${labels[type] || '尚無記錄'}</div>`;
+    return;
+  }
+
+  listEl.innerHTML = items.map((item, idx) => {
+    const isCorr = type === 'corrections';
+    const mainField = isCorr
+      ? `<div class="suppl-field">
+           <label>劑量</label>
+           <div class="field-input-wrap">
+             <input type="number" data-idx="${idx}" data-field="dose"
+                    class="suppl-val" value="${item.dose || ''}"
+                    min="0" max="100" step="0.5" placeholder="--" />
+             <span class="field-unit">單位</span>
+           </div>
+         </div>`
+      : `<div class="suppl-field">
+           <label>碳水量</label>
+           <div class="field-input-wrap">
+             <input type="number" data-idx="${idx}" data-field="carb"
+                    class="suppl-val" value="${item.carb || ''}"
+                    min="0" max="500" step="1" placeholder="--" />
+             <span class="field-unit">克</span>
+           </div>
+         </div>`;
+
+    return `
+      <div class="suppl-row" id="${type}-row-${idx}">
+        <div class="suppl-row-top">
+          ${mainField}
+          <div class="suppl-field">
+            <label>時間</label>
+            <input type="time" data-idx="${idx}" data-field="time"
+                   class="suppl-val" value="${item.time || ''}" />
+          </div>
+          <button class="suppl-del-btn" onclick="removeSupplRow('${type}', ${idx})" title="刪除">✕</button>
+        </div>
+        <div class="suppl-note">
+          <textarea rows="1" data-idx="${idx}" data-field="note"
+                    class="suppl-val" placeholder="備註（症狀、原因…）">${item.note || ''}</textarea>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function collectSupplRows(type) {
+  const listEl = document.getElementById(type + '-list');
+  if (!listEl) return [];
+  const rows = listEl.querySelectorAll('.suppl-row');
+  const result = [];
+  rows.forEach((row, idx) => {
+    const obj = {};
+    row.querySelectorAll('.suppl-val').forEach(el => {
+      obj[el.dataset.field] = el.value.trim();
+    });
+    if (Object.values(obj).some(v => v !== '')) result.push(obj);
+  });
+  return result;
+}
+
+function addSupplRow(type) {
+  const current = collectSupplRows(type);
+  current.push({});
+  renderSupplList(type, current);
+  // Focus the first input of the new row
+  const listEl = document.getElementById(type + '-list');
+  if (listEl) {
+    const last = listEl.querySelector('.suppl-row:last-child input');
+    if (last) last.focus();
+  }
+}
+
+function removeSupplRow(type, idx) {
+  const current = collectSupplRows(type);
+  current.splice(idx, 1);
+  renderSupplList(type, current);
+}
+
+// ════════════════════════════════
+//  CLOUD CONFIG UI
+// ════════════════════════════════
+function loadCloudConfigUI() {
+  const url = localStorage.getItem('sb_url') || DEFAULT_SB_URL;
+  const key = localStorage.getItem('sb_key') || DEFAULT_SB_KEY;
+  const el_url = document.getElementById('set-sb-url');
+  const el_key = document.getElementById('set-sb-key');
+  const el_id  = document.getElementById('myUserId');
+  if (el_url) el_url.value = url;
+  if (el_key) el_key.value = key;
+  if (el_id)  el_id.value  = currentUserId || '';
+
+  const status = document.getElementById('cloudStatus');
+  if (status) {
+    if (sbClient) {
+      status.textContent = '✅ 已連線至 Supabase';
+      status.style.color = '#22c55e';
+    } else if (url) {
+      status.textContent = '⚠️ 設定已填寫但連線未成功，請確認 URL 和 Key 正確';
+      status.style.color = '#f59e0b';
+    } else {
+      status.textContent = '尚未設定 — 目前使用本機儲存';
+      status.style.color = 'var(--text-muted)';
+    }
+  }
+}
+
+async function saveCloudConfig() {
+  const url = (document.getElementById('set-sb-url').value || '').trim();
+  const key = (document.getElementById('set-sb-key').value || '').trim();
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+  initSupabase();
+  loadCloudConfigUI();
+  if (sbClient) {
+    await loadFromCloud();
+    loadCloudConfigUI();
+    loadDayData();
+    showToast('✅ 雲端連線成功，資料已同步！');
+  } else {
+    showToast('⚠️ 連線失敗，請檢查 URL 和 Key');
+  }
+}
+
+function copyUserId() {
+  const id = currentUserId || '';
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(id).then(() => showToast('✅ 帳號 ID 已複製！'));
+  } else {
+    document.getElementById('myUserId').select();
+    document.execCommand('copy');
+    showToast('✅ 帳號 ID 已複製！');
+  }
+}
+
+function importUserId() {
+  const newId = (document.getElementById('importUserId').value || '').trim();
+  if (!newId) { showToast('⚠️ 請先貼入帳號 ID'); return; }
+  if (!confirm('套用新帳號 ID 後，此裝置將使用該帳號的雲端資料。確定繼續？')) return;
+  localStorage.setItem('user_id', newId);
+  currentUserId = newId;
+  document.getElementById('myUserId').value = newId;
+  document.getElementById('importUserId').value = '';
+  loadFromCloud().then(() => {
+    loadDayData();
+    showToast('✅ 帳號已切換，資料同步完成！');
+  });
+}
+
+// ════════════════════════════════
+//  INIT
+// ════════════════════════════════
+function init() {
+  buildPeriodCards();
+  var today = todayStr();
+  statAnchor = today;
+  document.getElementById('todayDate').value    = today;
+  document.getElementById('historyMonth').value = today.slice(0, 7);
+  document.getElementById('headerDate').innerHTML =
+    formatDateDisplay(today).replace('（', '<br>（');
+  loadDayData();
+  loadFromCloud().then(function(){ loadDayData(); });
+}
+
+
+// ══════════════════════════════════════════
+//  CALCULATOR DATA
+// ══════════════════════════════════════════
+const CALC_MEAL_PRESETS = {
+  breakfast: {
+    label: '早餐', cir: 7, isf: 110, target: 130,
+    notes: ['施打部位 >> 肚子', '施打完 15 分鐘後進食'],
+  },
+  lunch: {
+    label: '午餐', cir: 10, isf: 110, target: 150,
+    notes: [
+      '施打部位 >> 手臂',
+      '施打完 20 分鐘後進食',
+      '因為 11:30 開始吃，若當下血糖低於 130，打完胰島素後先補 1 顆葡萄糖片',
+      '週四體育課 >>> 低於 150 時先補充 2 顆糖；低於 170 時先補充 1 顆糖，預防性課間低血糖',
+    ],
+  },
+  dinner: {
+    label: '晚餐', cir: 10, isf: 110, target: 140,
+    notes: [
+      '施打部位 >> 左大腿',
+      '施打完 30~45 分鐘後進食',
+      '睡前長效固定 3 單位，施打部位 >> 右大腿',
+    ],
+  },
+};
+
+const CALC_CARB_FOODS = {
+  white_rice: 30, udon: 24.6, yangchun_noodle: 27.8, oil_noodle: 25.5,
+  spaghetti: 27.4, penne: 29, potato_skin: 12.9,
+  wheat_toast: 12, white_toast: 12, strawberry_toast: 15.25,
+  berry_party: 3.5, bacon_egg_pancake: 30, pan_fried_dumpling: 15,
+  dumpling: 4, soup_dumpling: 4.3,
+  mcd_combo_1: 66, mcd_combo_2: 55.2,
+  guava: 10.6, apple: 11.9, cherry: 19.12, banana_peel: 10.6, banana: 22.1,
+  pineapple: 13.6, dragon_fruit: 12.36, strawberry: 9.3,
+  milk_100: 4.8, milk_150: 7, milk_200: 10, yogurt_100: 12, yakult: 14.7,
+};
+
+const CALC_MAIN_OPTIONS = {
+  breakfast: [
+    { value: 'white_rice',         label: '白飯 100g (碳水30g)' },
+    { value: 'udon',               label: '烏龍麵 100g (碳水24.6g)' },
+    { value: 'yangchun_noodle',    label: '陽春麵 100g (碳水27.8g)' },
+    { value: 'oil_noodle',         label: '油麵 100g (碳水25.5g)' },
+    { value: 'spaghetti',          label: '義大利麵 100g (碳水27.4g)' },
+    { value: 'penne',              label: '筆管麵 100g (碳水29g)' },
+    { value: 'potato_skin',        label: '馬鈴薯帶皮 100g (碳水12.9g)' },
+    { value: 'wheat_toast',        label: '全麥吐司 1片 (碳水12g)' },
+    { value: 'white_toast',        label: '白吐司 1片 (碳水12g)' },
+    { value: 'strawberry_toast',   label: '草莓吐司 1片 (碳水15.25g)' },
+    { value: 'berry_party',        label: '莓果派對 1份 (碳水3.5g)' },
+    { value: 'bacon_egg_pancake',  label: '培根蛋餅 1份 (碳水30g)' },
+    { value: 'pan_fried_dumpling', label: '小煎餃 55g (碳水15g)' },
+    { value: 'dumpling',           label: '水餃 1顆 (碳水4g)' },
+    { value: 'soup_dumpling',      label: '湯包 1顆 (碳水4.3g)' },
+  ],
+  lunch: [
+    { value: 'white_rice',      label: '白飯 100g (碳水30g)' },
+    { value: 'udon',            label: '烏龍麵 100g (碳水24.6g)' },
+    { value: 'yangchun_noodle', label: '陽春麵 100g (碳水27.8g)' },
+    { value: 'oil_noodle',      label: '油麵 100g (碳水25.5g)' },
+    { value: 'spaghetti',       label: '義大利麵 100g (碳水27.4g)' },
+    { value: 'penne',           label: '筆管麵 100g (碳水29g)' },
+    { value: 'potato_skin',     label: '馬鈴薯帶皮 100g (碳水12.9g)' },
+    { value: 'dumpling',        label: '水餃 1顆 (碳水4g)' },
+    { value: 'soup_dumpling',   label: '湯包 1顆 (碳水4.3g)' },
+    { value: 'mcd_combo_1',     label: '麥當勞組合1（鱈魚堡＋玉米杯＋牛奶）(碳水66g)' },
+    { value: 'mcd_combo_2',     label: '麥當勞組合2（鱈魚堡＋玉米杯＋水果袋）(碳水55.2g)' },
+  ],
+  dinner: [
+    { value: 'white_rice',      label: '白飯 100g (碳水30g)' },
+    { value: 'udon',            label: '烏龍麵 100g (碳水24.6g)' },
+    { value: 'yangchun_noodle', label: '陽春麵 100g (碳水27.8g)' },
+    { value: 'oil_noodle',      label: '油麵 100g (碳水25.5g)' },
+    { value: 'spaghetti',       label: '義大利麵 100g (碳水27.4g)' },
+    { value: 'penne',           label: '筆管麵 100g (碳水29g)' },
+    { value: 'potato_skin',     label: '馬鈴薯帶皮 100g (碳水12.9g)' },
+    { value: 'dumpling',        label: '水餃 1顆 (碳水4g)' },
+    { value: 'soup_dumpling',   label: '湯包 1顆 (碳水4.3g)' },
+    { value: 'mcd_combo_1',     label: '麥當勞組合1（鱈魚堡＋玉米杯＋牛奶）(碳水66g)' },
+    { value: 'mcd_combo_2',     label: '麥當勞組合2（鱈魚堡＋玉米杯＋水果袋）(碳水55.2g)' },
+  ],
+};
+
+// ── period → meal mapping ──
+const PERIOD_TO_MEAL = { morning: 'breakfast', noon: 'lunch', evening: 'dinner' };
+let calcTargetPeriod = 'morning';
+
+// ── Open / Close ──
+function openCalcModal(periodId) {
+  calcTargetPeriod = periodId;
+  const meal = PERIOD_TO_MEAL[periodId] || 'breakfast';
+  document.getElementById('calc-meal-period').value = meal;
+
+  const bgVal = document.getElementById(periodId + '-bg').value;
+  if (bgVal) document.getElementById('calc-bg').value = bgVal;
+
+  // Reset food & IOB
+  [1,2,3,4].forEach(i => {
+    document.getElementById('calc-qty-' + i).value = 1;
+  });
+  document.getElementById('calc-food-3').value = '';
+  document.getElementById('calc-food-4').value = '';
+  document.getElementById('calc-iob').value = 0;
+  document.getElementById('calc-carbs').value = 60;
+  document.getElementById('calc-warnings').innerHTML = '';
+
+  calcUpdateMeal();
+  document.getElementById('calcOverlay').classList.add('open');
+}
+
+function closeCalcModal() {
+  document.getElementById('calcOverlay').classList.remove('open');
+}
+
+function calcOverlayClick(e) {
+  if (e.target.id === 'calcOverlay') closeCalcModal();
+}
+
+// ── Meal select → rebuild food dropdowns ──
+function calcUpdateMeal() {
+  const meal = document.getElementById('calc-meal-period').value;
+  const opts = CALC_MAIN_OPTIONS[meal] || CALC_MAIN_OPTIONS.breakfast;
+  const sel1 = document.getElementById('calc-food-1');
+  sel1.innerHTML = '<option value="">不選擇</option>' +
+    opts.map(o => '<option value="' + o.value + '">' + o.label + '</option>').join('');
+  calcUpdateFood1();
+}
+
+function calcUpdateFood1() {
+  const meal    = document.getElementById('calc-meal-period').value;
+  const opts    = CALC_MAIN_OPTIONS[meal] || CALC_MAIN_OPTIONS.breakfast;
+  const mainVal = document.getElementById('calc-food-1').value;
+  const sel2    = document.getElementById('calc-food-2');
+  sel2.innerHTML = '<option value="">不選擇</option>' +
+    opts.filter(o => o.value !== mainVal)
+        .map(o => '<option value="' + o.value + '">' + o.label + '</option>').join('');
+  calcRecalc();
+}
+
+// ── Core calculation ──
+function calcFmt(v) {
+  const r = Math.round(v * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1);
+}
+
+function calcRecalc() {
+  const meal   = document.getElementById('calc-meal-period').value;
+  const preset = CALC_MEAL_PRESETS[meal];
+
+  // Show preset values
+  document.getElementById('calc-cir-display').textContent    = preset.cir;
+  document.getElementById('calc-isf-display').textContent    = preset.isf;
+  document.getElementById('calc-target-display').textContent = preset.target;
+
+  // Meal notes
+  const notesEl = document.getElementById('calc-meal-notes');
+  if (preset.notes && preset.notes.length) {
+    notesEl.innerHTML = preset.notes.map(n => '<p>• ' + n + '</p>').join('');
+    notesEl.style.display = 'block';
+  } else {
+    notesEl.style.display = 'none';
+  }
+
+  // Carbs from food selection
+  let totalCarbs = 0, hasFood = false;
+  [1,2,3,4].forEach(function(i) {
+    const food = document.getElementById('calc-food-' + i).value;
+    const qty  = parseFloat(document.getElementById('calc-qty-' + i).value) || 0;
+    if (food && CALC_CARB_FOODS[food] !== undefined) {
+      totalCarbs += CALC_CARB_FOODS[food] * qty;
+      hasFood = true;
+    }
+  });
+  if (hasFood) {
+    document.getElementById('calc-carbs').value = Math.round(totalCarbs * 10) / 10;
+  }
+
+  // Calculate
+  const bg      = parseFloat(document.getElementById('calc-bg').value)    || 0;
+  const carbs   = parseFloat(document.getElementById('calc-carbs').value) || 0;
+  const iob     = Math.max(parseFloat(document.getElementById('calc-iob').value) || 0, 0);
+  const mealDose = carbs / preset.cir;
+  const corrDose = (bg - preset.target) / preset.isf;
+  const rawDose  = Math.max(0, mealDose + corrDose - iob);
+
+  document.getElementById('calc-meal-dose').textContent   = calcFmt(mealDose);
+  document.getElementById('calc-corr-dose').textContent   = calcFmt(corrDose);
+  document.getElementById('calc-iob-dose').textContent    = '-' + calcFmt(iob);
+  document.getElementById('calc-raw-dose').textContent    = calcFmt(rawDose);
+  document.getElementById('calc-result-dose').textContent = calcFmt(rawDose);
+
+  // Warnings
+  const warns = [];
+  if (bg > 0 && bg < 70)  warns.push('目前血糖偏低，建議先處理低血糖再評估是否施打。');
+  if (bg >= 250)           warns.push('目前血糖偏高，請依照醫療團隊的高血糖處置流程。');
+  if (rawDose === 0 && (carbs > 0 || bg > preset.target))
+    warns.push('估算結果為 0，請確認 CIR、ISF 與 IOB 設定值是否正確。');
+  document.getElementById('calc-warnings').innerHTML =
+    warns.map(w => '<div class="calc-warning">⚠️ ' + w + '</div>').join('');
+}
+
+// ── Apply result to tracker ──
+function calcApply() {
+  const meal   = document.getElementById('calc-meal-period').value;
+  const dose   = document.getElementById('calc-result-dose').textContent;
+  const carbs  = document.getElementById('calc-carbs').value;
+  const bg     = document.getElementById('calc-bg').value;
+
+  // Fill dose
+  document.getElementById(calcTargetPeriod + '-insulin').value = dose;
+
+  // Fill BG if empty
+  const bgField = document.getElementById(calcTargetPeriod + '-bg');
+  if (!bgField.value && bg) {
+    bgField.value = bg;
+    onBGInput(calcTargetPeriod);
+  }
+
+  // Build food summary
+  const foodLines = [];
+  [1,2,3,4].forEach(function(i) {
+    const sel = document.getElementById('calc-food-' + i);
+    const qty = document.getElementById('calc-qty-' + i).value;
+    if (sel.value && sel.selectedIndex > 0) {
+      const lbl = sel.options[sel.selectedIndex].text.split(' (')[0];
+      foodLines.push(lbl + ' x' + qty);
+    }
+  });
+
+  const preset = CALC_MEAL_PRESETS[meal];
+  const noteLines = [];
+  if (foodLines.length) noteLines.push('飲食：' + foodLines.join('、'));
+  noteLines.push('碳水：' + carbs + 'g｜建議劑量：' + dose + '單位');
+  if (preset.notes.length) noteLines.push('注意：' + preset.notes[0]);
+
+  const noteField = document.getElementById(calcTargetPeriod + '-note');
+  if (noteField.value) {
+    noteField.value += '\n' + noteLines.join('\n');
+  } else {
+    noteField.value = noteLines.join('\n');
+  }
+
+  closeCalcModal();
+  showToast('✅ 計算結果已帶入！');
+}
+
+
+init();
+</script>
+
+<!-- ══════════════ CALCULATOR MODAL ══════════════ -->
+<div id="calcOverlay" class="calc-overlay" onclick="calcOverlayClick(event)">
+  <div class="calc-modal">
+    <div class="calc-modal-header">
+      <h2>💊 餐前劑量計算</h2>
+      <button class="calc-close-btn" type="button" onclick="closeCalcModal()">✕</button>
+    </div>
+    <div class="calc-body">
+
+      <!-- 基本資訊 -->
+      <div class="calc-section">
+        <div class="calc-section-title">基本資訊</div>
+        <div class="calc-grid-2">
+          <div class="calc-field">
+            <label>餐別</label>
+            <select id="calc-meal-period" onchange="calcUpdateMeal()">
+              <option value="breakfast">🌅 早餐</option>
+              <option value="lunch">☀️ 午餐</option>
+              <option value="dinner">🌙 晚餐</option>
+            </select>
+          </div>
+          <div class="calc-field">
+            <label>目前血糖 (mg/dL)</label>
+            <input type="number" id="calc-bg" min="0" step="1" value="180" oninput="calcRecalc()" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 飲食紀錄 -->
+      <div class="calc-section">
+        <div class="calc-section-title">飲食紀錄</div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-main">主餐</span>
+          <select id="calc-food-1" onchange="calcUpdateFood1()"></select>
+          <input type="number" id="calc-qty-1" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-side">餐食2</span>
+          <select id="calc-food-2" onchange="calcRecalc()"></select>
+          <input type="number" id="calc-qty-2" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-fruit">甜點</span>
+          <select id="calc-food-3" onchange="calcRecalc()">
+            <option value="">不選擇</option>
+            <option value="guava">芭樂 100g (碳水10.6g)</option>
+            <option value="apple">蘋果 100g (碳水11.9g)</option>
+            <option value="cherry">櫻桃 100g (碳水19.12g)</option>
+            <option value="banana_peel">香蕉帶皮 100g (碳水10.6g)</option>
+            <option value="banana">香蕉去皮 100g (碳水22.1g)</option>
+            <option value="pineapple">鳳梨 100g (碳水13.6g)</option>
+            <option value="dragon_fruit">火龍果 100g (碳水12.36g)</option>
+            <option value="strawberry">草莓去蒂 100g (碳水9.3g)</option>
+          </select>
+          <input type="number" id="calc-qty-3" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-drink">飲品</span>
+          <select id="calc-food-4" onchange="calcRecalc()">
+            <option value="">不選擇</option>
+            <option value="milk_100">牛奶 100g (碳水4.8g)</option>
+            <option value="milk_150">牛奶 150g (碳水7g)</option>
+            <option value="milk_200">牛奶 200g (碳水10g)</option>
+            <option value="yogurt_100">優酪乳 100g (碳水12g)</option>
+            <option value="yakult">養樂多 90ML (碳水14.7g)</option>
+          </select>
+          <input type="number" id="calc-qty-4" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+      </div>
+
+      <!-- 劑量計算 -->
+      <div class="calc-section">
+        <div class="calc-section-title">劑量計算</div>
+        <div class="calc-grid-2">
+          <div class="calc-field">
+            <label>預計碳水量 (克)</label>
+            <input type="number" id="calc-carbs" min="0" step="1" value="60" oninput="calcRecalc()" />
+          </div>
+          <div class="calc-field">
+            <label>有效胰島素 IOB (單位)</label>
+            <input type="number" id="calc-iob" min="0" step="0.1" value="0" oninput="calcRecalc()" />
+          </div>
+        </div>
+        <div class="calc-preset-row">
+          <div class="calc-preset-item">
+            <span>CIR 醣類係數</span>
+            <strong id="calc-cir-display">10</strong>
+            <span>g / 單位</span>
+          </div>
+          <div class="calc-preset-item">
+            <span>ISF 敏感係數</span>
+            <strong id="calc-isf-display">50</strong>
+            <span>mg/dL / 單位</span>
+          </div>
+          <div class="calc-preset-item">
+            <span>目標血糖</span>
+            <strong id="calc-target-display">110</strong>
+            <span>mg/dL</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 警示 -->
+      <div id="calc-warnings"></div>
+
+      <!-- 計算結果 -->
+      <div class="calc-result-box">
+        <div class="calc-result-main"><span id="calc-result-dose">0</span><small> 單位</small></div>
+        <div class="calc-result-label">建議估算劑量</div>
+        <div class="calc-breakdown">
+          <div class="calc-breakdown-item"><span>碳水劑量</span><strong id="calc-meal-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>血糖校正</span><strong id="calc-corr-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>扣除 IOB</span><strong id="calc-iob-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>計算值</span><strong id="calc-raw-dose">0</strong></div>
+        </div>
+      </div>
+
+      <!-- 餐別備註 -->
+      <div id="calc-meal-notes" class="calc-notes" style="display:none"></div>
+
+      <!-- 帶入按鈕 -->
+      <button class="calc-apply-btn" type="button" onclick="calcApply()">✅ 帶入紀錄表</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
