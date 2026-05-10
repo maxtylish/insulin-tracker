@@ -684,6 +684,32 @@
 
     .history-day-body { display: none; }
     .history-day-body.open { display: block; }
+    .history-day-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .hist-edit-btn, .hist-del-btn {
+      border: none;
+      border-radius: 7px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .hist-edit-btn {
+      background: #eff6ff;
+      color: #2563eb;
+    }
+    .hist-edit-btn:hover { background: #2563eb; color: white; }
+    .hist-del-btn {
+      background: #fef2f2;
+      color: #ef4444;
+    }
+    .hist-del-btn:hover { background: #ef4444; color: white; }
 
     .history-row {
       display: grid;
@@ -1905,9 +1931,15 @@ function renderHistory() {
     return `
       <div class="history-day">
         <div class="history-day-header" onclick="toggleDay('${id}')">
-          <h4>${formatDateDisplay(date)}</h4>
-          <div style="display:flex;align-items:center;gap:10px">
+          <div>
+            <h4>${formatDateDisplay(date)}</h4>
             <span class="summary">${summaryParts.join('　')}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="history-day-actions" onclick="event.stopPropagation()">
+              <button class="hist-edit-btn" onclick="editHistoryDay('${date}')">✏️ 編輯</button>
+              <button class="hist-del-btn"  onclick="deleteHistoryDay('${date}')">🗑️ 刪除</button>
+            </div>
             <span class="toggle-arrow">▾</span>
           </div>
         </div>
@@ -1927,6 +1959,24 @@ function toggleDay(id) {
   const header = body.previousElementSibling;
   body.classList.toggle('open');
   header.classList.toggle('open');
+}
+
+function editHistoryDay(date) {
+  // Jump to 今日記錄 tab and load that date's data
+  document.getElementById('todayDate').value = date;
+  loadDayData();
+  switchTab('today');
+  showToast('📝 已載入 ' + date + ' 的紀錄，修改後請按儲存');
+}
+
+function deleteHistoryDay(date) {
+  const label = formatDateDisplay(date);
+  if (!confirm('確定要刪除「' + label + '」的所有紀錄嗎？\n此操作無法復原。')) return;
+  const all = getAllData();
+  delete all[date];
+  setAllData(all);
+  renderHistory();
+  showToast('🗑️ 已刪除 ' + date + ' 的紀錄');
 }
 
 // ══════════════════════════════════════════
@@ -3711,9 +3761,15 @@ function renderHistory() {
     return `
       <div class="history-day">
         <div class="history-day-header" onclick="toggleDay('${id}')">
-          <h4>${formatDateDisplay(date)}</h4>
-          <div style="display:flex;align-items:center;gap:10px">
+          <div>
+            <h4>${formatDateDisplay(date)}</h4>
             <span class="summary">${summaryParts.join('　')}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="history-day-actions" onclick="event.stopPropagation()">
+              <button class="hist-edit-btn" onclick="editHistoryDay('${date}')">✏️ 編輯</button>
+              <button class="hist-del-btn"  onclick="deleteHistoryDay('${date}')">🗑️ 刪除</button>
+            </div>
             <span class="toggle-arrow">▾</span>
           </div>
         </div>
@@ -3733,6 +3789,24 @@ function toggleDay(id) {
   const header = body.previousElementSibling;
   body.classList.toggle('open');
   header.classList.toggle('open');
+}
+
+function editHistoryDay(date) {
+  // Jump to 今日記錄 tab and load that date's data
+  document.getElementById('todayDate').value = date;
+  loadDayData();
+  switchTab('today');
+  showToast('📝 已載入 ' + date + ' 的紀錄，修改後請按儲存');
+}
+
+function deleteHistoryDay(date) {
+  const label = formatDateDisplay(date);
+  if (!confirm('確定要刪除「' + label + '」的所有紀錄嗎？\n此操作無法復原。')) return;
+  const all = getAllData();
+  delete all[date];
+  setAllData(all);
+  renderHistory();
+  showToast('🗑️ 已刪除 ' + date + ' 的紀錄');
 }
 
 // ══════════════════════════════════════════
@@ -4638,73 +4712,4 @@ function copyUserId() {
 function showCustomIdInput() {
   const row = document.getElementById('customIdRow');
   if (!row) return;
-  const isHidden = row.style.display === 'none' || row.style.display === '';
-  row.style.display = isHidden ? 'block' : 'none';
-  if (isHidden) {
-    const inp = document.getElementById('customIdInput');
-    if (inp) { inp.value = currentUserId || ''; inp.focus(); inp.select(); }
-  }
-}
-
-async function applyCustomId() {
-  const newId = (document.getElementById('customIdInput').value || '').trim();
-  if (!newId) { showToast('⚠️ 請輸入帳號 ID'); return; }
-  if (newId.length < 3) { showToast('⚠️ ID 至少需要 3 個字元'); return; }
-  if (newId === currentUserId) {
-    document.getElementById('customIdRow').style.display = 'none';
-    return;
-  }
-  if (!confirm('確定要將帳號 ID 設定為「' + newId + '」嗎？\n現有資料會一起搬移到新 ID。')) return;
-
-  // 搬移現有資料到新 ID
-  const existingData = getAllData();
-  const dates = Object.keys(existingData);
-  if (sbClient && dates.length > 0) {
-    setSyncBadge('⏳ 搬移資料中…', 'sync-busy');
-    try {
-      const rows = dates.map(d => ({
-        user_id: newId,
-        date: d,
-        data: existingData[d],
-        updated_at: new Date().toISOString()
-      }));
-      await sbClient.from('insulin_records').upsert(rows, { onConflict: 'user_id,date' });
-    } catch(e) { console.warn('Migration failed:', e); }
-  }
-
-  // 切換 ID
-  saveUserId(newId);
-  currentUserId = newId;
-  const dispEl = document.getElementById('currentIdDisplay');
-  if (dispEl) dispEl.textContent = newId;
-  document.getElementById('customIdRow').style.display = 'none';
-
-  await loadFromCloud();
-  loadDayData();
-  showToast('✅ 帳號 ID 已設定，資料已同步！');
-}
-
-function importUserId() {
-  applyCustomId();
-}
-
-// ════════════════════════════════
-//  INIT
-// ════════════════════════════════
-function init() {
-  initSupabase();   // ← 每次載入頁面都自動連線
-  buildPeriodCards();
-  var today = todayStr();
-  statAnchor = today;
-  document.getElementById('todayDate').value    = today;
-  document.getElementById('historyMonth').value = today.slice(0, 7);
-  document.getElementById('headerDate').innerHTML =
-    formatDateDisplay(today).replace('（', '<br>（');
-  loadDayData();
-  loadFromCloud().then(function(){ loadDayData(); });
-}
-
-
-// ══════════════════════════════════════════
-//  CALCULATOR DATA
-// ══�
+  const isHidden = row.style.display

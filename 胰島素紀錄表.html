@@ -684,6 +684,32 @@
 
     .history-day-body { display: none; }
     .history-day-body.open { display: block; }
+    .history-day-actions {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .hist-edit-btn, .hist-del-btn {
+      border: none;
+      border-radius: 7px;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .hist-edit-btn {
+      background: #eff6ff;
+      color: #2563eb;
+    }
+    .hist-edit-btn:hover { background: #2563eb; color: white; }
+    .hist-del-btn {
+      background: #fef2f2;
+      color: #ef4444;
+    }
+    .hist-del-btn:hover { background: #ef4444; color: white; }
 
     .history-row {
       display: grid;
@@ -1905,9 +1931,15 @@ function renderHistory() {
     return `
       <div class="history-day">
         <div class="history-day-header" onclick="toggleDay('${id}')">
-          <h4>${formatDateDisplay(date)}</h4>
-          <div style="display:flex;align-items:center;gap:10px">
+          <div>
+            <h4>${formatDateDisplay(date)}</h4>
             <span class="summary">${summaryParts.join('　')}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="history-day-actions" onclick="event.stopPropagation()">
+              <button class="hist-edit-btn" onclick="editHistoryDay('${date}')">✏️ 編輯</button>
+              <button class="hist-del-btn"  onclick="deleteHistoryDay('${date}')">🗑️ 刪除</button>
+            </div>
             <span class="toggle-arrow">▾</span>
           </div>
         </div>
@@ -1927,6 +1959,24 @@ function toggleDay(id) {
   const header = body.previousElementSibling;
   body.classList.toggle('open');
   header.classList.toggle('open');
+}
+
+function editHistoryDay(date) {
+  // Jump to 今日記錄 tab and load that date's data
+  document.getElementById('todayDate').value = date;
+  loadDayData();
+  switchTab('today');
+  showToast('📝 已載入 ' + date + ' 的紀錄，修改後請按儲存');
+}
+
+function deleteHistoryDay(date) {
+  const label = formatDateDisplay(date);
+  if (!confirm('確定要刪除「' + label + '」的所有紀錄嗎？\n此操作無法復原。')) return;
+  const all = getAllData();
+  delete all[date];
+  setAllData(all);
+  renderHistory();
+  showToast('🗑️ 已刪除 ' + date + ' 的紀錄');
 }
 
 // ══════════════════════════════════════════
@@ -3711,9 +3761,15 @@ function renderHistory() {
     return `
       <div class="history-day">
         <div class="history-day-header" onclick="toggleDay('${id}')">
-          <h4>${formatDateDisplay(date)}</h4>
-          <div style="display:flex;align-items:center;gap:10px">
+          <div>
+            <h4>${formatDateDisplay(date)}</h4>
             <span class="summary">${summaryParts.join('　')}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="history-day-actions" onclick="event.stopPropagation()">
+              <button class="hist-edit-btn" onclick="editHistoryDay('${date}')">✏️ 編輯</button>
+              <button class="hist-del-btn"  onclick="deleteHistoryDay('${date}')">🗑️ 刪除</button>
+            </div>
             <span class="toggle-arrow">▾</span>
           </div>
         </div>
@@ -3733,6 +3789,24 @@ function toggleDay(id) {
   const header = body.previousElementSibling;
   body.classList.toggle('open');
   header.classList.toggle('open');
+}
+
+function editHistoryDay(date) {
+  // Jump to 今日記錄 tab and load that date's data
+  document.getElementById('todayDate').value = date;
+  loadDayData();
+  switchTab('today');
+  showToast('📝 已載入 ' + date + ' 的紀錄，修改後請按儲存');
+}
+
+function deleteHistoryDay(date) {
+  const label = formatDateDisplay(date);
+  if (!confirm('確定要刪除「' + label + '」的所有紀錄嗎？\n此操作無法復原。')) return;
+  const all = getAllData();
+  delete all[date];
+  setAllData(all);
+  renderHistory();
+  showToast('🗑️ 已刪除 ' + date + ' 的紀錄');
 }
 
 // ══════════════════════════════════════════
