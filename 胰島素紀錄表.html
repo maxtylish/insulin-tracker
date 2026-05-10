@@ -2829,10 +2829,22 @@ function renderSupplList(type, items) {
            </div>
          </div>`;
 
+    const bgField = !isCorr ? `
+      <div class="suppl-field">
+        <label>當前血糖</label>
+        <div class="field-input-wrap">
+          <input type="number" data-idx="${idx}" data-field="bg"
+                 class="suppl-val" value="${item.bg || ''}"
+                 min="20" max="600" step="1" placeholder="--" />
+          <span class="field-unit">mg/dL</span>
+        </div>
+      </div>` : '';
+
     return `
       <div class="suppl-row" id="${type}-row-${idx}">
-        <div class="suppl-row-top">
+        <div class="suppl-row-top" style="${!isCorr ? 'grid-template-columns:1fr 1fr 1fr auto' : ''}">
           ${mainField}
+          ${bgField}
           <div class="suppl-field">
             <label>時間</label>
             <input type="time" data-idx="${idx}" data-field="time"
@@ -4659,10 +4671,22 @@ function renderSupplList(type, items) {
            </div>
          </div>`;
 
+    const bgField = !isCorr ? `
+      <div class="suppl-field">
+        <label>當前血糖</label>
+        <div class="field-input-wrap">
+          <input type="number" data-idx="${idx}" data-field="bg"
+                 class="suppl-val" value="${item.bg || ''}"
+                 min="20" max="600" step="1" placeholder="--" />
+          <span class="field-unit">mg/dL</span>
+        </div>
+      </div>` : '';
+
     return `
       <div class="suppl-row" id="${type}-row-${idx}">
-        <div class="suppl-row-top">
+        <div class="suppl-row-top" style="${!isCorr ? 'grid-template-columns:1fr 1fr 1fr auto' : ''}">
           ${mainField}
+          ${bgField}
           <div class="suppl-field">
             <label>時間</label>
             <input type="time" data-idx="${idx}" data-field="time"
