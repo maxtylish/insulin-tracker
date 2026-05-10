@@ -399,10 +399,21 @@
     }
     .snack-row-top {
       display: grid;
-      grid-template-columns: 1.6fr 0.9fr 1fr auto;
-      gap: 10px;
+      grid-template-columns: 1.3fr 0.7fr 0.7fr 0.8fr 1fr auto;
+      gap: 8px;
       align-items: end;
       margin-bottom: 8px;
+    }
+    .snack-calc-hint {
+      font-size: 0.68rem;
+      color: #059669;
+      margin-top: 3px;
+      font-weight: 600;
+      min-height: 1em;
+    }
+    .snack-dose-auto {
+      border-color: #10b981 !important;
+      background: #f0fdf4 !important;
     }
     .snack-field label {
       display: block;
@@ -1452,9 +1463,9 @@ const PERIODS = [
 ];
 
 const SNACK_SECTIONS = [
-  { id: 'snack-morning-noon',      label: '早餐後～午餐前點心', icon: '🍎', after: 'morning' },
-  { id: 'snack-noon-evening',      label: '午餐後～晚餐前點心', icon: '🥝', after: 'noon'    },
-  { id: 'snack-evening-bedtime',   label: '晚餐後～睡前點心',   icon: '🍊', after: 'evening' },
+  { id: 'snack-morning-noon',    label: '早餐後～午餐前點心', icon: '🍎', after: 'morning', cir: 7,  isf: 110, target: 130, cirLabel: '早餐 CIR=7'  },
+  { id: 'snack-noon-evening',    label: '午餐後～晚餐前點心', icon: '🥝', after: 'noon',    cir: 10, isf: 110, target: 150, cirLabel: '午餐 CIR=10' },
+  { id: 'snack-evening-bedtime', label: '晚餐後～睡前點心',   icon: '🍊', after: 'evening', cir: 10, isf: 110, target: 140, cirLabel: '晚餐 CIR=10' },
 ];
 const SNACK_TYPES = ['麵包/餅乾', '水果', '飲料', '堅果', '甜點', '其他'];
 
@@ -2340,11 +2351,28 @@ function renderSnackSection(sectionId, items) {
 
   if (items.length === 0) { listEl.innerHTML = ''; return; }
 
+  // Find CIR/ISF/target for this section
+  var sec = SNACK_SECTIONS.filter(function(s){ return s.id === sectionId; })[0] || { cir:10, isf:110, target:140, cirLabel:'' };
+
   listEl.innerHTML = items.map(function(item, idx) {
     var typeOptions = SNACK_TYPES.map(function(t) {
       return '<option value="' + t + '"' + (item.type === t ? ' selected' : '') + '>' + t + '</option>';
     }).join('');
     var isOther = item.type === '其他';
+
+    // Pre-compute hint
+    var carb = parseFloat(item.carb) || 0;
+    var bg   = parseFloat(item.bg)   || 0;
+    var hint = '';
+    if (carb > 0) {
+      var mealD = carb / sec.cir;
+      var corrD = bg > 0 ? (bg - sec.target) / sec.isf : 0;
+      var total = Math.max(0, mealD + corrD);
+      hint = '碳水劑量 ' + mealD.toFixed(1) + 'u';
+      if (bg > 0) hint += (corrD >= 0 ? ' + 修正 ' : ' − 修正 ') + Math.abs(corrD).toFixed(1) + 'u = <strong>' + total.toFixed(1) + 'u</strong>';
+    }
+
+    var doseAutoClass = (carb > 0 && item.dose) ? ' snack-dose-auto' : '';
 
     return '<div class="snack-row" id="' + sectionId + '-row-' + idx + '">' +
       '<div class="snack-row-top">' +
@@ -2355,8 +2383,26 @@ function renderSnackSection(sectionId, items) {
             '<option value="">-- 選擇 --</option>' + typeOptions +
           '</select>' +
           '<input type="text" class="snack-val snack-custom-input" data-idx="' + idx + '" data-field="typeCustom"' +
-            ' placeholder="自填食物名稱" value="' + (item.typeCustom || '') + '"' +
+            ' placeholder="自填名稱" value="' + (item.typeCustom || '') + '"' +
             ' style="' + (isOther ? '' : 'display:none') + '" />' +
+        '</div>' +
+        '<div class="snack-field">' +
+          '<label>碳水(g)</label>' +
+          '<div class="field-input-wrap">' +
+            '<input type="number" class="snack-val" data-idx="' + idx + '" data-field="carb"' +
+              ' value="' + (item.carb || '') + '" min="0" max="300" step="0.5" placeholder="--"' +
+              ' oninput="calcSnackDose(\'' + sectionId + '\',' + idx + ')" />' +
+            '<span class="field-unit">g</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="snack-field">' +
+          '<label>血糖</label>' +
+          '<div class="field-input-wrap">' +
+            '<input type="number" class="snack-val" data-idx="' + idx + '" data-field="bg"' +
+              ' value="' + (item.bg || '') + '" min="20" max="600" step="1" placeholder="--"' +
+              ' oninput="calcSnackDose(\'' + sectionId + '\',' + idx + ')" />' +
+            '<span class="field-unit">mg/dL</span>' +
+          '</div>' +
         '</div>' +
         '<div class="snack-field">' +
           '<label>時間</label>' +
@@ -2364,12 +2410,14 @@ function renderSnackSection(sectionId, items) {
             ' value="' + (item.time || getNowTime()) + '" />' +
         '</div>' +
         '<div class="snack-field">' +
-          '<label>補打胰島素</label>' +
+          '<label>補打劑量</label>' +
           '<div class="field-input-wrap">' +
-            '<input type="number" class="snack-val" data-idx="' + idx + '" data-field="dose"' +
+            '<input type="number" class="snack-val' + doseAutoClass + '" id="' + sectionId + '-dose-' + idx + '"' +
+              ' data-idx="' + idx + '" data-field="dose"' +
               ' value="' + (item.dose || '') + '" min="0" max="50" step="0.5" placeholder="--" />' +
             '<span class="field-unit">單位</span>' +
           '</div>' +
+          '<div class="snack-calc-hint" id="' + sectionId + '-hint-' + idx + '">' + hint + '</div>' +
         '</div>' +
         '<button class="suppl-del-btn" onclick="removeSnackRow(\'' + sectionId + '\',' + idx + ')" title="刪除">✕</button>' +
       '</div>' +
@@ -2419,6 +2467,52 @@ function onSnackTypeChange(sectionId, idx, selectEl) {
   if (customInput) {
     customInput.style.display = selectEl.value === '其他' ? '' : 'none';
     if (selectEl.value !== '其他') customInput.value = '';
+  }
+}
+
+function calcSnackDose(sectionId, idx) {
+  var sec = SNACK_SECTIONS.filter(function(s){ return s.id === sectionId; })[0];
+  if (!sec) return;
+
+  var rowEl  = document.getElementById(sectionId + '-row-' + idx);
+  if (!rowEl) return;
+
+  var carbEl = rowEl.querySelector('[data-field="carb"]');
+  var bgEl   = rowEl.querySelector('[data-field="bg"]');
+  var doseEl = document.getElementById(sectionId + '-dose-' + idx);
+  var hintEl = document.getElementById(sectionId + '-hint-' + idx);
+
+  var carb = parseFloat((carbEl && carbEl.value) || 0) || 0;
+  var bg   = parseFloat((bgEl   && bgEl.value)   || 0) || 0;
+
+  if (carb <= 0) {
+    if (hintEl) hintEl.innerHTML = '';
+    if (doseEl) doseEl.classList.remove('snack-dose-auto');
+    return;
+  }
+
+  var mealD  = carb / sec.cir;
+  var corrD  = bg > 0 ? (bg - sec.target) / sec.isf : 0;
+  var total  = Math.max(0, mealD + corrD);
+  var rounded = Math.round(total * 2) / 2; // round to nearest 0.5u
+
+  // Auto-fill dose
+  if (doseEl) {
+    doseEl.value = rounded > 0 ? rounded : '';
+    doseEl.classList.toggle('snack-dose-auto', rounded > 0);
+  }
+
+  // Show hint
+  if (hintEl) {
+    var hint = '碳水 ' + mealD.toFixed(1) + 'u';
+    if (bg > 0) {
+      hint += (corrD >= 0 ? ' + 修正 ' : ' − 修正 ') + Math.abs(corrD).toFixed(1) + 'u';
+      hint += ' = <strong>' + total.toFixed(1) + 'u → 四捨五入 ' + rounded + 'u</strong>';
+    } else {
+      hint += ' <span style="color:#94a3b8">（未輸入血糖，不含修正）</span>';
+    }
+    hint += ' <span style="font-weight:400;color:#94a3b8">(' + sec.cirLabel + ')</span>';
+    hintEl.innerHTML = hint;
   }
 }
 
@@ -3155,9 +3249,9 @@ const PERIODS = [
 ];
 
 const SNACK_SECTIONS = [
-  { id: 'snack-morning-noon',      label: '早餐後～午餐前點心', icon: '🍎', after: 'morning' },
-  { id: 'snack-noon-evening',      label: '午餐後～晚餐前點心', icon: '🥝', after: 'noon'    },
-  { id: 'snack-evening-bedtime',   label: '晚餐後～睡前點心',   icon: '🍊', after: 'evening' },
+  { id: 'snack-morning-noon',    label: '早餐後～午餐前點心', icon: '🍎', after: 'morning', cir: 7,  isf: 110, target: 130, cirLabel: '早餐 CIR=7'  },
+  { id: 'snack-noon-evening',    label: '午餐後～晚餐前點心', icon: '🥝', after: 'noon',    cir: 10, isf: 110, target: 150, cirLabel: '午餐 CIR=10' },
+  { id: 'snack-evening-bedtime', label: '晚餐後～睡前點心',   icon: '🍊', after: 'evening', cir: 10, isf: 110, target: 140, cirLabel: '晚餐 CIR=10' },
 ];
 const SNACK_TYPES = ['麵包/餅乾', '水果', '飲料', '堅果', '甜點', '其他'];
 
@@ -4043,11 +4137,28 @@ function renderSnackSection(sectionId, items) {
 
   if (items.length === 0) { listEl.innerHTML = ''; return; }
 
+  // Find CIR/ISF/target for this section
+  var sec = SNACK_SECTIONS.filter(function(s){ return s.id === sectionId; })[0] || { cir:10, isf:110, target:140, cirLabel:'' };
+
   listEl.innerHTML = items.map(function(item, idx) {
     var typeOptions = SNACK_TYPES.map(function(t) {
       return '<option value="' + t + '"' + (item.type === t ? ' selected' : '') + '>' + t + '</option>';
     }).join('');
     var isOther = item.type === '其他';
+
+    // Pre-compute hint
+    var carb = parseFloat(item.carb) || 0;
+    var bg   = parseFloat(item.bg)   || 0;
+    var hint = '';
+    if (carb > 0) {
+      var mealD = carb / sec.cir;
+      var corrD = bg > 0 ? (bg - sec.target) / sec.isf : 0;
+      var total = Math.max(0, mealD + corrD);
+      hint = '碳水劑量 ' + mealD.toFixed(1) + 'u';
+      if (bg > 0) hint += (corrD >= 0 ? ' + 修正 ' : ' − 修正 ') + Math.abs(corrD).toFixed(1) + 'u = <strong>' + total.toFixed(1) + 'u</strong>';
+    }
+
+    var doseAutoClass = (carb > 0 && item.dose) ? ' snack-dose-auto' : '';
 
     return '<div class="snack-row" id="' + sectionId + '-row-' + idx + '">' +
       '<div class="snack-row-top">' +
@@ -4058,8 +4169,26 @@ function renderSnackSection(sectionId, items) {
             '<option value="">-- 選擇 --</option>' + typeOptions +
           '</select>' +
           '<input type="text" class="snack-val snack-custom-input" data-idx="' + idx + '" data-field="typeCustom"' +
-            ' placeholder="自填食物名稱" value="' + (item.typeCustom || '') + '"' +
+            ' placeholder="自填名稱" value="' + (item.typeCustom || '') + '"' +
             ' style="' + (isOther ? '' : 'display:none') + '" />' +
+        '</div>' +
+        '<div class="snack-field">' +
+          '<label>碳水(g)</label>' +
+          '<div class="field-input-wrap">' +
+            '<input type="number" class="snack-val" data-idx="' + idx + '" data-field="carb"' +
+              ' value="' + (item.carb || '') + '" min="0" max="300" step="0.5" placeholder="--"' +
+              ' oninput="calcSnackDose(\'' + sectionId + '\',' + idx + ')" />' +
+            '<span class="field-unit">g</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="snack-field">' +
+          '<label>血糖</label>' +
+          '<div class="field-input-wrap">' +
+            '<input type="number" class="snack-val" data-idx="' + idx + '" data-field="bg"' +
+              ' value="' + (item.bg || '') + '" min="20" max="600" step="1" placeholder="--"' +
+              ' oninput="calcSnackDose(\'' + sectionId + '\',' + idx + ')" />' +
+            '<span class="field-unit">mg/dL</span>' +
+          '</div>' +
         '</div>' +
         '<div class="snack-field">' +
           '<label>時間</label>' +
@@ -4067,12 +4196,14 @@ function renderSnackSection(sectionId, items) {
             ' value="' + (item.time || getNowTime()) + '" />' +
         '</div>' +
         '<div class="snack-field">' +
-          '<label>補打胰島素</label>' +
+          '<label>補打劑量</label>' +
           '<div class="field-input-wrap">' +
-            '<input type="number" class="snack-val" data-idx="' + idx + '" data-field="dose"' +
+            '<input type="number" class="snack-val' + doseAutoClass + '" id="' + sectionId + '-dose-' + idx + '"' +
+              ' data-idx="' + idx + '" data-field="dose"' +
               ' value="' + (item.dose || '') + '" min="0" max="50" step="0.5" placeholder="--" />' +
             '<span class="field-unit">單位</span>' +
           '</div>' +
+          '<div class="snack-calc-hint" id="' + sectionId + '-hint-' + idx + '">' + hint + '</div>' +
         '</div>' +
         '<button class="suppl-del-btn" onclick="removeSnackRow(\'' + sectionId + '\',' + idx + ')" title="刪除">✕</button>' +
       '</div>' +
@@ -4122,6 +4253,52 @@ function onSnackTypeChange(sectionId, idx, selectEl) {
   if (customInput) {
     customInput.style.display = selectEl.value === '其他' ? '' : 'none';
     if (selectEl.value !== '其他') customInput.value = '';
+  }
+}
+
+function calcSnackDose(sectionId, idx) {
+  var sec = SNACK_SECTIONS.filter(function(s){ return s.id === sectionId; })[0];
+  if (!sec) return;
+
+  var rowEl  = document.getElementById(sectionId + '-row-' + idx);
+  if (!rowEl) return;
+
+  var carbEl = rowEl.querySelector('[data-field="carb"]');
+  var bgEl   = rowEl.querySelector('[data-field="bg"]');
+  var doseEl = document.getElementById(sectionId + '-dose-' + idx);
+  var hintEl = document.getElementById(sectionId + '-hint-' + idx);
+
+  var carb = parseFloat((carbEl && carbEl.value) || 0) || 0;
+  var bg   = parseFloat((bgEl   && bgEl.value)   || 0) || 0;
+
+  if (carb <= 0) {
+    if (hintEl) hintEl.innerHTML = '';
+    if (doseEl) doseEl.classList.remove('snack-dose-auto');
+    return;
+  }
+
+  var mealD  = carb / sec.cir;
+  var corrD  = bg > 0 ? (bg - sec.target) / sec.isf : 0;
+  var total  = Math.max(0, mealD + corrD);
+  var rounded = Math.round(total * 2) / 2; // round to nearest 0.5u
+
+  // Auto-fill dose
+  if (doseEl) {
+    doseEl.value = rounded > 0 ? rounded : '';
+    doseEl.classList.toggle('snack-dose-auto', rounded > 0);
+  }
+
+  // Show hint
+  if (hintEl) {
+    var hint = '碳水 ' + mealD.toFixed(1) + 'u';
+    if (bg > 0) {
+      hint += (corrD >= 0 ? ' + 修正 ' : ' − 修正 ') + Math.abs(corrD).toFixed(1) + 'u';
+      hint += ' = <strong>' + total.toFixed(1) + 'u → 四捨五入 ' + rounded + 'u</strong>';
+    } else {
+      hint += ' <span style="color:#94a3b8">（未輸入血糖，不含修正）</span>';
+    }
+    hint += ' <span style="font-weight:400;color:#94a3b8">(' + sec.cirLabel + ')</span>';
+    hintEl.innerHTML = hint;
   }
 }
 
@@ -4520,206 +4697,4 @@ const CALC_MAIN_OPTIONS = {
 
 // ── period → meal mapping ──
 const PERIOD_TO_MEAL = { morning: 'breakfast', noon: 'lunch', evening: 'dinner' };
-let calcTargetPeriod = 'morning';
-
-// ── Open / Close ──
-function openCalcModal(periodId) {
-  try {
-  calcTargetPeriod = periodId;
-  const meal = PERIOD_TO_MEAL[periodId] || 'breakfast';
-  document.getElementById('calc-meal-period').value = meal;
-
-  const bgVal = document.getElementById(periodId + '-bg').value;
-  if (bgVal) document.getElementById('calc-bg').value = bgVal;
-
-  // Reset food & IOB
-  [1,2,3,4].forEach(i => {
-    document.getElementById('calc-qty-' + i).value = 1;
-  });
-  document.getElementById('calc-food-3').value = '';
-  document.getElementById('calc-food-4').value = '';
-  document.getElementById('calc-iob').value = 0;
-  const otherCarbsEl = document.getElementById('calc-other-carbs');
-  const otherNameEl  = document.getElementById('calc-other-name');
-  if (otherCarbsEl) otherCarbsEl.value = '';
-  if (otherNameEl)  otherNameEl.value  = '';
-  document.getElementById('calc-carbs').value = 60;
-  document.getElementById('calc-warnings').innerHTML = '';
-
-  calcUpdateMeal();
-  document.getElementById('calcOverlay').classList.add('open');
-  } catch(err) {
-    showToast('❌ 錯誤：' + err.message);
-    console.error('openCalcModal error:', err);
-  }
-}
-
-function closeCalcModal() {
-  document.getElementById('calcOverlay').classList.remove('open');
-}
-
-function calcOverlayClick(e) {
-  if (e.target.id === 'calcOverlay') closeCalcModal();
-}
-
-// ── Meal select → rebuild food dropdowns ──
-function calcUpdateMeal() {
-  const meal = document.getElementById('calc-meal-period').value;
-  const opts = CALC_MAIN_OPTIONS[meal] || CALC_MAIN_OPTIONS.breakfast;
-  const sel1 = document.getElementById('calc-food-1');
-  sel1.innerHTML = '<option value="">不選擇</option>' +
-    opts.map(o => '<option value="' + o.value + '">' + o.label + '</option>').join('');
-  calcUpdateFood1();
-}
-
-function calcUpdateFood1() {
-  const meal    = document.getElementById('calc-meal-period').value;
-  const opts    = CALC_MAIN_OPTIONS[meal] || CALC_MAIN_OPTIONS.breakfast;
-  const mainVal = document.getElementById('calc-food-1').value;
-  const sel2    = document.getElementById('calc-food-2');
-  sel2.innerHTML = '<option value="">不選擇</option>' +
-    opts.filter(o => o.value !== mainVal)
-        .map(o => '<option value="' + o.value + '">' + o.label + '</option>').join('');
-  calcRecalc();
-}
-
-// ── Core calculation ──
-function calcFmt(v) {
-  const r = Math.round(v * 10) / 10;
-  return Number.isInteger(r) ? String(r) : r.toFixed(1);
-}
-
-function calcRecalc() {
-  const meal   = document.getElementById('calc-meal-period').value;
-  const preset = CALC_MEAL_PRESETS[meal];
-
-  // Show preset values
-  document.getElementById('calc-cir-display').textContent    = preset.cir;
-  document.getElementById('calc-isf-display').textContent    = preset.isf;
-  document.getElementById('calc-target-display').textContent = preset.target;
-
-  // Meal notes
-  const notesEl = document.getElementById('calc-meal-notes');
-  if (preset.notes && preset.notes.length) {
-    notesEl.innerHTML = preset.notes.map(n => '<p>• ' + n + '</p>').join('');
-    notesEl.style.display = 'block';
-  } else {
-    notesEl.style.display = 'none';
-  }
-
-  // Carbs from food selection
-  let totalCarbs = 0, hasFood = false;
-  [1,2,3,4].forEach(function(i) {
-    const food = document.getElementById('calc-food-' + i).value;
-    const qty  = parseFloat(document.getElementById('calc-qty-' + i).value) || 0;
-    if (food && CALC_CARB_FOODS[food] !== undefined) {
-      totalCarbs += CALC_CARB_FOODS[food] * qty;
-      hasFood = true;
-    }
-  });
-  // 加上「其他」手動輸入的碳水
-  const otherEl = document.getElementById('calc-other-carbs');
-  const otherCarbs = otherEl ? (parseFloat(otherEl.value) || 0) : 0;
-  if (otherCarbs > 0) { totalCarbs += otherCarbs; hasFood = true; }
-
-  if (hasFood) {
-    document.getElementById('calc-carbs').value = Math.round(totalCarbs * 10) / 10;
-  }
-
-  // Calculate
-  const bg      = parseFloat(document.getElementById('calc-bg').value)    || 0;
-  const carbs   = parseFloat(document.getElementById('calc-carbs').value) || 0;
-  const iob     = Math.max(parseFloat(document.getElementById('calc-iob').value) || 0, 0);
-  const mealDose = carbs / preset.cir;
-  const corrDose = (bg - preset.target) / preset.isf;
-  const rawDose  = Math.max(0, mealDose + corrDose - iob);
-
-  document.getElementById('calc-meal-dose').textContent   = calcFmt(mealDose);
-  document.getElementById('calc-corr-dose').textContent   = calcFmt(corrDose);
-  document.getElementById('calc-iob-dose').textContent    = '-' + calcFmt(iob);
-  document.getElementById('calc-raw-dose').textContent    = calcFmt(rawDose);
-  document.getElementById('calc-result-dose').textContent = calcFmt(rawDose);
-
-  // Warnings
-  const warns = [];
-  if (bg > 0 && bg < 70)  warns.push('目前血糖偏低，建議先處理低血糖再評估是否施打。');
-  if (bg >= 250)           warns.push('目前血糖偏高，請依照醫療團隊的高血糖處置流程。');
-  if (rawDose === 0 && (carbs > 0 || bg > preset.target))
-    warns.push('估算結果為 0，請確認 CIR、ISF 與 IOB 設定值是否正確。');
-  document.getElementById('calc-warnings').innerHTML =
-    warns.map(w => '<div class="calc-warning">⚠️ ' + w + '</div>').join('');
-}
-
-// ── Apply result to tracker ──
-function calcApply() {
-  const meal   = document.getElementById('calc-meal-period').value;
-  const dose   = document.getElementById('calc-result-dose').textContent;
-  const carbs  = document.getElementById('calc-carbs').value;
-  const bg     = document.getElementById('calc-bg').value;
-
-  // Fill dose
-  document.getElementById(calcTargetPeriod + '-insulin').value = dose;
-
-  // Fill BG if empty
-  const bgField = document.getElementById(calcTargetPeriod + '-bg');
-  if (!bgField.value && bg) {
-    bgField.value = bg;
-    onBGInput(calcTargetPeriod);
-  }
-
-  // Build food summary
-  const foodLines = [];
-  [1,2,3,4].forEach(function(i) {
-    const sel = document.getElementById('calc-food-' + i);
-    const qty = document.getElementById('calc-qty-' + i).value;
-    if (sel.value && sel.selectedIndex > 0) {
-      const lbl = sel.options[sel.selectedIndex].text.split(' (')[0];
-      foodLines.push(lbl + ' x' + qty);
-    }
-  });
-  const otherCarbs = document.getElementById('calc-other-carbs').value;
-  const otherName  = document.getElementById('calc-other-name').value.trim();
-  if (otherCarbs) foodLines.push((otherName || '其他') + ' ' + otherCarbs + 'g');
-
-  const preset = CALC_MEAL_PRESETS[meal];
-  const noteLines = [];
-  if (foodLines.length) noteLines.push('飲食：' + foodLines.join('、'));
-  noteLines.push('碳水：' + carbs + 'g｜建議劑量：' + dose + '單位');
-  if (preset.notes.length) noteLines.push('注意：' + preset.notes[0]);
-
-  const noteField = document.getElementById(calcTargetPeriod + '-note');
-  if (noteField.value) {
-    noteField.value += '\n' + noteLines.join('\n');
-  } else {
-    noteField.value = noteLines.join('\n');
-  }
-
-  closeCalcModal();
-  showToast('✅ 計算結果已帶入！');
-}
-
-
-init();
-
-// ── PWA Service Worker ──
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/insulin-tracker/sw.js')
-      .then(() => console.log('SW registered'))
-      .catch(e => console.log('SW error:', e));
-  });
-}
-
-// ── PWA Service Worker ──
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/insulin-tracker/sw.js')
-      .then(() => console.log('SW registered'))
-      .catch(e => console.log('SW error:', e));
-  });
-}
-
-init();
-</script>
-</body>
-</html>
+let calcTarge

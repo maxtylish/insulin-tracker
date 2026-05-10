@@ -399,10 +399,21 @@
     }
     .snack-row-top {
       display: grid;
-      grid-template-columns: 1.6fr 0.9fr 1fr auto;
-      gap: 10px;
+      grid-template-columns: 1.3fr 0.7fr 0.7fr 0.8fr 1fr auto;
+      gap: 8px;
       align-items: end;
       margin-bottom: 8px;
+    }
+    .snack-calc-hint {
+      font-size: 0.68rem;
+      color: #059669;
+      margin-top: 3px;
+      font-weight: 600;
+      min-height: 1em;
+    }
+    .snack-dose-auto {
+      border-color: #10b981 !important;
+      background: #f0fdf4 !important;
     }
     .snack-field label {
       display: block;
@@ -1452,9 +1463,9 @@ const PERIODS = [
 ];
 
 const SNACK_SECTIONS = [
-  { id: 'snack-morning-noon',      label: '早餐後～午餐前點心', icon: '🍎', after: 'morning' },
-  { id: 'snack-noon-evening',      label: '午餐後～晚餐前點心', icon: '🥝', after: 'noon'    },
-  { id: 'snack-evening-bedtime',   label: '晚餐後～睡前點心',   icon: '🍊', after: 'evening' },
+  { id: 'snack-morning-noon',    label: '早餐後～午餐前點心', icon: '🍎', after: 'morning', cir: 7,  isf: 110, target: 130, cirLabel: '早餐 CIR=7'  },
+  { id: 'snack-noon-evening',    label: '午餐後～晚餐前點心', icon: '🥝', after: 'noon',    cir: 10, isf: 110, target: 150, cirLabel: '午餐 CIR=10' },
+  { id: 'snack-evening-bedtime', label: '晚餐後～睡前點心',   icon: '🍊', after: 'evening', cir: 10, isf: 110, target: 140, cirLabel: '晚餐 CIR=10' },
 ];
 const SNACK_TYPES = ['麵包/餅乾', '水果', '飲料', '堅果', '甜點', '其他'];
 
@@ -2340,11 +2351,28 @@ function renderSnackSection(sectionId, items) {
 
   if (items.length === 0) { listEl.innerHTML = ''; return; }
 
+  // Find CIR/ISF/target for this section
+  var sec = SNACK_SECTIONS.filter(function(s){ return s.id === sectionId; })[0] || { cir:10, isf:110, target:140, cirLabel:'' };
+
   listEl.innerHTML = items.map(function(item, idx) {
     var typeOptions = SNACK_TYPES.map(function(t) {
       return '<option value="' + t + '"' + (item.type === t ? ' selected' : '') + '>' + t + '</option>';
     }).join('');
     var isOther = item.type === '其他';
+
+    // Pre-compute hint
+    var carb = parseFloat(item.carb) || 0;
+    var bg   = parseFloat(item.bg)   || 0;
+    var hint = '';
+    if (carb > 0) {
+      var mealD = carb / sec.cir;
+      var corrD = bg > 0 ? (bg - sec.target) / sec.isf : 0;
+      var total = Math.max(0, mealD + corrD);
+      hint = '碳水劑量 ' + mealD.toFixed(1) + 'u';
+      if (bg > 0) hint += (corrD >= 0 ? ' + 修正 ' : ' − 修正 ') + Math.abs(corrD).toFixed(1) + 'u = <strong>' + total.toFixed(1) + 'u</strong>';
+    }
+
+    var doseAutoClass = (carb > 0 && item.dose) ? ' snack-dose-auto' : '';
 
     return '<div class="snack-row" id="' + sectionId + '-row-' + idx + '">' +
       '<div class="snack-row-top">' +
@@ -2355,8 +2383,26 @@ function renderSnackSection(sectionId, items) {
             '<option value="">-- 選擇 --</option>' + typeOptions +
           '</select>' +
           '<input type="text" class="snack-val snack-custom-input" data-idx="' + idx + '" data-field="typeCustom"' +
-            ' placeholder="自填食物名稱" value="' + (item.typeCustom || '') + '"' +
+            ' placeholder="自填名稱" value="' + (item.typeCustom || '') + '"' +
             ' style="' + (isOther ? '' : 'display:none') + '" />' +
+        '</div>' +
+        '<div class="snack-field">' +
+          '<label>碳水(g)</label>' +
+          '<div class="field-input-wrap">' +
+            '<input type="number" class="snack-val" data-idx="' + idx + '" data-field="carb"' +
+              ' value="' + (item.carb || '') + '" min="0" max="300" step="0.5" placeholder="--"' +
+              ' oninput="calcSnackDose(\'' + sectionId + '\',' + idx + ')" />' +
+            '<span class="field-unit">g</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="snack-field">' +
+          '<label>血糖</label>' +
+          '<div class="field-input-wrap">' +
+            '<input type="number" class="snack-val" data-idx="' + idx + '" data-field="bg"' +
+              ' value="' + (item.bg || '') + '" min="20" max="600" step="1" placeholder="--"' +
+              ' oninput="calcSnackDose(\'' + sectionId + '\',' + idx + ')" />' +
+            '<span class="field-unit">mg/dL</span>' +
+          '</div>' +
         '</div>' +
         '<div class="snack-field">' +
           '<label>時間</label>' +
@@ -2364,12 +2410,14 @@ function renderSnackSection(sectionId, items) {
             ' value="' + (item.time || getNowTime()) + '" />' +
         '</div>' +
         '<div class="snack-field">' +
-          '<label>補打胰島素</label>' +
+          '<label>補打劑量</label>' +
           '<div class="field-input-wrap">' +
-            '<input type="number" class="snack-val" data-idx="' + idx + '" data-field="dose"' +
+            '<input type="number" class="snack-val' + doseAutoClass + '" id="' + sectionId + '-dose-' + idx + '"' +
+              ' data-idx="' + idx + '" data-field="dose"' +
               ' value="' + (item.dose || '') + '" min="0" max="50" step="0.5" placeholder="--" />' +
             '<span class="field-unit">單位</span>' +
           '</div>' +
+          '<div class="snack-calc-hint" id="' + sectionId + '-hint-' + idx + '">' + hint + '</div>' +
         '</div>' +
         '<button class="suppl-del-btn" onclick="removeSnackRow(\'' + sectionId + '\',' + idx + ')" title="刪除">✕</button>' +
       '</div>' +
@@ -2419,6 +2467,52 @@ function onSnackTypeChange(sectionId, idx, selectEl) {
   if (customInput) {
     customInput.style.display = selectEl.value === '其他' ? '' : 'none';
     if (selectEl.value !== '其他') customInput.value = '';
+  }
+}
+
+function calcSnackDose(sectionId, idx) {
+  var sec = SNACK_SECTIONS.filter(function(s){ return s.id === sectionId; })[0];
+  if (!sec) return;
+
+  var rowEl  = document.getElementById(sectionId + '-row-' + idx);
+  if (!rowEl) return;
+
+  var carbEl = rowEl.querySelector('[data-field="carb"]');
+  var bgEl   = rowEl.querySelector('[data-field="bg"]');
+  var doseEl = document.getElementById(sectionId + '-dose-' + idx);
+  var hintEl = document.getElementById(sectionId + '-hint-' + idx);
+
+  var carb = parseFloat((carbEl && carbEl.value) || 0) || 0;
+  var bg   = parseFloat((bgEl   && bgEl.value)   || 0) || 0;
+
+  if (carb <= 0) {
+    if (hintEl) hintEl.innerHTML = '';
+    if (doseEl) doseEl.classList.remove('snack-dose-auto');
+    return;
+  }
+
+  var mealD  = carb / sec.cir;
+  var corrD  = bg > 0 ? (bg - sec.target) / sec.isf : 0;
+  var total  = Math.max(0, mealD + corrD);
+  var rounded = Math.round(total * 2) / 2; // round to nearest 0.5u
+
+  // Auto-fill dose
+  if (doseEl) {
+    doseEl.value = rounded > 0 ? rounded : '';
+    doseEl.classList.toggle('snack-dose-auto', rounded > 0);
+  }
+
+  // Show hint
+  if (hintEl) {
+    var hint = '碳水 ' + mealD.toFixed(1) + 'u';
+    if (bg > 0) {
+      hint += (corrD >= 0 ? ' + 修正 ' : ' − 修正 ') + Math.abs(corrD).toFixed(1) + 'u';
+      hint += ' = <strong>' + total.toFixed(1) + 'u → 四捨五入 ' + rounded + 'u</strong>';
+    } else {
+      hint += ' <span style="color:#94a3b8">（未輸入血糖，不含修正）</span>';
+    }
+    hint += ' <span style="font-weight:400;color:#94a3b8">(' + sec.cirLabel + ')</span>';
+    hintEl.innerHTML = hint;
   }
 }
 
@@ -3155,9 +3249,9 @@ const PERIODS = [
 ];
 
 const SNACK_SECTIONS = [
-  { id: 'snack-morning-noon',      label: '早餐後～午餐前點心', icon: '🍎', after: 'morning' },
-  { id: 'snack-noon-evening',      label: '午餐後～晚餐前點心', icon: '🥝', after: 'noon'    },
-  { id: 'snack-evening-bedtime',   label: '晚餐後～睡前點心',   icon: '🍊', after: 'evening' },
+  { id: 'snack-morning-noon',    label: '早餐後～午餐前點心', icon: '🍎', after: 'morning', cir: 7,  isf: 110, target: 130, cirLabel: '早餐 CIR=7'  },
+  { id: 'snack-noon-evening',    label: '午餐後～晚餐前點心', icon: '🥝', after: 'noon',    cir: 10, isf: 110, target: 150, cirLabel: '午餐 CIR=10' },
+  { id: 'snack-evening-bedtime', label: '晚餐後～睡前點心',   icon: '🍊', after: 'evening', cir: 10, isf: 110, target: 140, cirLabel: '晚餐 CIR=10' },
 ];
 const SNACK_TYPES = ['麵包/餅乾', '水果', '飲料', '堅果', '甜點', '其他'];
 
@@ -4043,11 +4137,28 @@ function renderSnackSection(sectionId, items) {
 
   if (items.length === 0) { listEl.innerHTML = ''; return; }
 
+  // Find CIR/ISF/target for this section
+  var sec = SNACK_SECTIONS.filter(function(s){ return s.id === sectionId; })[0] || { cir:10, isf:110, target:140, cirLabel:'' };
+
   listEl.innerHTML = items.map(function(item, idx) {
     var typeOptions = SNACK_TYPES.map(function(t) {
       return '<option value="' + t + '"' + (item.type === t ? ' selected' : '') + '>' + t + '</option>';
     }).join('');
     var isOther = item.type === '其他';
+
+    // Pre-compute hint
+    var carb = parseFloat(item.carb) || 0;
+    var bg   = parseFloat(item.bg)   || 0;
+    var hint = '';
+    if (carb > 0) {
+      var mealD = carb / sec.cir;
+      var corrD = bg > 0 ? (bg - sec.target) / sec.isf : 0;
+      var total = Math.max(0, mealD + corrD);
+      hint = '碳水劑量 ' + mealD.toFixed(1) + 'u';
+      if (bg > 0) hint += (corrD >= 0 ? ' + 修正 ' : ' − 修正 ') + Math.abs(corrD).toFixed(1) + 'u = <strong>' + total.toFixed(1) + 'u</strong>';
+    }
+
+    var doseAutoClass = (carb > 0 && item.dose) ? ' snack-dose-auto' : '';
 
     return '<div class="snack-row" id="' + sectionId + '-row-' + idx + '">' +
       '<div class="snack-row-top">' +
@@ -4058,9 +4169,532 @@ function renderSnackSection(sectionId, items) {
             '<option value="">-- 選擇 --</option>' + typeOptions +
           '</select>' +
           '<input type="text" class="snack-val snack-custom-input" data-idx="' + idx + '" data-field="typeCustom"' +
-            ' placeholder="自填食物名稱" value="' + (item.typeCustom || '') + '"' +
+            ' placeholder="自填名稱" value="' + (item.typeCustom || '') + '"' +
             ' style="' + (isOther ? '' : 'display:none') + '" />' +
         '</div>' +
         '<div class="snack-field">' +
+          '<label>碳水(g)</label>' +
+          '<div class="field-input-wrap">' +
+            '<input type="number" class="snack-val" data-idx="' + idx + '" data-field="carb"' +
+              ' value="' + (item.carb || '') + '" min="0" max="300" step="0.5" placeholder="--"' +
+              ' oninput="calcSnackDose(\'' + sectionId + '\',' + idx + ')" />' +
+            '<span class="field-unit">g</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="snack-field">' +
+          '<label>血糖</label>' +
+          '<div class="field-input-wrap">' +
+            '<input type="number" class="snack-val" data-idx="' + idx + '" data-field="bg"' +
+              ' value="' + (item.bg || '') + '" min="20" max="600" step="1" placeholder="--"' +
+              ' oninput="calcSnackDose(\'' + sectionId + '\',' + idx + ')" />' +
+            '<span class="field-unit">mg/dL</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="snack-field">' +
           '<label>時間</label>' +
-          '<input type="time" class="snack-val" data-idx="' + idx + '" dat
+          '<input type="time" class="snack-val" data-idx="' + idx + '" data-field="time"' +
+            ' value="' + (item.time || getNowTime()) + '" />' +
+        '</div>' +
+        '<div class="snack-field">' +
+          '<label>補打劑量</label>' +
+          '<div class="field-input-wrap">' +
+            '<input type="number" class="snack-val' + doseAutoClass + '" id="' + sectionId + '-dose-' + idx + '"' +
+              ' data-idx="' + idx + '" data-field="dose"' +
+              ' value="' + (item.dose || '') + '" min="0" max="50" step="0.5" placeholder="--" />' +
+            '<span class="field-unit">單位</span>' +
+          '</div>' +
+          '<div class="snack-calc-hint" id="' + sectionId + '-hint-' + idx + '">' + hint + '</div>' +
+        '</div>' +
+        '<button class="suppl-del-btn" onclick="removeSnackRow(\'' + sectionId + '\',' + idx + ')" title="刪除">✕</button>' +
+      '</div>' +
+      '<div class="suppl-note">' +
+        '<textarea rows="1" class="snack-val" data-idx="' + idx + '" data-field="note"' +
+          ' placeholder="備註（點心內容、血糖反應…）">' + (item.note || '') + '</textarea>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function addSnackRow(sectionId) {
+  var current = collectSnackRows(sectionId);
+  current.push({ time: getNowTime() });
+  renderSnackSection(sectionId, current);
+}
+
+function removeSnackRow(sectionId, idx) {
+  var current = collectSnackRows(sectionId);
+  current.splice(idx, 1);
+  renderSnackSection(sectionId, current);
+}
+
+function collectSnackRows(sectionId) {
+  var listEl = document.getElementById(sectionId + '-list');
+  if (!listEl) return [];
+  var rows = listEl.querySelectorAll('.snack-row');
+  var result = [];
+  rows.forEach(function(row) {
+    var obj = {};
+    row.querySelectorAll('.snack-val').forEach(function(el) {
+      if (el.style.display !== 'none') {
+        obj[el.dataset.field] = el.value.trim();
+      } else if (el.tagName === 'SELECT') {
+        obj[el.dataset.field] = el.value.trim();
+      }
+    });
+    if (Object.values(obj).some(function(v){ return v !== ''; })) result.push(obj);
+  });
+  return result;
+}
+
+function onSnackTypeChange(sectionId, idx, selectEl) {
+  var rowEl = document.getElementById(sectionId + '-row-' + idx);
+  if (!rowEl) return;
+  var customInput = rowEl.querySelector('[data-field="typeCustom"]');
+  if (customInput) {
+    customInput.style.display = selectEl.value === '其他' ? '' : 'none';
+    if (selectEl.value !== '其他') customInput.value = '';
+  }
+}
+
+function calcSnackDose(sectionId, idx) {
+  var sec = SNACK_SECTIONS.filter(function(s){ return s.id === sectionId; })[0];
+  if (!sec) return;
+
+  var rowEl  = document.getElementById(sectionId + '-row-' + idx);
+  if (!rowEl) return;
+
+  var carbEl = rowEl.querySelector('[data-field="carb"]');
+  var bgEl   = rowEl.querySelector('[data-field="bg"]');
+  var doseEl = document.getElementById(sectionId + '-dose-' + idx);
+  var hintEl = document.getElementById(sectionId + '-hint-' + idx);
+
+  var carb = parseFloat((carbEl && carbEl.value) || 0) || 0;
+  var bg   = parseFloat((bgEl   && bgEl.value)   || 0) || 0;
+
+  if (carb <= 0) {
+    if (hintEl) hintEl.innerHTML = '';
+    if (doseEl) doseEl.classList.remove('snack-dose-auto');
+    return;
+  }
+
+  var mealD  = carb / sec.cir;
+  var corrD  = bg > 0 ? (bg - sec.target) / sec.isf : 0;
+  var total  = Math.max(0, mealD + corrD);
+  var rounded = Math.round(total * 2) / 2; // round to nearest 0.5u
+
+  // Auto-fill dose
+  if (doseEl) {
+    doseEl.value = rounded > 0 ? rounded : '';
+    doseEl.classList.toggle('snack-dose-auto', rounded > 0);
+  }
+
+  // Show hint
+  if (hintEl) {
+    var hint = '碳水 ' + mealD.toFixed(1) + 'u';
+    if (bg > 0) {
+      hint += (corrD >= 0 ? ' + 修正 ' : ' − 修正 ') + Math.abs(corrD).toFixed(1) + 'u';
+      hint += ' = <strong>' + total.toFixed(1) + 'u → 四捨五入 ' + rounded + 'u</strong>';
+    } else {
+      hint += ' <span style="color:#94a3b8">（未輸入血糖，不含修正）</span>';
+    }
+    hint += ' <span style="font-weight:400;color:#94a3b8">(' + sec.cirLabel + ')</span>';
+    hintEl.innerHTML = hint;
+  }
+}
+
+// ════════════════════════════════
+//  SETTINGS
+// ════════════════════════════════
+function loadSettingsUI() {
+  document.getElementById('set-low').value        = settings.low;
+  document.getElementById('set-normalLow').value  = settings.normalLow;
+  document.getElementById('set-normalHigh').value = settings.normalHigh;
+  document.getElementById('set-high').value       = settings.high;
+}
+
+function saveSettings() {
+  settings.low        = parseFloat(document.getElementById('set-low').value)        || DEFAULT_SETTINGS.low;
+  settings.normalLow  = parseFloat(document.getElementById('set-normalLow').value)  || DEFAULT_SETTINGS.normalLow;
+  settings.normalHigh = parseFloat(document.getElementById('set-normalHigh').value) || DEFAULT_SETTINGS.normalHigh;
+  settings.high       = parseFloat(document.getElementById('set-high').value)       || DEFAULT_SETTINGS.high;
+  saveSettingsToStorage();
+  showToast('✅ 設定已儲存！');
+}
+
+function clearAllData() {
+  if (confirm('確定要清除所有胰島素紀錄資料？此動作無法復原。')) {
+    localStorage.removeItem('insulin_records');
+    showToast('🗑️ 所有資料已清除');
+    loadDayData();
+  }
+}
+
+// ════════════════════════════════
+//  CSV EXPORT
+// ════════════════════════════════
+function exportCSV() {
+  var all = getAllData();
+  var dates = Object.keys(all).sort();
+  if (dates.length === 0) { showToast('⚠️ 目前尚無資料可匯出'); return; }
+
+  var header = '日期,時段,注射時間,血糖(mg/dL),血糖狀態,胰島素劑量(單位),修正劑量(單位),補充碳水(克),備註';
+  var rows = [];
+
+  dates.forEach(function(date) {
+    PERIODS.forEach(function(p) {
+      var rec = (all[date] && all[date][p.id]) ? all[date][p.id] : {};
+      var bgResult = classifyBG(rec.bg);
+      var statusMap = { normal:'正常', warn:'警戒', high:'高血糖', low:'低血糖' };
+      var bgStatus = bgResult ? (statusMap[bgResult.cls] || '') : '';
+      rows.push([
+        date,
+        p.label,
+        rec.time       || '',
+        rec.bg         || '',
+        bgStatus,
+        rec.insulin    || '',
+        rec.correction || '',
+        rec.carb       || '',
+        (rec.note || '').replace(/,/g, '，').replace(/\n/g, ' ')
+      ].join(','));
+    });
+  });
+
+  var csv = '﻿' + header + '\n' + rows.join('\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '胰島素紀錄_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('📥 CSV 匯出成功！');
+}
+
+// ════════════════════════════════
+//  TOAST
+// ════════════════════════════════
+var toastTimer = null;
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove('show'); }, 2500);
+}
+
+// ════════════════════════════════
+//  SUPPLEMENTAL RECORDS (補打/補糖)
+// ════════════════════════════════
+
+function renderSupplList(type, items) {
+  const listEl = document.getElementById(type + '-list');
+  if (!listEl) return;
+
+  if (items.length === 0) {
+    const labels = { corrections: '尚無補打記錄', carbs: '尚無補糖記錄' };
+    listEl.innerHTML = `<div class="suppl-empty">${labels[type] || '尚無記錄'}</div>`;
+    return;
+  }
+
+  listEl.innerHTML = items.map((item, idx) => {
+    const isCorr = type === 'corrections';
+    const mainField = isCorr
+      ? `<div class="suppl-field">
+           <label>劑量</label>
+           <div class="field-input-wrap">
+             <input type="number" data-idx="${idx}" data-field="dose"
+                    class="suppl-val" value="${item.dose || ''}"
+                    min="0" max="100" step="0.5" placeholder="--" />
+             <span class="field-unit">單位</span>
+           </div>
+         </div>`
+      : `<div class="suppl-field">
+           <label>碳水量</label>
+           <div class="field-input-wrap">
+             <input type="number" data-idx="${idx}" data-field="carb"
+                    class="suppl-val" value="${item.carb || ''}"
+                    min="0" max="500" step="1" placeholder="--" />
+             <span class="field-unit">克</span>
+           </div>
+         </div>`;
+
+    return `
+      <div class="suppl-row" id="${type}-row-${idx}">
+        <div class="suppl-row-top">
+          ${mainField}
+          <div class="suppl-field">
+            <label>時間</label>
+            <input type="time" data-idx="${idx}" data-field="time"
+                   class="suppl-val" value="${item.time || ''}" />
+          </div>
+          <button class="suppl-del-btn" onclick="removeSupplRow('${type}', ${idx})" title="刪除">✕</button>
+        </div>
+        <div class="suppl-note">
+          <textarea rows="1" data-idx="${idx}" data-field="note"
+                    class="suppl-val" placeholder="備註（症狀、原因…）">${item.note || ''}</textarea>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function collectSupplRows(type) {
+  const listEl = document.getElementById(type + '-list');
+  if (!listEl) return [];
+  const rows = listEl.querySelectorAll('.suppl-row');
+  const result = [];
+  rows.forEach((row, idx) => {
+    const obj = {};
+    row.querySelectorAll('.suppl-val').forEach(el => {
+      obj[el.dataset.field] = el.value.trim();
+    });
+    if (Object.values(obj).some(v => v !== '')) result.push(obj);
+  });
+  return result;
+}
+
+function addSupplRow(type) {
+  const current = collectSupplRows(type);
+  current.push({});
+  renderSupplList(type, current);
+  // Focus the first input of the new row
+  const listEl = document.getElementById(type + '-list');
+  if (listEl) {
+    const last = listEl.querySelector('.suppl-row:last-child input');
+    if (last) last.focus();
+  }
+}
+
+function removeSupplRow(type, idx) {
+  const current = collectSupplRows(type);
+  current.splice(idx, 1);
+  renderSupplList(type, current);
+}
+
+// ════════════════════════════════
+//  CLOUD CONFIG UI
+// ════════════════════════════════
+function loadCloudConfigUI() {
+  const url = localStorage.getItem('sb_url') || DEFAULT_SB_URL;
+  const key = localStorage.getItem('sb_key') || DEFAULT_SB_KEY;
+  const el_url = document.getElementById('set-sb-url');
+  const el_key = document.getElementById('set-sb-key');
+  const el_id  = document.getElementById('myUserId');
+  if (el_url) el_url.value = url;
+  if (el_key) el_key.value = key;
+  if (el_id)  el_id.value  = currentUserId || '';
+  const dispEl = document.getElementById('currentIdDisplay');
+  if (dispEl) dispEl.textContent = currentUserId || '尚未設定';
+
+  const status = document.getElementById('cloudStatus');
+  if (status) {
+    if (sbClient) {
+      status.textContent = '✅ 已連線至 Supabase';
+      status.style.color = '#22c55e';
+    } else if (url) {
+      status.textContent = '⚠️ 設定已填寫但連線未成功，請確認 URL 和 Key 正確';
+      status.style.color = '#f59e0b';
+    } else {
+      status.textContent = '尚未設定 — 目前使用本機儲存';
+      status.style.color = 'var(--text-muted)';
+    }
+  }
+}
+
+async function saveCloudConfig() {
+  const url = (document.getElementById('set-sb-url').value || '').trim();
+  const key = (document.getElementById('set-sb-key').value || '').trim();
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+  initSupabase();
+  loadCloudConfigUI();
+  if (sbClient) {
+    await loadFromCloud();
+    loadCloudConfigUI();
+    loadDayData();
+    showToast('✅ 雲端連線成功，資料已同步！');
+  } else {
+    showToast('⚠️ 連線失敗，請檢查 URL 和 Key');
+  }
+}
+
+// ── Cookie helpers for persistent user_id ──
+function setCookie(name, value, days) {
+  const exp = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = name + '=' + encodeURIComponent(value) +
+    '; expires=' + exp + '; path=/; SameSite=Lax';
+}
+function getCookie(name) {
+  const m = document.cookie.match('(?:^|;)\\s*' + name + '=([^;]*)');
+  return m ? decodeURIComponent(m[1]) : null;
+}
+function saveUserId(id) {
+  localStorage.setItem('user_id', id);
+  setCookie('insulin_uid', id, 365);
+}
+
+function copyUserId() {
+  const id = currentUserId || '';
+  if (!id) return;
+  navigator.clipboard.writeText(id).catch(() => {});
+  showToast('📋 帳號 ID 已複製！');
+}
+
+function showCustomIdInput() {
+  const row = document.getElementById('customIdRow');
+  if (!row) return;
+  const isHidden = row.style.display === 'none' || row.style.display === '';
+  row.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    const inp = document.getElementById('customIdInput');
+    if (inp) { inp.value = currentUserId || ''; inp.focus(); inp.select(); }
+  }
+}
+
+async function applyCustomId() {
+  const newId = (document.getElementById('customIdInput').value || '').trim();
+  if (!newId) { showToast('⚠️ 請輸入帳號 ID'); return; }
+  if (newId.length < 3) { showToast('⚠️ ID 至少需要 3 個字元'); return; }
+  if (newId === currentUserId) {
+    document.getElementById('customIdRow').style.display = 'none';
+    return;
+  }
+  if (!confirm('確定要將帳號 ID 設定為「' + newId + '」嗎？\n現有資料會一起搬移到新 ID。')) return;
+
+  // 搬移現有資料到新 ID
+  const existingData = getAllData();
+  const dates = Object.keys(existingData);
+  if (sbClient && dates.length > 0) {
+    setSyncBadge('⏳ 搬移資料中…', 'sync-busy');
+    try {
+      const rows = dates.map(d => ({
+        user_id: newId,
+        date: d,
+        data: existingData[d],
+        updated_at: new Date().toISOString()
+      }));
+      await sbClient.from('insulin_records').upsert(rows, { onConflict: 'user_id,date' });
+    } catch(e) { console.warn('Migration failed:', e); }
+  }
+
+  // 切換 ID
+  saveUserId(newId);
+  currentUserId = newId;
+  const dispEl = document.getElementById('currentIdDisplay');
+  if (dispEl) dispEl.textContent = newId;
+  document.getElementById('customIdRow').style.display = 'none';
+
+  await loadFromCloud();
+  loadDayData();
+  showToast('✅ 帳號 ID 已設定，資料已同步！');
+}
+
+function importUserId() {
+  applyCustomId();
+}
+
+// ════════════════════════════════
+//  INIT
+// ════════════════════════════════
+function init() {
+  initSupabase();   // ← 每次載入頁面都自動連線
+  buildPeriodCards();
+  var today = todayStr();
+  statAnchor = today;
+  document.getElementById('todayDate').value    = today;
+  document.getElementById('historyMonth').value = today.slice(0, 7);
+  document.getElementById('headerDate').innerHTML =
+    formatDateDisplay(today).replace('（', '<br>（');
+  loadDayData();
+  loadFromCloud().then(function(){ loadDayData(); });
+}
+
+
+// ══════════════════════════════════════════
+//  CALCULATOR DATA
+// ══════════════════════════════════════════
+const CALC_MEAL_PRESETS = {
+  breakfast: {
+    label: '早餐', cir: 7, isf: 110, target: 130,
+    notes: ['施打部位 >> 肚子', '施打完 15 分鐘後進食'],
+  },
+  lunch: {
+    label: '午餐', cir: 10, isf: 110, target: 150,
+    notes: [
+      '施打部位 >> 手臂',
+      '施打完 20 分鐘後進食',
+      '因為 11:30 開始吃，若當下血糖低於 130，打完胰島素後先補 1 顆葡萄糖片',
+      '週四體育課 >>> 低於 150 時先補充 2 顆糖；低於 170 時先補充 1 顆糖，預防性課間低血糖',
+    ],
+  },
+  dinner: {
+    label: '晚餐', cir: 10, isf: 110, target: 140,
+    notes: [
+      '施打部位 >> 左大腿',
+      '施打完 30~45 分鐘後進食',
+      '睡前長效固定 3 單位，施打部位 >> 右大腿',
+    ],
+  },
+};
+
+const CALC_CARB_FOODS = {
+  white_rice: 30, udon: 24.6, yangchun_noodle: 27.8, oil_noodle: 25.5,
+  spaghetti: 27.4, penne: 29, potato_skin: 12.9,
+  wheat_toast: 12, white_toast: 12, strawberry_toast: 15.25,
+  berry_party: 3.5, bacon_egg_pancake: 30, pan_fried_dumpling: 15,
+  dumpling: 4, soup_dumpling: 4.3,
+  mcd_combo_1: 66, mcd_combo_2: 55.2,
+  guava: 10.6, apple: 11.9, cherry: 19.12, banana_peel: 10.6, banana: 22.1,
+  pineapple: 13.6, dragon_fruit: 12.36, strawberry: 9.3,
+  milk_100: 4.8, milk_150: 7, milk_200: 10, yogurt_100: 12, yakult: 14.7,
+};
+
+const CALC_MAIN_OPTIONS = {
+  breakfast: [
+    { value: 'white_rice',         label: '白飯 100g (碳水30g)' },
+    { value: 'udon',               label: '烏龍麵 100g (碳水24.6g)' },
+    { value: 'yangchun_noodle',    label: '陽春麵 100g (碳水27.8g)' },
+    { value: 'oil_noodle',         label: '油麵 100g (碳水25.5g)' },
+    { value: 'spaghetti',          label: '義大利麵 100g (碳水27.4g)' },
+    { value: 'penne',              label: '筆管麵 100g (碳水29g)' },
+    { value: 'potato_skin',        label: '馬鈴薯帶皮 100g (碳水12.9g)' },
+    { value: 'wheat_toast',        label: '全麥吐司 1片 (碳水12g)' },
+    { value: 'white_toast',        label: '白吐司 1片 (碳水12g)' },
+    { value: 'strawberry_toast',   label: '草莓吐司 1片 (碳水15.25g)' },
+    { value: 'berry_party',        label: '莓果派對 1份 (碳水3.5g)' },
+    { value: 'bacon_egg_pancake',  label: '培根蛋餅 1份 (碳水30g)' },
+    { value: 'pan_fried_dumpling', label: '小煎餃 55g (碳水15g)' },
+    { value: 'dumpling',           label: '水餃 1顆 (碳水4g)' },
+    { value: 'soup_dumpling',      label: '湯包 1顆 (碳水4.3g)' },
+  ],
+  lunch: [
+    { value: 'white_rice',      label: '白飯 100g (碳水30g)' },
+    { value: 'udon',            label: '烏龍麵 100g (碳水24.6g)' },
+    { value: 'yangchun_noodle', label: '陽春麵 100g (碳水27.8g)' },
+    { value: 'oil_noodle',      label: '油麵 100g (碳水25.5g)' },
+    { value: 'spaghetti',       label: '義大利麵 100g (碳水27.4g)' },
+    { value: 'penne',           label: '筆管麵 100g (碳水29g)' },
+    { value: 'potato_skin',     label: '馬鈴薯帶皮 100g (碳水12.9g)' },
+    { value: 'dumpling',        label: '水餃 1顆 (碳水4g)' },
+    { value: 'soup_dumpling',   label: '湯包 1顆 (碳水4.3g)' },
+    { value: 'mcd_combo_1',     label: '麥當勞組合1（鱈魚堡＋玉米杯＋牛奶）(碳水66g)' },
+    { value: 'mcd_combo_2',     label: '麥當勞組合2（鱈魚堡＋玉米杯＋水果袋）(碳水55.2g)' },
+  ],
+  dinner: [
+    { value: 'white_rice',      label: '白飯 100g (碳水30g)' },
+    { value: 'udon',            label: '烏龍麵 100g (碳水24.6g)' },
+    { value: 'yangchun_noodle', label: '陽春麵 100g (碳水27.8g)' },
+    { value: 'oil_noodle',      label: '油麵 100g (碳水25.5g)' },
+    { value: 'spaghetti',       label: '義大利麵 100g (碳水27.4g)' },
+    { value: 'penne',           label: '筆管麵 100g (碳水29g)' },
+    { value: 'potato_skin',     label: '馬鈴薯帶皮 100g (碳水12.9g)' },
+    { value: 'dumpling',        label: '水餃 1顆 (碳水4g)' },
+    { value: 'soup_dumpling',   label: '湯包 1顆 (碳水4.3g)' },
+    { value: 'mcd_combo_1',     label: '麥當勞組合1（鱈魚堡＋玉米杯＋牛奶）(碳水66g)' },
+    { value: 'mcd_combo_2',     label: '麥當勞組合2（鱈魚堡＋玉米杯＋水果袋）(碳水55.2g)' },
+  ],
+};
+
+// ── period → meal mapping ──
+const PERIOD_TO_MEAL = { morning: 'breakfast', noon: 'lunch', evening: 'dinner' };
+let calcTarge
