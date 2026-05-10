@@ -1870,7 +1870,8 @@ function loadDayData() {
 
   PERIODS.forEach(p => {
     const rec = dayData[p.id] || {};
-    document.getElementById(p.id + '-time').value    = rec.time    || getNowTime();
+    const isToday = date === todayStr();
+    document.getElementById(p.id + '-time').value    = rec.time    || (isToday ? getNowTime() : '');
     document.getElementById(p.id + '-bg').value      = rec.bg      || '';
     document.getElementById(p.id + '-insulin').value = rec.insulin || '';
     document.getElementById(p.id + '-note').value    = rec.note    || '';
@@ -1957,7 +1958,7 @@ function renderHistory() {
             ${rec.insulin ? rec.insulin + '<small style="font-weight:400"> 單位</small>' : '—'}
             ${correctionBadge}
           </span>
-          <span class="time-val">${rec.time || '—'}</span>
+          <span class="time-val">${(rec.time && (rec.bg || rec.insulin)) ? rec.time : '—'}</span>
         </div>`;
     }).join('');
 
@@ -3712,7 +3713,8 @@ function loadDayData() {
 
   PERIODS.forEach(p => {
     const rec = dayData[p.id] || {};
-    document.getElementById(p.id + '-time').value    = rec.time    || getNowTime();
+    const isToday = date === todayStr();
+    document.getElementById(p.id + '-time').value    = rec.time    || (isToday ? getNowTime() : '');
     document.getElementById(p.id + '-bg').value      = rec.bg      || '';
     document.getElementById(p.id + '-insulin').value = rec.insulin || '';
     document.getElementById(p.id + '-note').value    = rec.note    || '';
@@ -3799,7 +3801,7 @@ function renderHistory() {
             ${rec.insulin ? rec.insulin + '<small style="font-weight:400"> 單位</small>' : '—'}
             ${correctionBadge}
           </span>
-          <span class="time-val">${rec.time || '—'}</span>
+          <span class="time-val">${(rec.time && (rec.bg || rec.insulin)) ? rec.time : '—'}</span>
         </div>`;
     }).join('');
 
@@ -4714,4 +4716,444 @@ function collectSupplRows(type) {
     });
     if (Object.values(obj).some(v => v !== '')) result.push(obj);
   });
-  return r
+  return result;
+}
+
+function addSupplRow(type) {
+  const current = collectSupplRows(type);
+  current.push({});
+  renderSupplList(type, current);
+  // Focus the first input of the new row
+  const listEl = document.getElementById(type + '-list');
+  if (listEl) {
+    const last = listEl.querySelector('.suppl-row:last-child input');
+    if (last) last.focus();
+  }
+}
+
+function removeSupplRow(type, idx) {
+  const current = collectSupplRows(type);
+  current.splice(idx, 1);
+  renderSupplList(type, current);
+}
+
+// ════════════════════════════════
+//  CLOUD CONFIG UI
+// ════════════════════════════════
+function loadCloudConfigUI() {
+  const url = localStorage.getItem('sb_url') || DEFAULT_SB_URL;
+  const key = localStorage.getItem('sb_key') || DEFAULT_SB_KEY;
+  const el_url = document.getElementById('set-sb-url');
+  const el_key = document.getElementById('set-sb-key');
+  const el_id  = document.getElementById('myUserId');
+  if (el_url) el_url.value = url;
+  if (el_key) el_key.value = key;
+  if (el_id)  el_id.value  = currentUserId || '';
+  const dispEl = document.getElementById('currentIdDisplay');
+  if (dispEl) dispEl.textContent = currentUserId || '尚未設定';
+
+  const status = document.getElementById('cloudStatus');
+  if (status) {
+    if (sbClient) {
+      status.textContent = '✅ 已連線至 Supabase';
+      status.style.color = '#22c55e';
+    } else if (url) {
+      status.textContent = '⚠️ 設定已填寫但連線未成功，請確認 URL 和 Key 正確';
+      status.style.color = '#f59e0b';
+    } else {
+      status.textContent = '尚未設定 — 目前使用本機儲存';
+      status.style.color = 'var(--text-muted)';
+    }
+  }
+}
+
+async function saveCloudConfig() {
+  const url = (document.getElementById('set-sb-url').value || '').trim();
+  const key = (document.getElementById('set-sb-key').value || '').trim();
+  localStorage.setItem('sb_url', url);
+  localStorage.setItem('sb_key', key);
+  initSupabase();
+  loadCloudConfigUI();
+  if (sbClient) {
+    await loadFromCloud();
+    loadCloudConfigUI();
+    loadDayData();
+    showToast('✅ 雲端連線成功，資料已同步！');
+  } else {
+    showToast('⚠️ 連線失敗，請檢查 URL 和 Key');
+  }
+}
+
+// ── Cookie helpers for persistent user_id ──
+function setCookie(name, value, days) {
+  const exp = new Date(Date.now() + days * 864e5).toUTCString();
+  document.cookie = name + '=' + encodeURIComponent(value) +
+    '; expires=' + exp + '; path=/; SameSite=Lax';
+}
+function getCookie(name) {
+  const m = document.cookie.match('(?:^|;)\\s*' + name + '=([^;]*)');
+  return m ? decodeURIComponent(m[1]) : null;
+}
+function saveUserId(id) {
+  localStorage.setItem('user_id', id);
+  setCookie('insulin_uid', id, 365);
+}
+
+function copyUserId() {
+  const id = currentUserId || '';
+  if (!id) return;
+  navigator.clipboard.writeText(id).catch(() => {});
+  showToast('📋 帳號 ID 已複製！');
+}
+
+function showCustomIdInput() {
+  const row = document.getElementById('customIdRow');
+  if (!row) return;
+  const isHidden = row.style.display === 'none' || row.style.display === '';
+  row.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    const inp = document.getElementById('customIdInput');
+    if (inp) { inp.value = currentUserId || ''; inp.focus(); inp.select(); }
+  }
+}
+
+async function applyCustomId() {
+  const newId = (document.getElementById('customIdInput').value || '').trim();
+  if (!newId) { showToast('⚠️ 請輸入帳號 ID'); return; }
+  if (newId.length < 3) { showToast('⚠️ ID 至少需要 3 個字元'); return; }
+  if (newId === currentUserId) {
+    document.getElementById('customIdRow').style.display = 'none';
+    return;
+  }
+  if (!confirm('確定要將帳號 ID 設定為「' + newId + '」嗎？\n現有資料會一起搬移到新 ID。')) return;
+
+  // 搬移現有資料到新 ID
+  const existingData = getAllData();
+  const dates = Object.keys(existingData);
+  if (sbClient && dates.length > 0) {
+    setSyncBadge('⏳ 搬移資料中…', 'sync-busy');
+    try {
+      const rows = dates.map(d => ({
+        user_id: newId,
+        date: d,
+        data: existingData[d],
+        updated_at: new Date().toISOString()
+      }));
+      await sbClient.from('insulin_records').upsert(rows, { onConflict: 'user_id,date' });
+    } catch(e) { console.warn('Migration failed:', e); }
+  }
+
+  // 切換 ID
+  saveUserId(newId);
+  currentUserId = newId;
+  const dispEl = document.getElementById('currentIdDisplay');
+  if (dispEl) dispEl.textContent = newId;
+  document.getElementById('customIdRow').style.display = 'none';
+
+  await loadFromCloud();
+  loadDayData();
+  showToast('✅ 帳號 ID 已設定，資料已同步！');
+}
+
+function importUserId() {
+  applyCustomId();
+}
+
+// ════════════════════════════════
+//  INIT
+// ════════════════════════════════
+function init() {
+  initSupabase();   // ← 每次載入頁面都自動連線
+  buildPeriodCards();
+  var today = todayStr();
+  statAnchor = today;
+  document.getElementById('todayDate').value    = today;
+  document.getElementById('historyMonth').value = today.slice(0, 7);
+  document.getElementById('headerDate').innerHTML =
+    formatDateDisplay(today).replace('（', '<br>（');
+  loadDayData();
+  loadFromCloud().then(function(){ loadDayData(); });
+}
+
+
+// ══════════════════════════════════════════
+//  CALCULATOR DATA
+// ══════════════════════════════════════════
+const CALC_MEAL_PRESETS = {
+  breakfast: {
+    label: '早餐', cir: 7, isf: 110, target: 130,
+    notes: ['施打部位 >> 肚子', '施打完 15 分鐘後進食'],
+  },
+  lunch: {
+    label: '午餐', cir: 10, isf: 110, target: 150,
+    notes: [
+      '施打部位 >> 手臂',
+      '施打完 20 分鐘後進食',
+      '因為 11:30 開始吃，若當下血糖低於 130，打完胰島素後先補 1 顆葡萄糖片',
+      '週四體育課 >>> 低於 150 時先補充 2 顆糖；低於 170 時先補充 1 顆糖，預防性課間低血糖',
+    ],
+  },
+  dinner: {
+    label: '晚餐', cir: 10, isf: 110, target: 140,
+    notes: [
+      '施打部位 >> 左大腿',
+      '施打完 30~45 分鐘後進食',
+      '睡前長效固定 3 單位，施打部位 >> 右大腿',
+    ],
+  },
+};
+
+const CALC_CARB_FOODS = {
+  white_rice: 30, udon: 24.6, yangchun_noodle: 27.8, oil_noodle: 25.5,
+  spaghetti: 27.4, penne: 29, potato_skin: 12.9,
+  wheat_toast: 12, white_toast: 12, strawberry_toast: 15.25,
+  berry_party: 3.5, bacon_egg_pancake: 30, pan_fried_dumpling: 15,
+  dumpling: 4, soup_dumpling: 4.3,
+  mcd_combo_1: 66, mcd_combo_2: 55.2,
+  guava: 10.6, apple: 11.9, cherry: 19.12, banana_peel: 10.6, banana: 22.1,
+  pineapple: 13.6, dragon_fruit: 12.36, strawberry: 9.3,
+  milk_100: 4.8, milk_150: 7, milk_200: 10, yogurt_100: 12, yakult: 14.7,
+};
+
+const CALC_MAIN_OPTIONS = {
+  breakfast: [
+    { value: 'white_rice',         label: '白飯 100g (碳水30g)' },
+    { value: 'udon',               label: '烏龍麵 100g (碳水24.6g)' },
+    { value: 'yangchun_noodle',    label: '陽春麵 100g (碳水27.8g)' },
+    { value: 'oil_noodle',         label: '油麵 100g (碳水25.5g)' },
+    { value: 'spaghetti',          label: '義大利麵 100g (碳水27.4g)' },
+    { value: 'penne',              label: '筆管麵 100g (碳水29g)' },
+    { value: 'potato_skin',        label: '馬鈴薯帶皮 100g (碳水12.9g)' },
+    { value: 'wheat_toast',        label: '全麥吐司 1片 (碳水12g)' },
+    { value: 'white_toast',        label: '白吐司 1片 (碳水12g)' },
+    { value: 'strawberry_toast',   label: '草莓吐司 1片 (碳水15.25g)' },
+    { value: 'berry_party',        label: '莓果派對 1份 (碳水3.5g)' },
+    { value: 'bacon_egg_pancake',  label: '培根蛋餅 1份 (碳水30g)' },
+    { value: 'pan_fried_dumpling', label: '小煎餃 55g (碳水15g)' },
+    { value: 'dumpling',           label: '水餃 1顆 (碳水4g)' },
+    { value: 'soup_dumpling',      label: '湯包 1顆 (碳水4.3g)' },
+  ],
+  lunch: [
+    { value: 'white_rice',      label: '白飯 100g (碳水30g)' },
+    { value: 'udon',            label: '烏龍麵 100g (碳水24.6g)' },
+    { value: 'yangchun_noodle', label: '陽春麵 100g (碳水27.8g)' },
+    { value: 'oil_noodle',      label: '油麵 100g (碳水25.5g)' },
+    { value: 'spaghetti',       label: '義大利麵 100g (碳水27.4g)' },
+    { value: 'penne',           label: '筆管麵 100g (碳水29g)' },
+    { value: 'potato_skin',     label: '馬鈴薯帶皮 100g (碳水12.9g)' },
+    { value: 'dumpling',        label: '水餃 1顆 (碳水4g)' },
+    { value: 'soup_dumpling',   label: '湯包 1顆 (碳水4.3g)' },
+    { value: 'mcd_combo_1',     label: '麥當勞組合1（鱈魚堡＋玉米杯＋牛奶）(碳水66g)' },
+    { value: 'mcd_combo_2',     label: '麥當勞組合2（鱈魚堡＋玉米杯＋水果袋）(碳水55.2g)' },
+  ],
+  dinner: [
+    { value: 'white_rice',      label: '白飯 100g (碳水30g)' },
+    { value: 'udon',            label: '烏龍麵 100g (碳水24.6g)' },
+    { value: 'yangchun_noodle', label: '陽春麵 100g (碳水27.8g)' },
+    { value: 'oil_noodle',      label: '油麵 100g (碳水25.5g)' },
+    { value: 'spaghetti',       label: '義大利麵 100g (碳水27.4g)' },
+    { value: 'penne',           label: '筆管麵 100g (碳水29g)' },
+    { value: 'potato_skin',     label: '馬鈴薯帶皮 100g (碳水12.9g)' },
+    { value: 'dumpling',        label: '水餃 1顆 (碳水4g)' },
+    { value: 'soup_dumpling',   label: '湯包 1顆 (碳水4.3g)' },
+    { value: 'mcd_combo_1',     label: '麥當勞組合1（鱈魚堡＋玉米杯＋牛奶）(碳水66g)' },
+    { value: 'mcd_combo_2',     label: '麥當勞組合2（鱈魚堡＋玉米杯＋水果袋）(碳水55.2g)' },
+  ],
+};
+
+// ── period → meal mapping ──
+const PERIOD_TO_MEAL = { morning: 'breakfast', noon: 'lunch', evening: 'dinner' };
+let calcTargetPeriod = 'morning';
+
+// ── Open / Close ──
+function openCalcModal(periodId) {
+  try {
+  calcTargetPeriod = periodId;
+  const meal = PERIOD_TO_MEAL[periodId] || 'breakfast';
+  document.getElementById('calc-meal-period').value = meal;
+
+  const bgVal = document.getElementById(periodId + '-bg').value;
+  if (bgVal) document.getElementById('calc-bg').value = bgVal;
+
+  // Reset food & IOB
+  [1,2,3,4].forEach(i => {
+    document.getElementById('calc-qty-' + i).value = 1;
+  });
+  document.getElementById('calc-food-3').value = '';
+  document.getElementById('calc-food-4').value = '';
+  document.getElementById('calc-iob').value = 0;
+  const otherCarbsEl = document.getElementById('calc-other-carbs');
+  const otherNameEl  = document.getElementById('calc-other-name');
+  if (otherCarbsEl) otherCarbsEl.value = '';
+  if (otherNameEl)  otherNameEl.value  = '';
+  document.getElementById('calc-carbs').value = 60;
+  document.getElementById('calc-warnings').innerHTML = '';
+
+  calcUpdateMeal();
+  document.getElementById('calcOverlay').classList.add('open');
+  } catch(err) {
+    showToast('❌ 錯誤：' + err.message);
+    console.error('openCalcModal error:', err);
+  }
+}
+
+function closeCalcModal() {
+  document.getElementById('calcOverlay').classList.remove('open');
+}
+
+function calcOverlayClick(e) {
+  if (e.target.id === 'calcOverlay') closeCalcModal();
+}
+
+// ── Meal select → rebuild food dropdowns ──
+function calcUpdateMeal() {
+  const meal = document.getElementById('calc-meal-period').value;
+  const opts = CALC_MAIN_OPTIONS[meal] || CALC_MAIN_OPTIONS.breakfast;
+  const sel1 = document.getElementById('calc-food-1');
+  sel1.innerHTML = '<option value="">不選擇</option>' +
+    opts.map(o => '<option value="' + o.value + '">' + o.label + '</option>').join('');
+  calcUpdateFood1();
+}
+
+function calcUpdateFood1() {
+  const meal    = document.getElementById('calc-meal-period').value;
+  const opts    = CALC_MAIN_OPTIONS[meal] || CALC_MAIN_OPTIONS.breakfast;
+  const mainVal = document.getElementById('calc-food-1').value;
+  const sel2    = document.getElementById('calc-food-2');
+  sel2.innerHTML = '<option value="">不選擇</option>' +
+    opts.filter(o => o.value !== mainVal)
+        .map(o => '<option value="' + o.value + '">' + o.label + '</option>').join('');
+  calcRecalc();
+}
+
+// ── Core calculation ──
+function calcFmt(v) {
+  const r = Math.round(v * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1);
+}
+
+function calcRecalc() {
+  const meal   = document.getElementById('calc-meal-period').value;
+  const preset = CALC_MEAL_PRESETS[meal];
+
+  // Show preset values
+  document.getElementById('calc-cir-display').textContent    = preset.cir;
+  document.getElementById('calc-isf-display').textContent    = preset.isf;
+  document.getElementById('calc-target-display').textContent = preset.target;
+
+  // Meal notes
+  const notesEl = document.getElementById('calc-meal-notes');
+  if (preset.notes && preset.notes.length) {
+    notesEl.innerHTML = preset.notes.map(n => '<p>• ' + n + '</p>').join('');
+    notesEl.style.display = 'block';
+  } else {
+    notesEl.style.display = 'none';
+  }
+
+  // Carbs from food selection
+  let totalCarbs = 0, hasFood = false;
+  [1,2,3,4].forEach(function(i) {
+    const food = document.getElementById('calc-food-' + i).value;
+    const qty  = parseFloat(document.getElementById('calc-qty-' + i).value) || 0;
+    if (food && CALC_CARB_FOODS[food] !== undefined) {
+      totalCarbs += CALC_CARB_FOODS[food] * qty;
+      hasFood = true;
+    }
+  });
+  // 加上「其他」手動輸入的碳水
+  const otherEl = document.getElementById('calc-other-carbs');
+  const otherCarbs = otherEl ? (parseFloat(otherEl.value) || 0) : 0;
+  if (otherCarbs > 0) { totalCarbs += otherCarbs; hasFood = true; }
+
+  if (hasFood) {
+    document.getElementById('calc-carbs').value = Math.round(totalCarbs * 10) / 10;
+  }
+
+  // Calculate
+  const bg      = parseFloat(document.getElementById('calc-bg').value)    || 0;
+  const carbs   = parseFloat(document.getElementById('calc-carbs').value) || 0;
+  const iob     = Math.max(parseFloat(document.getElementById('calc-iob').value) || 0, 0);
+  const mealDose = carbs / preset.cir;
+  const corrDose = (bg - preset.target) / preset.isf;
+  const rawDose  = Math.max(0, mealDose + corrDose - iob);
+
+  document.getElementById('calc-meal-dose').textContent   = calcFmt(mealDose);
+  document.getElementById('calc-corr-dose').textContent   = calcFmt(corrDose);
+  document.getElementById('calc-iob-dose').textContent    = '-' + calcFmt(iob);
+  document.getElementById('calc-raw-dose').textContent    = calcFmt(rawDose);
+  document.getElementById('calc-result-dose').textContent = calcFmt(rawDose);
+
+  // Warnings
+  const warns = [];
+  if (bg > 0 && bg < 70)  warns.push('目前血糖偏低，建議先處理低血糖再評估是否施打。');
+  if (bg >= 250)           warns.push('目前血糖偏高，請依照醫療團隊的高血糖處置流程。');
+  if (rawDose === 0 && (carbs > 0 || bg > preset.target))
+    warns.push('估算結果為 0，請確認 CIR、ISF 與 IOB 設定值是否正確。');
+  document.getElementById('calc-warnings').innerHTML =
+    warns.map(w => '<div class="calc-warning">⚠️ ' + w + '</div>').join('');
+}
+
+// ── Apply result to tracker ──
+function calcApply() {
+  const meal   = document.getElementById('calc-meal-period').value;
+  const dose   = document.getElementById('calc-result-dose').textContent;
+  const carbs  = document.getElementById('calc-carbs').value;
+  const bg     = document.getElementById('calc-bg').value;
+
+  // Fill dose
+  document.getElementById(calcTargetPeriod + '-insulin').value = dose;
+
+  // Fill BG if empty
+  const bgField = document.getElementById(calcTargetPeriod + '-bg');
+  if (!bgField.value && bg) {
+    bgField.value = bg;
+    onBGInput(calcTargetPeriod);
+  }
+
+  // Build food summary
+  const foodLines = [];
+  [1,2,3,4].forEach(function(i) {
+    const sel = document.getElementById('calc-food-' + i);
+    const qty = document.getElementById('calc-qty-' + i).value;
+    if (sel.value && sel.selectedIndex > 0) {
+      const lbl = sel.options[sel.selectedIndex].text.split(' (')[0];
+      foodLines.push(lbl + ' x' + qty);
+    }
+  });
+  const otherCarbs = document.getElementById('calc-other-carbs').value;
+  const otherName  = document.getElementById('calc-other-name').value.trim();
+  if (otherCarbs) foodLines.push((otherName || '其他') + ' ' + otherCarbs + 'g');
+
+  const preset = CALC_MEAL_PRESETS[meal];
+  const noteLines = [];
+  if (foodLines.length) noteLines.push('飲食：' + foodLines.join('、'));
+  noteLines.push('碳水：' + carbs + 'g｜建議劑量：' + dose + '單位');
+  if (preset.notes.length) noteLines.push('注意：' + preset.notes[0]);
+
+  const noteField = document.getElementById(calcTargetPeriod + '-note');
+  if (noteField.value) {
+    noteField.value += '\n' + noteLines.join('\n');
+  } else {
+    noteField.value = noteLines.join('\n');
+  }
+
+  closeCalcModal();
+  showToast('✅ 計算結果已帶入！');
+}
+
+
+init();
+
+// ── PWA Service Worker ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/insulin-tracker/sw.js')
+      .then(() => console.log('SW registered'))
+      .catch(e => console.log('SW error:', e));
+  });
+}
+
+// ── PWA Service Worker ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navi

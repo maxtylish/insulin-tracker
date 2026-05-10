@@ -1870,7 +1870,8 @@ function loadDayData() {
 
   PERIODS.forEach(p => {
     const rec = dayData[p.id] || {};
-    document.getElementById(p.id + '-time').value    = rec.time    || getNowTime();
+    const isToday = date === todayStr();
+    document.getElementById(p.id + '-time').value    = rec.time    || (isToday ? getNowTime() : '');
     document.getElementById(p.id + '-bg').value      = rec.bg      || '';
     document.getElementById(p.id + '-insulin').value = rec.insulin || '';
     document.getElementById(p.id + '-note').value    = rec.note    || '';
@@ -1957,7 +1958,7 @@ function renderHistory() {
             ${rec.insulin ? rec.insulin + '<small style="font-weight:400"> 單位</small>' : '—'}
             ${correctionBadge}
           </span>
-          <span class="time-val">${rec.time || '—'}</span>
+          <span class="time-val">${(rec.time && (rec.bg || rec.insulin)) ? rec.time : '—'}</span>
         </div>`;
     }).join('');
 
@@ -3712,7 +3713,8 @@ function loadDayData() {
 
   PERIODS.forEach(p => {
     const rec = dayData[p.id] || {};
-    document.getElementById(p.id + '-time').value    = rec.time    || getNowTime();
+    const isToday = date === todayStr();
+    document.getElementById(p.id + '-time').value    = rec.time    || (isToday ? getNowTime() : '');
     document.getElementById(p.id + '-bg').value      = rec.bg      || '';
     document.getElementById(p.id + '-insulin').value = rec.insulin || '';
     document.getElementById(p.id + '-note').value    = rec.note    || '';
@@ -3799,7 +3801,7 @@ function renderHistory() {
             ${rec.insulin ? rec.insulin + '<small style="font-weight:400"> 單位</small>' : '—'}
             ${correctionBadge}
           </span>
-          <span class="time-val">${rec.time || '—'}</span>
+          <span class="time-val">${(rec.time && (rec.bg || rec.insulin)) ? rec.time : '—'}</span>
         </div>`;
     }).join('');
 
