@@ -1891,11 +1891,16 @@ function saveDayData() {
   all[date] = all[date] || {};
 
   PERIODS.forEach(p => {
+    const bg      = document.getElementById(p.id + '-bg').value;
+    const insulin = document.getElementById(p.id + '-insulin').value;
+    const note    = document.getElementById(p.id + '-note').value;
+    const time    = document.getElementById(p.id + '-time').value;
     all[date][p.id] = {
-      time:    document.getElementById(p.id + '-time').value,
-      bg:      document.getElementById(p.id + '-bg').value,
-      insulin: document.getElementById(p.id + '-insulin').value,
-      note:    document.getElementById(p.id + '-note').value,
+      // Only persist time if the period actually has measurement data
+      time:    (bg || insulin) ? time : '',
+      bg,
+      insulin,
+      note,
     };
   });
 
@@ -3439,12 +3444,4 @@ if ('serviceWorker' in navigator) {
       <!-- 餐別備註 -->
       <div id="calc-meal-notes" class="calc-notes" style="display:none"></div>
 
-      <!-- 帶入按鈕 -->
-      <button class="calc-apply-btn" type="button" onclick="calcApply()">✅ 帶入紀錄表</button>
-    </div>
-  </div>
-</div>
-
-
-</body>
-</html>
+   
