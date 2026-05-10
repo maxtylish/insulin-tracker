@@ -2493,13 +2493,13 @@ function calcSnackDose(sectionId, idx) {
 
   var mealD  = carb / sec.cir;
   var corrD  = bg > 0 ? (bg - sec.target) / sec.isf : 0;
-  var total  = Math.max(0, mealD + corrD);
-  var rounded = Math.round(total * 2) / 2; // round to nearest 0.5u
+  var total = Math.max(0, mealD + corrD);
+  var display = Math.round(total * 10) / 10; // 保留小數點後一位
 
   // Auto-fill dose
   if (doseEl) {
-    doseEl.value = rounded > 0 ? rounded : '';
-    doseEl.classList.toggle('snack-dose-auto', rounded > 0);
+    doseEl.value = display > 0 ? display : '';
+    doseEl.classList.toggle('snack-dose-auto', display > 0);
   }
 
   // Show hint
@@ -2507,7 +2507,7 @@ function calcSnackDose(sectionId, idx) {
     var hint = '碳水 ' + mealD.toFixed(1) + 'u';
     if (bg > 0) {
       hint += (corrD >= 0 ? ' + 修正 ' : ' − 修正 ') + Math.abs(corrD).toFixed(1) + 'u';
-      hint += ' = <strong>' + total.toFixed(1) + 'u → 四捨五入 ' + rounded + 'u</strong>';
+      hint += ' = <strong>' + display.toFixed(1) + 'u</strong>';
     } else {
       hint += ' <span style="color:#94a3b8">（未輸入血糖，不含修正）</span>';
     }
@@ -4279,13 +4279,13 @@ function calcSnackDose(sectionId, idx) {
 
   var mealD  = carb / sec.cir;
   var corrD  = bg > 0 ? (bg - sec.target) / sec.isf : 0;
-  var total  = Math.max(0, mealD + corrD);
-  var rounded = Math.round(total * 2) / 2; // round to nearest 0.5u
+  var total = Math.max(0, mealD + corrD);
+  var display = Math.round(total * 10) / 10; // 保留小數點後一位
 
   // Auto-fill dose
   if (doseEl) {
-    doseEl.value = rounded > 0 ? rounded : '';
-    doseEl.classList.toggle('snack-dose-auto', rounded > 0);
+    doseEl.value = display > 0 ? display : '';
+    doseEl.classList.toggle('snack-dose-auto', display > 0);
   }
 
   // Show hint
@@ -4293,7 +4293,7 @@ function calcSnackDose(sectionId, idx) {
     var hint = '碳水 ' + mealD.toFixed(1) + 'u';
     if (bg > 0) {
       hint += (corrD >= 0 ? ' + 修正 ' : ' − 修正 ') + Math.abs(corrD).toFixed(1) + 'u';
-      hint += ' = <strong>' + total.toFixed(1) + 'u → 四捨五入 ' + rounded + 'u</strong>';
+      hint += ' = <strong>' + display.toFixed(1) + 'u</strong>';
     } else {
       hint += ' <span style="color:#94a3b8">（未輸入血糖，不含修正）</span>';
     }
@@ -4697,4 +4697,7 @@ const CALC_MAIN_OPTIONS = {
 
 // ── period → meal mapping ──
 const PERIOD_TO_MEAL = { morning: 'breakfast', noon: 'lunch', evening: 'dinner' };
-let calcTarge
+let calcTargetPeriod = 'morning';
+
+// ── Open / Close ──
+func
