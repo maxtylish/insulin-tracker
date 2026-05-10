@@ -175,16 +175,19 @@
       font-size: 0.78rem;
       color: var(--text-muted);
     }
-    .period-time-input input[type="time"] {
+    .period-time-input .time-input {
       border: 1px solid var(--border);
       border-radius: 6px;
       padding: 4px 8px;
       font-size: 0.82rem;
       color: var(--text);
       outline: none;
-      width: 90px;
+      width: 72px;
+      text-align: center;
+      letter-spacing: 0.5px;
+      font-variant-numeric: tabular-nums;
     }
-    .period-time-input input[type="time"]:focus { border-color: var(--primary); }
+    .period-time-input .time-input:focus { border-color: var(--primary); }
 
     .fields-row {
       display: grid;
@@ -315,7 +318,7 @@
       margin-bottom: 5px;
     }
     .suppl-field .field-input-wrap input[type="number"],
-    .suppl-field input[type="time"] {
+    .suppl-field .time-input {
       width: 100%;
       border: 1.5px solid var(--border);
       border-radius: 8px;
@@ -328,7 +331,7 @@
       transition: border-color 0.2s;
     }
     .suppl-field .field-input-wrap input:focus,
-    .suppl-field input[type="time"]:focus { border-color: var(--primary); }
+    .suppl-field .time-input:focus { border-color: var(--primary); }
     .suppl-del-btn {
       background: none;
       border: 1.5px solid #fca5a5;
@@ -516,7 +519,7 @@
       background: white;
       transition: border-color 0.2s;
     }
-    .snack-field input[type="time"] {
+    .snack-field .time-input {
       width: 100%;
       border: 1.5px solid var(--border);
       border-radius: 8px;
@@ -529,7 +532,7 @@
       transition: border-color 0.2s;
     }
     .snack-field .field-input-wrap input:focus,
-    .snack-field input[type="time"]:focus { border-color: #10b981; }
+    .snack-field .time-input:focus { border-color: #10b981; }
 
     /* ── IOB Chart ── */
     .iob-info-box {
@@ -1761,6 +1764,26 @@ function getNowTime() {
 function currentMonthStr() {
   return new Date().toISOString().slice(0, 7);
 }
+
+// ── 24-hour time input helpers (replace <input type="time"> for cross-device) ──
+function onTimeInput(el) {
+  // Strip non-digits, keep up to 4 digits, auto-insert colon after HH
+  const pos = el.selectionStart;
+  let raw = el.value.replace(/\D/g, '').slice(0, 4);
+  if (raw.length > 2) raw = raw.slice(0, 2) + ':' + raw.slice(2);
+  el.value = raw;
+  // Restore cursor (account for inserted colon)
+  try { el.setSelectionRange(pos <= 2 ? pos : pos + 1, pos <= 2 ? pos : pos + 1); } catch(e) {}
+}
+function onTimeBlur(el) {
+  const m = el.value.match(/^(\d{1,2}):?(\d{0,2})$/);
+  if (!m || el.value === '') { el.value = ''; return; }
+  let h = parseInt(m[1], 10);
+  let min = parseInt(m[2] || '0', 10);
+  if (isNaN(h) || h > 23) { el.value = ''; return; }
+  if (isNaN(min) || min > 59) min = 0;
+  el.value = h.toString().padStart(2, '0') + ':' + min.toString().padStart(2, '0');
+}
 function formatDateDisplay(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   const days = ['日', '一', '二', '三', '四', '五', '六'];
@@ -1801,7 +1824,10 @@ function buildPeriodCards() {
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
             <div class="period-time-input">
               <span>注射時間</span>
-              <input type="time" id="${p.id}-time" value="${getNowTime()}" />
+              <input type="text" class="time-input" id="${p.id}-time"
+                     value="${getNowTime()}" inputmode="numeric" maxlength="5"
+                     placeholder="--:--"
+                     oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />
             </div>
             ${p.id !== 'bedtime' ? `<button class="calc-open-btn" type="button" onclick="openCalcModal('${p.id}')">💊 計算劑量</button>` : ''}
           </div>
@@ -2596,9 +2622,11 @@ function renderSnackSection(sectionId, items) {
           '</div>' +
           '<div class="snack-field">' +
             '<label>時間</label>' +
-            '<input type="time" class="snack-val" data-idx="' + idx + '" data-field="time"' +
+            '<input type="text" class="snack-val time-input" data-idx="' + idx + '" data-field="time"' +
               ' value="' + (item.time || getNowTime()) + '"' +
-              ' style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 8px;font-size:0.95rem;font-weight:700;outline:none;background:white;transition:border-color 0.2s" />' +
+              ' inputmode="numeric" maxlength="5" placeholder="--:--"' +
+              ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)"' +
+              ' style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 8px;font-size:0.95rem;font-weight:700;outline:none;background:white;transition:border-color 0.2s;text-align:center;letter-spacing:0.5px;font-variant-numeric:tabular-nums" />' +
           '</div>' +
         '</div>' +
 
@@ -2853,8 +2881,10 @@ function renderSupplList(type, items) {
           ${bgField}
           <div class="suppl-field">
             <label>時間</label>
-            <input type="time" data-idx="${idx}" data-field="time"
-                   class="suppl-val" value="${item.time || ''}" />
+            <input type="text" data-idx="${idx}" data-field="time"
+                   class="suppl-val time-input" value="${item.time || ''}"
+                   inputmode="numeric" maxlength="5" placeholder="--:--"
+                   oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />
           </div>
           <button class="suppl-del-btn" onclick="removeSupplRow('${type}', ${idx})" title="刪除">✕</button>
         </div>
