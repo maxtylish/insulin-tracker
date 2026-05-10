@@ -47,9 +47,9 @@
       background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
       color: white;
       padding: 16px 20px;
-      display: flex;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      justify-content: space-between;
       box-shadow: 0 2px 8px rgba(29,78,216,0.3);
     }
     header h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.5px; }
@@ -1293,10 +1293,15 @@
 <body>
 
 <header>
-  <div>
+  <!-- 左側留空，用來平衡右側寬度 -->
+  <div></div>
+  <!-- 中央標題（自動置中） -->
+  <div style="text-align:center;">
     <h1>💉 胰島素紀錄表</h1>
     <div class="subtitle">血糖與胰島素注射管理</div>
+    <div style="font-size:0.65rem;opacity:0.55;margin-top:3px;letter-spacing:0.06em;">Powered by Lukuarts Studio · 2026</div>
   </div>
+  <!-- 右側：日期 + 同步狀態 -->
   <div style="text-align:right;">
     <div style="font-size:0.8rem; opacity:0.85;" id="headerDate">--</div>
     <div id="syncBadge" class="sync-badge sync-busy" style="margin-top:3px;">⏳ 初始化</div>
