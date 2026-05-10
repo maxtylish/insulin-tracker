@@ -608,6 +608,58 @@
     .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
 
     /* ── Toast ── */
+    /* ── Footer ── */
+    .app-footer {
+      margin: 8px 0 0;
+      padding: 20px 20px 32px;
+      text-align: center;
+      border-top: 1px solid var(--border);
+      background: white;
+    }
+    .app-footer-brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .footer-studio {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: 0.05em;
+    }
+    .footer-dot { color: var(--text-muted); font-size: 1rem; }
+    .footer-en {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+    }
+    .app-footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .footer-link {
+      font-size: 0.82rem;
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: #eff6ff;
+      transition: all 0.2s;
+    }
+    .footer-link:hover { background: var(--primary); color: white; }
+    .app-footer-copy {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      letter-spacing: 0.04em;
+    }
+
     .toast {
       position: fixed;
       bottom: 24px;
@@ -1528,6 +1580,20 @@
     <button class="danger-btn" onclick="clearAllData()">🗑️ 清除所有資料</button>
   </div>
 </div>
+
+<!-- Footer -->
+<footer class="app-footer">
+  <div class="app-footer-brand">
+    <span class="footer-studio">青玥影像</span>
+    <span class="footer-dot">·</span>
+    <span class="footer-en">Lukuarts Studio</span>
+  </div>
+  <div class="app-footer-links">
+    <a href="tel:0932754860" class="footer-link">📞 0932-754-860</a>
+    <a href="https://lukuarts-website.vercel.app/" target="_blank" rel="noopener" class="footer-link">🌐 官方網站</a>
+  </div>
+  <div class="app-footer-copy">Powered by Lukuarts Studio &nbsp;·&nbsp; 2026</div>
+</footer>
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
@@ -4656,60 +4722,4 @@ function loadCloudConfigUI() {
   if (dispEl) dispEl.textContent = currentUserId || '尚未設定';
 
   const status = document.getElementById('cloudStatus');
-  if (status) {
-    if (sbClient) {
-      status.textContent = '✅ 已連線至 Supabase';
-      status.style.color = '#22c55e';
-    } else if (url) {
-      status.textContent = '⚠️ 設定已填寫但連線未成功，請確認 URL 和 Key 正確';
-      status.style.color = '#f59e0b';
-    } else {
-      status.textContent = '尚未設定 — 目前使用本機儲存';
-      status.style.color = 'var(--text-muted)';
-    }
-  }
-}
-
-async function saveCloudConfig() {
-  const url = (document.getElementById('set-sb-url').value || '').trim();
-  const key = (document.getElementById('set-sb-key').value || '').trim();
-  localStorage.setItem('sb_url', url);
-  localStorage.setItem('sb_key', key);
-  initSupabase();
-  loadCloudConfigUI();
-  if (sbClient) {
-    await loadFromCloud();
-    loadCloudConfigUI();
-    loadDayData();
-    showToast('✅ 雲端連線成功，資料已同步！');
-  } else {
-    showToast('⚠️ 連線失敗，請檢查 URL 和 Key');
-  }
-}
-
-// ── Cookie helpers for persistent user_id ──
-function setCookie(name, value, days) {
-  const exp = new Date(Date.now() + days * 864e5).toUTCString();
-  document.cookie = name + '=' + encodeURIComponent(value) +
-    '; expires=' + exp + '; path=/; SameSite=Lax';
-}
-function getCookie(name) {
-  const m = document.cookie.match('(?:^|;)\\s*' + name + '=([^;]*)');
-  return m ? decodeURIComponent(m[1]) : null;
-}
-function saveUserId(id) {
-  localStorage.setItem('user_id', id);
-  setCookie('insulin_uid', id, 365);
-}
-
-function copyUserId() {
-  const id = currentUserId || '';
-  if (!id) return;
-  navigator.clipboard.writeText(id).catch(() => {});
-  showToast('📋 帳號 ID 已複製！');
-}
-
-function showCustomIdInput() {
-  const row = document.getElementById('customIdRow');
-  if (!row) return;
-  const isHidden = row.style.display
+ 

@@ -608,6 +608,58 @@
     .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
 
     /* ── Toast ── */
+    /* ── Footer ── */
+    .app-footer {
+      margin: 8px 0 0;
+      padding: 20px 20px 32px;
+      text-align: center;
+      border-top: 1px solid var(--border);
+      background: white;
+    }
+    .app-footer-brand {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .footer-studio {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: 0.05em;
+    }
+    .footer-dot { color: var(--text-muted); font-size: 1rem; }
+    .footer-en {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+    }
+    .app-footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .footer-link {
+      font-size: 0.82rem;
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: #eff6ff;
+      transition: all 0.2s;
+    }
+    .footer-link:hover { background: var(--primary); color: white; }
+    .app-footer-copy {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      letter-spacing: 0.04em;
+    }
+
     .toast {
       position: fixed;
       bottom: 24px;
@@ -1528,6 +1580,20 @@
     <button class="danger-btn" onclick="clearAllData()">🗑️ 清除所有資料</button>
   </div>
 </div>
+
+<!-- Footer -->
+<footer class="app-footer">
+  <div class="app-footer-brand">
+    <span class="footer-studio">青玥影像</span>
+    <span class="footer-dot">·</span>
+    <span class="footer-en">Lukuarts Studio</span>
+  </div>
+  <div class="app-footer-links">
+    <a href="tel:0932754860" class="footer-link">📞 0932-754-860</a>
+    <a href="https://lukuarts-website.vercel.app/" target="_blank" rel="noopener" class="footer-link">🌐 官方網站</a>
+  </div>
+  <div class="app-footer-copy">Powered by Lukuarts Studio &nbsp;·&nbsp; 2026</div>
+</footer>
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
