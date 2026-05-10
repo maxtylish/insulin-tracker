@@ -1851,7 +1851,7 @@ function buildPeriodCards() {
             <div id="${p.id}-bg-badge"></div>
           </div>
           <div class="field-group">
-            <label>胰島素劑量</label>
+            <label>胰島素劑量${p.id === 'bedtime' ? '【長效】' : '【速效】'}</label>
             <div class="field-input-wrap">
               <input type="number" id="${p.id}-insulin" placeholder="--"
                      min="0" max="100" step="0.5"
@@ -1995,7 +1995,7 @@ function renderHistory() {
             ${carbBadge}
           </span>
           <span class="insulin-val ${!rec.insulin ? 'empty' : ''}">
-            ${rec.insulin ? rec.insulin + '<small style="font-weight:400"> 單位</small>' : '—'}
+            ${rec.insulin ? rec.insulin + '<small style="font-weight:400"> 單位</small><small style="font-weight:500;color:#6b7280;margin-left:3px;">' + (p.id === 'bedtime' ? '【長效】' : '【速效】') + '</small>' : '—'}
             ${correctionBadge}
           </span>
           <span class="time-val">${(rec.time && (rec.bg || rec.insulin)) ? rec.time : '—'}</span>
@@ -3433,6 +3433,4 @@ if ('serviceWorker' in navigator) {
         <div class="calc-food-row">
           <span class="calc-food-badge badge-other">其他</span>
           <input type="text" id="calc-other-name" placeholder="食物名稱（選填）"
-                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 8px;font-size:0.8rem;outline:none;width:100%;color:var(--text);" />
-          <input type="number" id="calc-other-carbs" min="0" step="1" placeholder="克"
-              
+                 style="border:1.5px solid var(--border);border-radius
