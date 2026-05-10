@@ -1302,9 +1302,9 @@
     <div style="font-size:0.65rem;opacity:0.55;margin-top:3px;letter-spacing:0.06em;">Powered by Lukuarts Studio · 2026</div>
   </div>
   <!-- 右側：日期 + 同步狀態 -->
-  <div style="text-align:right;">
+  <div style="text-align:right; justify-self:end;">
     <div style="font-size:0.8rem; opacity:0.85;" id="headerDate">--</div>
-    <div id="syncBadge" class="sync-badge sync-busy" style="margin-top:3px;">⏳ 初始化</div>
+    <div id="syncBadge" class="sync-badge sync-busy" style="margin-top:3px; display:inline-block;">⏳ 初始化</div>
   </div>
 </header>
 
@@ -4719,4 +4719,4 @@ function loadCloudConfigUI() {
   const key = localStorage.getItem('sb_key') || DEFAULT_SB_KEY;
   const el_url = document.getElementById('set-sb-url');
   const el_key = document.getElementById('set-sb-key');
-  const el_id  = document.getElementById('myUserId');
+  const el_id
