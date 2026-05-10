@@ -1784,6 +1784,12 @@ function onTimeBlur(el) {
   if (isNaN(min) || min > 59) min = 0;
   el.value = h.toString().padStart(2, '0') + ':' + min.toString().padStart(2, '0');
 }
+// Auto-fill time with NOW only when user first focuses BG or insulin field
+// and the time field for that period is still empty.
+function autoFillTime(periodId) {
+  const timeEl = document.getElementById(periodId + '-time');
+  if (timeEl && timeEl.value === '') timeEl.value = getNowTime();
+}
 function formatDateDisplay(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   const days = ['日', '一', '二', '三', '四', '五', '六'];
@@ -1825,7 +1831,7 @@ function buildPeriodCards() {
             <div class="period-time-input">
               <span>注射時間</span>
               <input type="text" class="time-input" id="${p.id}-time"
-                     value="${getNowTime()}" inputmode="numeric" maxlength="5"
+                     value="" inputmode="numeric" maxlength="5"
                      placeholder="--:--"
                      oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />
             </div>
@@ -1838,7 +1844,8 @@ function buildPeriodCards() {
             <div class="field-input-wrap">
               <input type="number" id="${p.id}-bg" placeholder="--"
                      min="20" max="600" step="1"
-                     oninput="onBGInput('${p.id}')" />
+                     oninput="onBGInput('${p.id}')"
+                     onfocus="autoFillTime('${p.id}')" />
               <span class="field-unit">mg/dL</span>
             </div>
             <div id="${p.id}-bg-badge"></div>
@@ -1847,7 +1854,8 @@ function buildPeriodCards() {
             <label>胰島素劑量</label>
             <div class="field-input-wrap">
               <input type="number" id="${p.id}-insulin" placeholder="--"
-                     min="0" max="100" step="0.5" />
+                     min="0" max="100" step="0.5"
+                     onfocus="autoFillTime('${p.id}')" />
               <span class="field-unit">單位</span>
             </div>
           </div>
@@ -1896,8 +1904,9 @@ function loadDayData() {
 
   PERIODS.forEach(p => {
     const rec = dayData[p.id] || {};
-    const isToday = date === todayStr();
-    document.getElementById(p.id + '-time').value    = rec.time    || (isToday ? getNowTime() : '');
+    // Always restore the saved time exactly; never auto-fill here.
+    // Time is auto-filled by autoFillTime() only when user focuses BG/insulin.
+    document.getElementById(p.id + '-time').value    = rec.time    || '';
     document.getElementById(p.id + '-bg').value      = rec.bg      || '';
     document.getElementById(p.id + '-insulin').value = rec.insulin || '';
     document.getElementById(p.id + '-note').value    = rec.note    || '';
@@ -3426,15 +3435,4 @@ if ('serviceWorker' in navigator) {
           <input type="text" id="calc-other-name" placeholder="食物名稱（選填）"
                  style="border:1.5px solid var(--border);border-radius:8px;padding:6px 8px;font-size:0.8rem;outline:none;width:100%;color:var(--text);" />
           <input type="number" id="calc-other-carbs" min="0" step="1" placeholder="克"
-                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 4px;font-size:0.82rem;outline:none;text-align:center;width:100%;"
-                 oninput="calcRecalc()" />
-        </div>
-      </div>
-
-      <!-- 劑量計算 -->
-      <div class="calc-section">
-        <div class="calc-section-title">劑量計算</div>
-        <div class="calc-grid-2">
-          <div class="calc-field">
-            <label>預計碳水量 (克)</label>
-            <input t
+              
