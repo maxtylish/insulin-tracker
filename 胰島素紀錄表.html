@@ -3033,8 +3033,15 @@ function init() {
   document.getElementById('historyMonth').value = today.slice(0, 7);
   document.getElementById('headerDate').innerHTML =
     formatDateDisplay(today).replace('（', '<br>（');
+  // Snapshot whether today already has local data before cloud sync
+  var hadLocalDataToday = !!getAllData()[today];
   loadDayData();
-  loadFromCloud().then(function(){ loadDayData(); });
+  loadFromCloud().then(function(){
+    // Only re-render after cloud sync if there was no local data for today
+    // (first install / new device). If user already has local data, don't
+    // overwrite what they may have started editing.
+    if (!hadLocalDataToday) loadDayData();
+  });
 }
 
 

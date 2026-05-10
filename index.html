@@ -3033,8 +3033,15 @@ function init() {
   document.getElementById('historyMonth').value = today.slice(0, 7);
   document.getElementById('headerDate').innerHTML =
     formatDateDisplay(today).replace('（', '<br>（');
+  // Snapshot whether today already has local data before cloud sync
+  var hadLocalDataToday = !!getAllData()[today];
   loadDayData();
-  loadFromCloud().then(function(){ loadDayData(); });
+  loadFromCloud().then(function(){
+    // Only re-render after cloud sync if there was no local data for today
+    // (first install / new device). If user already has local data, don't
+    // overwrite what they may have started editing.
+    if (!hadLocalDataToday) loadDayData();
+  });
 }
 
 
@@ -3436,12 +3443,4 @@ if ('serviceWorker' in navigator) {
         <div class="calc-breakdown">
           <div class="calc-breakdown-item"><span>碳水劑量</span><strong id="calc-meal-dose">0</strong></div>
           <div class="calc-breakdown-item"><span>血糖校正</span><strong id="calc-corr-dose">0</strong></div>
-          <div class="calc-breakdown-item"><span>扣除 IOB</span><strong id="calc-iob-dose">0</strong></div>
-          <div class="calc-breakdown-item"><span>計算值</span><strong id="calc-raw-dose">0</strong></div>
-        </div>
-      </div>
-
-      <!-- 餐別備註 -->
-      <div id="calc-meal-notes" class="calc-notes" style="display:none"></div>
-
-   
+       
