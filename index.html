@@ -3532,4 +3532,255 @@ function calcRecalc() {
   // Show preset values
   document.getElementById('calc-cir-display').textContent    = preset.cir;
   document.getElementById('calc-isf-display').textContent    = preset.isf;
-  document.getE
+  document.getElementById('calc-target-display').textContent = preset.target;
+
+  // Meal notes
+  const notesEl = document.getElementById('calc-meal-notes');
+  if (preset.notes && preset.notes.length) {
+    notesEl.innerHTML = preset.notes.map(n => '<p>• ' + n + '</p>').join('');
+    notesEl.style.display = 'block';
+  } else {
+    notesEl.style.display = 'none';
+  }
+
+  // Carbs from food selection
+  let totalCarbs = 0, hasFood = false;
+  [1,2,3,4].forEach(function(i) {
+    const food = document.getElementById('calc-food-' + i).value;
+    const qty  = parseFloat(document.getElementById('calc-qty-' + i).value) || 0;
+    if (food && CALC_CARB_FOODS[food] !== undefined) {
+      totalCarbs += CALC_CARB_FOODS[food] * qty;
+      hasFood = true;
+    }
+  });
+  // 加上「其他」手動輸入的碳水
+  const otherEl = document.getElementById('calc-other-carbs');
+  const otherCarbs = otherEl ? (parseFloat(otherEl.value) || 0) : 0;
+  if (otherCarbs > 0) { totalCarbs += otherCarbs; hasFood = true; }
+
+  if (hasFood) {
+    document.getElementById('calc-carbs').value = Math.round(totalCarbs * 10) / 10;
+  }
+
+  // Calculate
+  const bg      = parseFloat(document.getElementById('calc-bg').value)    || 0;
+  const carbs   = parseFloat(document.getElementById('calc-carbs').value) || 0;
+  const iob     = Math.max(parseFloat(document.getElementById('calc-iob').value) || 0, 0);
+  const mealDose = carbs / preset.cir;
+  const corrDose = (bg - preset.target) / preset.isf;
+  const rawDose  = Math.max(0, mealDose + corrDose - iob);
+
+  document.getElementById('calc-meal-dose').textContent   = calcFmt(mealDose);
+  document.getElementById('calc-corr-dose').textContent   = calcFmt(corrDose);
+  document.getElementById('calc-iob-dose').textContent    = '-' + calcFmt(iob);
+  document.getElementById('calc-raw-dose').textContent    = calcFmt(rawDose);
+  document.getElementById('calc-result-dose').textContent = calcFmt(rawDose);
+
+  // Warnings
+  const warns = [];
+  if (bg > 0 && bg < 70)  warns.push('目前血糖偏低，建議先處理低血糖再評估是否施打。');
+  if (bg >= 250)           warns.push('目前血糖偏高，請依照醫療團隊的高血糖處置流程。');
+  if (rawDose === 0 && (carbs > 0 || bg > preset.target))
+    warns.push('估算結果為 0，請確認 CIR、ISF 與 IOB 設定值是否正確。');
+  document.getElementById('calc-warnings').innerHTML =
+    warns.map(w => '<div class="calc-warning">⚠️ ' + w + '</div>').join('');
+}
+
+// ── Apply result to tracker ──
+function calcApply() {
+  const meal   = document.getElementById('calc-meal-period').value;
+  const dose   = document.getElementById('calc-result-dose').textContent;
+  const carbs  = document.getElementById('calc-carbs').value;
+  const bg     = document.getElementById('calc-bg').value;
+
+  // Fill dose
+  document.getElementById(calcTargetPeriod + '-insulin').value = dose;
+
+  // Fill BG if empty
+  const bgField = document.getElementById(calcTargetPeriod + '-bg');
+  if (!bgField.value && bg) {
+    bgField.value = bg;
+    onBGInput(calcTargetPeriod);
+  }
+
+  // Build food summary
+  const foodLines = [];
+  [1,2,3,4].forEach(function(i) {
+    const sel = document.getElementById('calc-food-' + i);
+    const qty = document.getElementById('calc-qty-' + i).value;
+    if (sel.value && sel.selectedIndex > 0) {
+      const lbl = sel.options[sel.selectedIndex].text.split(' (')[0];
+      foodLines.push(lbl + ' x' + qty);
+    }
+  });
+  const otherCarbs = document.getElementById('calc-other-carbs').value;
+  const otherName  = document.getElementById('calc-other-name').value.trim();
+  if (otherCarbs) foodLines.push((otherName || '其他') + ' ' + otherCarbs + 'g');
+
+  const preset = CALC_MEAL_PRESETS[meal];
+  const noteLines = [];
+  if (foodLines.length) noteLines.push('飲食：' + foodLines.join('、'));
+  noteLines.push('碳水：' + carbs + 'g｜建議劑量：' + dose + '單位');
+  if (preset.notes.length) noteLines.push('注意：' + preset.notes[0]);
+
+  const noteField = document.getElementById(calcTargetPeriod + '-note');
+  if (noteField.value) {
+    noteField.value += '\n' + noteLines.join('\n');
+  } else {
+    noteField.value = noteLines.join('\n');
+  }
+
+  closeCalcModal();
+  showToast('✅ 計算結果已帶入！');
+}
+
+
+init();
+
+// ── PWA Service Worker ──
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/insulin-tracker/sw.js')
+      .then(() => console.log('SW registered'))
+      .catch(e => console.log('SW error:', e));
+  });
+}
+</script>
+
+<!-- ══════════════ CALCULATOR MODAL ══════════════ -->
+<div id="calcOverlay" class="calc-overlay" onclick="calcOverlayClick(event)">
+  <div class="calc-modal">
+    <div class="calc-modal-header">
+      <h2>💊 餐前劑量計算</h2>
+      <button class="calc-close-btn" type="button" onclick="closeCalcModal()">✕</button>
+    </div>
+    <div class="calc-body">
+
+      <!-- 基本資訊 -->
+      <div class="calc-section">
+        <div class="calc-section-title">基本資訊</div>
+        <div class="calc-grid-2">
+          <div class="calc-field">
+            <label>餐別</label>
+            <select id="calc-meal-period" onchange="calcUpdateMeal()">
+              <option value="breakfast">🌅 早餐</option>
+              <option value="lunch">☀️ 午餐</option>
+              <option value="dinner">🌙 晚餐</option>
+            </select>
+          </div>
+          <div class="calc-field">
+            <label>目前血糖 (mg/dL)</label>
+            <input type="number" id="calc-bg" min="0" step="1" value="180" oninput="calcRecalc()" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 飲食紀錄 -->
+      <div class="calc-section">
+        <div class="calc-section-title">飲食紀錄</div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-main">主餐</span>
+          <select id="calc-food-1" onchange="calcUpdateFood1()"></select>
+          <input type="number" id="calc-qty-1" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-side">餐食2</span>
+          <select id="calc-food-2" onchange="calcRecalc()"></select>
+          <input type="number" id="calc-qty-2" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-fruit">甜點</span>
+          <select id="calc-food-3" onchange="calcRecalc()">
+            <option value="">不選擇</option>
+            <option value="guava">芭樂 100g (碳水10.6g)</option>
+            <option value="apple">蘋果 100g (碳水11.9g)</option>
+            <option value="cherry">櫻桃 100g (碳水19.12g)</option>
+            <option value="banana_peel">香蕉帶皮 100g (碳水10.6g)</option>
+            <option value="banana">香蕉去皮 100g (碳水22.1g)</option>
+            <option value="pineapple">鳳梨 100g (碳水13.6g)</option>
+            <option value="dragon_fruit">火龍果 100g (碳水12.36g)</option>
+            <option value="strawberry">草莓去蒂 100g (碳水9.3g)</option>
+          </select>
+          <input type="number" id="calc-qty-3" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-drink">飲品</span>
+          <select id="calc-food-4" onchange="calcRecalc()">
+            <option value="">不選擇</option>
+            <option value="milk_100">牛奶 100g (碳水4.8g)</option>
+            <option value="milk_150">牛奶 150g (碳水7g)</option>
+            <option value="milk_200">牛奶 200g (碳水10g)</option>
+            <option value="yogurt_100">優酪乳 100g (碳水12g)</option>
+            <option value="yakult">養樂多 90ML (碳水14.7g)</option>
+          </select>
+          <input type="number" id="calc-qty-4" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-other">其他</span>
+          <input type="text" id="calc-other-name" placeholder="食物名稱（選填）"
+                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 8px;font-size:0.8rem;outline:none;width:100%;color:var(--text);" />
+          <input type="number" id="calc-other-carbs" min="0" step="1" placeholder="克"
+                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 4px;font-size:0.82rem;outline:none;text-align:center;width:100%;"
+                 oninput="calcRecalc()" />
+        </div>
+      </div>
+
+      <!-- 劑量計算 -->
+      <div class="calc-section">
+        <div class="calc-section-title">劑量計算</div>
+        <div class="calc-grid-2">
+          <div class="calc-field">
+            <label>預計碳水量 (克)</label>
+            <input type="number" id="calc-carbs" min="0" step="1" value="60" oninput="calcRecalc()" />
+          </div>
+          <div class="calc-field">
+            <label>有效胰島素 IOB (單位)</label>
+            <input type="number" id="calc-iob" min="0" step="0.1" value="0" oninput="calcRecalc()" />
+          </div>
+        </div>
+        <div class="calc-preset-row">
+          <div class="calc-preset-item">
+            <span>CIR 醣類係數</span>
+            <strong id="calc-cir-display">10</strong>
+            <span>g / 單位</span>
+          </div>
+          <div class="calc-preset-item">
+            <span>ISF 敏感係數</span>
+            <strong id="calc-isf-display">50</strong>
+            <span>mg/dL / 單位</span>
+          </div>
+          <div class="calc-preset-item">
+            <span>目標血糖</span>
+            <strong id="calc-target-display">110</strong>
+            <span>mg/dL</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 警示 -->
+      <div id="calc-warnings"></div>
+
+      <!-- 計算結果 -->
+      <div class="calc-result-box">
+        <div class="calc-result-main"><span id="calc-result-dose">0</span><small> 單位</small></div>
+        <div class="calc-result-label">建議估算劑量</div>
+        <div class="calc-breakdown">
+          <div class="calc-breakdown-item"><span>碳水劑量</span><strong id="calc-meal-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>血糖校正</span><strong id="calc-corr-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>扣除 IOB</span><strong id="calc-iob-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>計算值</span><strong id="calc-raw-dose">0</strong></div>
+        </div>
+      </div>
+
+      <!-- 餐別備註 -->
+      <div id="calc-meal-notes" class="calc-notes" style="display:none"></div>
+
+      <!-- 帶入按鈕 -->
+      <button class="calc-apply-btn" type="button" onclick="calcApply()">✅ 帶入紀錄表</button>
+    </div>
+  </div>
+</div>
+
+
+</body>
+</html>
