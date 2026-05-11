@@ -1291,6 +1291,27 @@
     }
     .calc-open-btn:hover { background: #7c3aed; color: white; border-color: #7c3aed; }
 
+    /* ── CGM Real-time Widget ── */
+    .cgm-widget {
+      background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%);
+      color: white; border-radius: 14px; padding: 12px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 12px; box-shadow: 0 4px 16px rgba(30,64,175,0.3);
+    }
+    .cgm-left { display: flex; align-items: baseline; gap: 8px; }
+    .cgm-value { font-size: 2.4rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+    .cgm-unit  { font-size: 0.75rem; opacity: 0.75; }
+    .cgm-trend { font-size: 1.6rem; line-height: 1; }
+    .cgm-right { text-align: right; }
+    .cgm-delta { font-size: 0.85rem; font-weight: 700; opacity: 0.9; }
+    .cgm-meta  { font-size: 0.7rem; opacity: 0.65; margin-top: 2px; }
+    .cgm-status-low    { color: #a78bfa; }
+    .cgm-status-normal { color: #86efac; }
+    .cgm-status-warn   { color: #fcd34d; }
+    .cgm-status-high   { color: #fca5a5; }
+    /* ── CGM Timeline Chart (day view) ── */
+    #cgm-day-section { display: none; }
+
   </style>
 </head>
 <body>
@@ -1320,6 +1341,19 @@
 
 <!-- ══════════════ TODAY PAGE ══════════════ -->
 <div id="page-today" class="page active">
+
+  <!-- CGM Real-time Widget -->
+  <div class="cgm-widget" id="cgm-widget" style="display:none">
+    <div class="cgm-left">
+      <span class="cgm-value" id="cgm-value">---</span>
+      <span class="cgm-unit">mg/dL</span>
+      <span class="cgm-trend" id="cgm-trend">→</span>
+    </div>
+    <div class="cgm-right">
+      <div class="cgm-delta" id="cgm-delta">--</div>
+      <div class="cgm-meta" id="cgm-meta">CGM 即時血糖</div>
+    </div>
+  </div>
 
   <!-- Legend -->
   <div class="legend-card">
@@ -1482,6 +1516,13 @@
     <canvas id="insulinChart" height="200"></canvas>
   </div>
 
+  <!-- CGM Timeline (single day only) -->
+  <div class="chart-card" id="cgm-day-section">
+    <h3>📡 CGM 連續血糖曲線</h3>
+    <div class="chart-sub">來自 Nightscout · 每 5 分鐘一點</div>
+    <canvas id="cgmChart" height="220"></canvas>
+  </div>
+
   <!-- IOB Chart -->
   <div class="chart-card">
     <h3>💉 胰島素作用時間預估 (IOB)</h3>
@@ -1579,6 +1620,29 @@
     <button class="settings-save-btn" onclick="saveSettings()">儲存設定</button>
   </div>
 
+  <!-- Nightscout / CGM settings -->
+  <div class="settings-section">
+    <h3>📡 CGM 連動設定（Nightscout）</h3>
+    <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px;">
+      連結 Nightscout 後，首頁即時顯示 CGM 血糖、點擊血糖欄位自動帶入、統計頁顯示連續曲線。
+    </p>
+    <div class="settings-field">
+      <label>Nightscout 網址</label>
+      <input type="url" id="set-ns-url" placeholder="https://yoursite.t1ns.tw"
+             style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;outline:none;" />
+    </div>
+    <div class="settings-field" style="margin-top:10px;">
+      <label>API Token（選填，若網站需要驗證）</label>
+      <input type="text" id="set-ns-token" placeholder="留空則為公開模式"
+             style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:0.9rem;outline:none;" />
+    </div>
+    <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="set-ns-autofill" style="width:16px;height:16px;" />
+      <label for="set-ns-autofill" style="font-size:0.88rem;">點擊血糖欄位時自動帶入 CGM 最新數值</label>
+    </div>
+    <button class="settings-save-btn" style="margin-top:12px;" onclick="saveNSSettings()">儲存 CGM 設定</button>
+  </div>
+
   <div class="settings-section">
     <h3>資料管理</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px;">
@@ -1629,6 +1693,9 @@ const DEFAULT_SETTINGS = {
   normalLow: 85,
   normalHigh: 180,
   high: 250,
+  nsUrl: 'https://0977771916.t1ns.tw',
+  nsToken: '',
+  nsAutoFill: true,
 };
 
 let settings = loadSettings();
@@ -1790,6 +1857,196 @@ function autoFillTime(periodId) {
   const timeEl = document.getElementById(periodId + '-time');
   if (timeEl && timeEl.value === '') timeEl.value = getNowTime();
 }
+
+// ══════════════════════════════════════════
+//  NIGHTSCOUT / CGM INTEGRATION
+// ══════════════════════════════════════════
+let cgmPollTimer = null;
+let cgmChart = null;
+
+function nsHeaders() {
+  const h = { 'Accept': 'application/json' };
+  if (settings.nsToken) h['api-secret'] = settings.nsToken;
+  return h;
+}
+
+async function fetchNSCurrent() {
+  if (!settings.nsUrl) return null;
+  try {
+    const token = settings.nsToken ? '?token=' + encodeURIComponent(settings.nsToken) : '';
+    const res = await fetch(settings.nsUrl + '/api/v1/entries/current.json' + token,
+      { headers: nsHeaders(), cache: 'no-store' });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return Array.isArray(data) ? data[0] : data;
+  } catch(e) { return null; }
+}
+
+async function fetchNSEntries(dateStr) {
+  if (!settings.nsUrl) return [];
+  try {
+    const d = new Date(dateStr + 'T00:00:00');
+    const next = new Date(d); next.setDate(next.getDate() + 1);
+    const from = d.getTime(), to = next.getTime();
+    const token = settings.nsToken ? '&token=' + encodeURIComponent(settings.nsToken) : '';
+    const url = settings.nsUrl + '/api/v1/entries.json?find[date][$gte]=' + from
+              + '&find[date][$lt]=' + to + '&count=1000' + token;
+    const res = await fetch(url, { headers: nsHeaders() });
+    if (!res.ok) return [];
+    return await res.json();
+  } catch(e) { return []; }
+}
+
+const NS_TREND = {
+  DoubleUp: '↑↑', SingleUp: '↑', FortyFiveUp: '↗',
+  Flat: '→',
+  FortyFiveDown: '↘', SingleDown: '↓', DoubleDown: '↓↓',
+  'NOT COMPUTABLE': '?', 'RATE OUT OF RANGE': '~',
+};
+
+function updateCGMWidget(entry) {
+  const widget = document.getElementById('cgm-widget');
+  if (!entry || !entry.sgv) { if (widget) widget.style.display = 'none'; return; }
+  if (widget) widget.style.display = 'flex';
+  const sgv = Math.round(entry.sgv);
+  const trend = NS_TREND[entry.direction] || '→';
+  const delta = entry.delta != null
+    ? (entry.delta >= 0 ? '+' : '') + Math.round(entry.delta * 10) / 10 + ' mg/dL'
+    : '';
+  const mins = Math.round((Date.now() - (entry.date || entry.dateString ? new Date(entry.dateString || entry.date).getTime() : Date.now())) / 60000);
+  const timeAgo = mins < 2 ? '剛剛' : mins + ' 分鐘前';
+
+  // Color by classification
+  const result = classifyBG(sgv);
+  const colorClass = result ? 'cgm-status-' + result.cls : '';
+  const valEl = document.getElementById('cgm-value');
+  valEl.textContent = sgv;
+  valEl.className = 'cgm-value ' + colorClass;
+  document.getElementById('cgm-trend').textContent  = trend;
+  document.getElementById('cgm-delta').textContent  = delta;
+  document.getElementById('cgm-meta').textContent   = 'CGM · ' + timeAgo;
+}
+
+async function pollCGM() {
+  const entry = await fetchNSCurrent();
+  updateCGMWidget(entry);
+}
+
+function startCGMPolling() {
+  if (cgmPollTimer) clearInterval(cgmPollTimer);
+  if (!settings.nsUrl) return;
+  pollCGM();                                       // immediate
+  cgmPollTimer = setInterval(pollCGM, 5 * 60000); // every 5 min
+}
+
+// Called when user focuses a BG input — auto-fill from CGM if empty
+async function autoFillBGFromCGM(periodId) {
+  autoFillTime(periodId);
+  if (!settings.nsAutoFill || !settings.nsUrl) return;
+  const bgEl = document.getElementById(periodId + '-bg');
+  if (!bgEl || bgEl.value) return;   // already has a value
+  const entry = await fetchNSCurrent();
+  if (entry && entry.sgv && !bgEl.value) {
+    bgEl.value = Math.round(entry.sgv);
+    onBGInput(periodId);
+  }
+}
+
+// Render CGM timeline chart for a single day
+let cgmDayChart = null;
+async function renderCGMDayChart(dateStr) {
+  const section = document.getElementById('cgm-day-section');
+  if (!settings.nsUrl) { if (section) section.style.display = 'none'; return; }
+  if (section) section.style.display = 'block';
+
+  const entries = await fetchNSEntries(dateStr);
+  if (!entries.length) { if (section) section.style.display = 'none'; return; }
+
+  // Sort by time
+  entries.sort((a, b) => (a.date || 0) - (b.date || 0));
+
+  const labels = entries.map(e => {
+    const d = new Date(e.date || e.dateString);
+    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  });
+  const values = entries.map(e => e.sgv || null);
+
+  // Color each point by BG zone
+  const pointColors = values.map(v => {
+    if (!v) return '#94a3b8';
+    if (v < settings.low)         return '#8b5cf6';
+    if (v <= settings.normalHigh) return '#22c55e';
+    if (v <= settings.high)       return '#f59e0b';
+    return '#ef4444';
+  });
+
+  if (cgmDayChart) { cgmDayChart.destroy(); cgmDayChart = null; }
+  const canvas = document.getElementById('cgmChart');
+  if (!canvas) return;
+
+  cgmDayChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'CGM 血糖',
+        data: values,
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59,130,246,0.08)',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 3,
+        pointBackgroundColor: pointColors,
+        tension: 0.3,
+        fill: true,
+        spanGaps: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: ctx => ctx[0].label,
+            label: ctx => ctx.parsed.y ? ctx.parsed.y + ' mg/dL' : '--',
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            maxTicksLimit: 8,
+            font: { size: 10 },
+            callback: (_, i) => (i % 24 === 0) ? labels[i] : null,
+          },
+          grid: { color: '#f1f5f9' },
+        },
+        y: {
+          min: 40, suggestedMax: 300,
+          title: { display: true, text: 'mg/dL', font: { size: 10 } },
+          ticks: { font: { size: 10 } },
+          grid: { color: '#f1f5f9' },
+        }
+      },
+      plugins2: [{
+        id: 'cgmZones',
+        afterDraw(chart) {
+          const ctx = chart.ctx, ca = chart.chartArea, y = chart.scales.y;
+          if (!y || !ca) return;
+          [[settings.normalHigh,'#22c55e88'],[settings.low,'#8b5cf688'],[settings.high,'#ef444488']].forEach(([v,c]) => {
+            const yp = y.getPixelForValue(v);
+            if (yp < ca.top || yp > ca.bottom) return;
+            ctx.save(); ctx.beginPath(); ctx.setLineDash([4,3]);
+            ctx.strokeStyle = c; ctx.lineWidth = 1;
+            ctx.moveTo(ca.left, yp); ctx.lineTo(ca.right, yp); ctx.stroke(); ctx.restore();
+          });
+        }
+      }]
+    }
+  });
+}
 function formatDateDisplay(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   const days = ['日', '一', '二', '三', '四', '五', '六'];
@@ -1850,7 +2107,7 @@ function buildPeriodCards() {
             + '<input type="number" id="' + p.id + '-bg" placeholder="--"'
             + ' min="20" max="600" step="1"'
             + ' oninput="onBGInput(\'' + p.id + '\')"'
-            + ' onfocus="autoFillTime(\'' + p.id + '\')" />'
+            + ' onfocus="autoFillBGFromCGM(\'' + p.id + '\')" />'
             + '<span class="field-unit">mg/dL</span>'
           + '</div>'
           + '<div id="' + p.id + '-bg-badge"></div>'
@@ -2372,6 +2629,15 @@ function renderCharts() {
   });
 
   renderIOBChart();
+
+  // CGM day chart — only in single-day view
+  if (statPeriod === 'day') {
+    renderCGMDayChart(start);
+  } else {
+    // hide CGM section in multi-day views
+    const cgmSec = document.getElementById('cgm-day-section');
+    if (cgmSec) cgmSec.style.display = 'none';
+  }
 }
 
 // ════════════════════════════════
@@ -2769,6 +3035,18 @@ function loadSettingsUI() {
   document.getElementById('set-normalLow').value  = settings.normalLow;
   document.getElementById('set-normalHigh').value = settings.normalHigh;
   document.getElementById('set-high').value       = settings.high;
+  document.getElementById('set-ns-url').value     = settings.nsUrl    || '';
+  document.getElementById('set-ns-token').value   = settings.nsToken  || '';
+  document.getElementById('set-ns-autofill').checked = settings.nsAutoFill !== false;
+}
+
+function saveNSSettings() {
+  settings.nsUrl      = (document.getElementById('set-ns-url').value || '').trim().replace(/\/$/, '');
+  settings.nsToken    = (document.getElementById('set-ns-token').value || '').trim();
+  settings.nsAutoFill = document.getElementById('set-ns-autofill').checked;
+  saveSettingsToStorage();
+  showToast('✅ CGM 設定已儲存！');
+  startCGMPolling();  // restart polling with new settings
 }
 
 function saveSettings() {
@@ -3087,6 +3365,7 @@ function init() {
     // overwrite what they may have started editing.
     if (!hadLocalDataToday) loadDayData();
   });
+  startCGMPolling();   // start real-time CGM widget
 }
 
 
@@ -3253,257 +3532,4 @@ function calcRecalc() {
   // Show preset values
   document.getElementById('calc-cir-display').textContent    = preset.cir;
   document.getElementById('calc-isf-display').textContent    = preset.isf;
-  document.getElementById('calc-target-display').textContent = preset.target;
-
-  // Meal notes
-  const notesEl = document.getElementById('calc-meal-notes');
-  if (preset.notes && preset.notes.length) {
-    notesEl.innerHTML = preset.notes.map(n => '<p>• ' + n + '</p>').join('');
-    notesEl.style.display = 'block';
-  } else {
-    notesEl.style.display = 'none';
-  }
-
-  // Carbs from food selection
-  let totalCarbs = 0, hasFood = false;
-  [1,2,3,4].forEach(function(i) {
-    const food = document.getElementById('calc-food-' + i).value;
-    const qty  = parseFloat(document.getElementById('calc-qty-' + i).value) || 0;
-    if (food && CALC_CARB_FOODS[food] !== undefined) {
-      totalCarbs += CALC_CARB_FOODS[food] * qty;
-      hasFood = true;
-    }
-  });
-  // 加上「其他」手動輸入的碳水
-  const otherEl = document.getElementById('calc-other-carbs');
-  const otherCarbs = otherEl ? (parseFloat(otherEl.value) || 0) : 0;
-  if (otherCarbs > 0) { totalCarbs += otherCarbs; hasFood = true; }
-
-  if (hasFood) {
-    document.getElementById('calc-carbs').value = Math.round(totalCarbs * 10) / 10;
-  }
-
-  // Calculate
-  const bg      = parseFloat(document.getElementById('calc-bg').value)    || 0;
-  const carbs   = parseFloat(document.getElementById('calc-carbs').value) || 0;
-  const iob     = Math.max(parseFloat(document.getElementById('calc-iob').value) || 0, 0);
-  const mealDose = carbs / preset.cir;
-  const corrDose = (bg - preset.target) / preset.isf;
-  const rawDose  = Math.max(0, mealDose + corrDose - iob);
-
-  document.getElementById('calc-meal-dose').textContent   = calcFmt(mealDose);
-  document.getElementById('calc-corr-dose').textContent   = calcFmt(corrDose);
-  document.getElementById('calc-iob-dose').textContent    = '-' + calcFmt(iob);
-  document.getElementById('calc-raw-dose').textContent    = calcFmt(rawDose);
-  document.getElementById('calc-result-dose').textContent = calcFmt(rawDose);
-
-  // Warnings
-  const warns = [];
-  if (bg > 0 && bg < 70)  warns.push('目前血糖偏低，建議先處理低血糖再評估是否施打。');
-  if (bg >= 250)           warns.push('目前血糖偏高，請依照醫療團隊的高血糖處置流程。');
-  if (rawDose === 0 && (carbs > 0 || bg > preset.target))
-    warns.push('估算結果為 0，請確認 CIR、ISF 與 IOB 設定值是否正確。');
-  document.getElementById('calc-warnings').innerHTML =
-    warns.map(w => '<div class="calc-warning">⚠️ ' + w + '</div>').join('');
-}
-
-// ── Apply result to tracker ──
-function calcApply() {
-  const meal   = document.getElementById('calc-meal-period').value;
-  const dose   = document.getElementById('calc-result-dose').textContent;
-  const carbs  = document.getElementById('calc-carbs').value;
-  const bg     = document.getElementById('calc-bg').value;
-
-  // Fill dose
-  document.getElementById(calcTargetPeriod + '-insulin').value = dose;
-
-  // Fill BG if empty
-  const bgField = document.getElementById(calcTargetPeriod + '-bg');
-  if (!bgField.value && bg) {
-    bgField.value = bg;
-    onBGInput(calcTargetPeriod);
-  }
-
-  // Build food summary
-  const foodLines = [];
-  [1,2,3,4].forEach(function(i) {
-    const sel = document.getElementById('calc-food-' + i);
-    const qty = document.getElementById('calc-qty-' + i).value;
-    if (sel.value && sel.selectedIndex > 0) {
-      const lbl = sel.options[sel.selectedIndex].text.split(' (')[0];
-      foodLines.push(lbl + ' x' + qty);
-    }
-  });
-  const otherCarbs = document.getElementById('calc-other-carbs').value;
-  const otherName  = document.getElementById('calc-other-name').value.trim();
-  if (otherCarbs) foodLines.push((otherName || '其他') + ' ' + otherCarbs + 'g');
-
-  const preset = CALC_MEAL_PRESETS[meal];
-  const noteLines = [];
-  if (foodLines.length) noteLines.push('飲食：' + foodLines.join('、'));
-  noteLines.push('碳水：' + carbs + 'g｜建議劑量：' + dose + '單位');
-  if (preset.notes.length) noteLines.push('注意：' + preset.notes[0]);
-
-  const noteField = document.getElementById(calcTargetPeriod + '-note');
-  if (noteField.value) {
-    noteField.value += '\n' + noteLines.join('\n');
-  } else {
-    noteField.value = noteLines.join('\n');
-  }
-
-  closeCalcModal();
-  showToast('✅ 計算結果已帶入！');
-}
-
-
-init();
-
-// ── PWA Service Worker ──
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/insulin-tracker/sw.js')
-      .then(() => console.log('SW registered'))
-      .catch(e => console.log('SW error:', e));
-  });
-}
-</script>
-
-<!-- ══════════════ CALCULATOR MODAL ══════════════ -->
-<div id="calcOverlay" class="calc-overlay" onclick="calcOverlayClick(event)">
-  <div class="calc-modal">
-    <div class="calc-modal-header">
-      <h2>💊 餐前劑量計算</h2>
-      <button class="calc-close-btn" type="button" onclick="closeCalcModal()">✕</button>
-    </div>
-    <div class="calc-body">
-
-      <!-- 基本資訊 -->
-      <div class="calc-section">
-        <div class="calc-section-title">基本資訊</div>
-        <div class="calc-grid-2">
-          <div class="calc-field">
-            <label>餐別</label>
-            <select id="calc-meal-period" onchange="calcUpdateMeal()">
-              <option value="breakfast">🌅 早餐</option>
-              <option value="lunch">☀️ 午餐</option>
-              <option value="dinner">🌙 晚餐</option>
-            </select>
-          </div>
-          <div class="calc-field">
-            <label>目前血糖 (mg/dL)</label>
-            <input type="number" id="calc-bg" min="0" step="1" value="180" oninput="calcRecalc()" />
-          </div>
-        </div>
-      </div>
-
-      <!-- 飲食紀錄 -->
-      <div class="calc-section">
-        <div class="calc-section-title">飲食紀錄</div>
-        <div class="calc-food-row">
-          <span class="calc-food-badge badge-main">主餐</span>
-          <select id="calc-food-1" onchange="calcUpdateFood1()"></select>
-          <input type="number" id="calc-qty-1" min="0" step="0.1" value="1" oninput="calcRecalc()" />
-        </div>
-        <div class="calc-food-row">
-          <span class="calc-food-badge badge-side">餐食2</span>
-          <select id="calc-food-2" onchange="calcRecalc()"></select>
-          <input type="number" id="calc-qty-2" min="0" step="0.1" value="1" oninput="calcRecalc()" />
-        </div>
-        <div class="calc-food-row">
-          <span class="calc-food-badge badge-fruit">甜點</span>
-          <select id="calc-food-3" onchange="calcRecalc()">
-            <option value="">不選擇</option>
-            <option value="guava">芭樂 100g (碳水10.6g)</option>
-            <option value="apple">蘋果 100g (碳水11.9g)</option>
-            <option value="cherry">櫻桃 100g (碳水19.12g)</option>
-            <option value="banana_peel">香蕉帶皮 100g (碳水10.6g)</option>
-            <option value="banana">香蕉去皮 100g (碳水22.1g)</option>
-            <option value="pineapple">鳳梨 100g (碳水13.6g)</option>
-            <option value="dragon_fruit">火龍果 100g (碳水12.36g)</option>
-            <option value="strawberry">草莓去蒂 100g (碳水9.3g)</option>
-          </select>
-          <input type="number" id="calc-qty-3" min="0" step="0.1" value="1" oninput="calcRecalc()" />
-        </div>
-        <div class="calc-food-row">
-          <span class="calc-food-badge badge-drink">飲品</span>
-          <select id="calc-food-4" onchange="calcRecalc()">
-            <option value="">不選擇</option>
-            <option value="milk_100">牛奶 100g (碳水4.8g)</option>
-            <option value="milk_150">牛奶 150g (碳水7g)</option>
-            <option value="milk_200">牛奶 200g (碳水10g)</option>
-            <option value="yogurt_100">優酪乳 100g (碳水12g)</option>
-            <option value="yakult">養樂多 90ML (碳水14.7g)</option>
-          </select>
-          <input type="number" id="calc-qty-4" min="0" step="0.1" value="1" oninput="calcRecalc()" />
-        </div>
-        <div class="calc-food-row">
-          <span class="calc-food-badge badge-other">其他</span>
-          <input type="text" id="calc-other-name" placeholder="食物名稱（選填）"
-                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 8px;font-size:0.8rem;outline:none;width:100%;color:var(--text);" />
-          <input type="number" id="calc-other-carbs" min="0" step="1" placeholder="克"
-                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 4px;font-size:0.82rem;outline:none;text-align:center;width:100%;"
-                 oninput="calcRecalc()" />
-        </div>
-      </div>
-
-      <!-- 劑量計算 -->
-      <div class="calc-section">
-        <div class="calc-section-title">劑量計算</div>
-        <div class="calc-grid-2">
-          <div class="calc-field">
-            <label>預計碳水量 (克)</label>
-            <input type="number" id="calc-carbs" min="0" step="1" value="60" oninput="calcRecalc()" />
-          </div>
-          <div class="calc-field">
-            <label>有效胰島素 IOB (單位)</label>
-            <input type="number" id="calc-iob" min="0" step="0.1" value="0" oninput="calcRecalc()" />
-          </div>
-        </div>
-        <div class="calc-preset-row">
-          <div class="calc-preset-item">
-            <span>CIR 醣類係數</span>
-            <strong id="calc-cir-display">10</strong>
-            <span>g / 單位</span>
-          </div>
-          <div class="calc-preset-item">
-            <span>ISF 敏感係數</span>
-            <strong id="calc-isf-display">50</strong>
-            <span>mg/dL / 單位</span>
-          </div>
-          <div class="calc-preset-item">
-            <span>目標血糖</span>
-            <strong id="calc-target-display">110</strong>
-            <span>mg/dL</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 警示 -->
-      <div id="calc-warnings"></div>
-
-      <!-- 計算結果 -->
-      <div class="calc-result-box">
-        <div class="calc-result-main"><span id="calc-result-dose">0</span><small> 單位</small></div>
-        <div class="calc-result-label">建議估算劑量</div>
-        <div class="calc-breakdown">
-          <div class="calc-breakdown-item"><span>碳水劑量</span><strong id="calc-meal-dose">0</strong></div>
-          <div class="calc-breakdown-item"><span>血糖校正</span><strong id="calc-corr-dose">0</strong></div>
-          <div class="calc-breakdown-item"><span>扣除 IOB</span><strong id="calc-iob-dose">0</strong></div>
-          <div class="calc-breakdown-item"><span>計算值</span><strong id="calc-raw-dose">0</strong></div>
-        </div>
-      </div>
-
-      <!-- 餐別備註 -->
-      <div id="calc-meal-notes" class="calc-notes" style="display:none"></div>
-
-      <!-- 帶入按鈕 -->
-      <button class="calc-apply-btn" type="button" onclick="calcApply()">✅ 帶入紀錄表</button>
-    </div>
-  </div>
-</div>
-
-
-</body>
-</html>
-
-         
+  document.getE
