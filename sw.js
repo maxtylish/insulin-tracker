@@ -1,4 +1,4 @@
-const CACHE = 'insulin-tracker-v3';
+const CACHE = 'insulin-tracker-v4';
 const CORE = [
   '/insulin-tracker/',
   '/insulin-tracker/index.html'
@@ -23,7 +23,6 @@ self.addEventListener('fetch', e => {
     e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
     return;
   }
-  // Network-first for HTML (always get fresh code)
   if (e.request.destination === 'document') {
     e.respondWith(
       fetch(e.request).then(res => {
@@ -34,8 +33,20 @@ self.addEventListener('fetch', e => {
     );
     return;
   }
-  // Cache-first for assets
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request))
+  );
+});
+
+// Open app when user taps a notification
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const c of list) {
+        if (c.url.includes('/insulin-tracker/') && 'focus' in c) return c.focus();
+      }
+      return clients.openWindow('/insulin-tracker/');
+    })
   );
 });

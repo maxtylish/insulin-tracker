@@ -1309,45 +1309,32 @@
     .cgm-status-normal { color: #86efac; }
     .cgm-status-warn   { color: #fcd34d; }
     .cgm-status-high   { color: #fca5a5; }
-    /* ── CGM Timeline Chart (day view) ── */
-    #cgm-day-section { display: none; }
-
-    /* ── Hypoglycemia Prediction Warning ── */
-    .hypo-warning {
+    /* ── Hypo / Hyper Prediction Banners ── */
+    .bg-warning {
       display: none;
       border-radius: var(--radius);
       padding: 14px 16px;
-      margin-bottom: 12px;
-      box-shadow: 0 4px 20px rgba(239,68,68,0.35);
-      animation: hypo-pulse 1.6s ease-in-out infinite;
+      margin-bottom: 10px;
+      animation: warn-pulse 1.6s ease-in-out infinite;
     }
-    .hypo-warning.level-warn {
-      background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
-      color: white;
+    .bg-warning.hypo-warn   { background: linear-gradient(135deg,#b45309,#d97706); color:#fff; }
+    .bg-warning.hypo-urgent { background: linear-gradient(135deg,#991b1b,#dc2626); color:#fff; animation-duration:.9s; }
+    .bg-warning.hyper-warn  { background: linear-gradient(135deg,#b45309,#f59e0b); color:#fff; }
+    .bg-warning.hyper-urgent{ background: linear-gradient(135deg,#7c2d12,#ea580c); color:#fff; animation-duration:.9s; }
+    @keyframes warn-pulse {
+      0%,100%{ opacity:1; }
+      50%    { opacity:.88; }
     }
-    .hypo-warning.level-urgent {
-      background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
-      color: white;
-      animation-duration: 0.9s;
-    }
-    @keyframes hypo-pulse {
-      0%, 100% { opacity: 1; box-shadow: 0 4px 20px rgba(239,68,68,0.35); }
-      50%       { opacity: 0.88; box-shadow: 0 4px 28px rgba(239,68,68,0.6); }
-    }
-    .hypo-warning-row { display: flex; align-items: center; gap: 10px; }
-    .hypo-warning-icon { font-size: 1.5rem; flex-shrink: 0; }
-    .hypo-warning-body { flex: 1; }
-    .hypo-warning-title {
-      font-size: 1rem; font-weight: 800; letter-spacing: 0.3px;
-    }
-    .hypo-warning-detail {
-      font-size: 0.78rem; opacity: 0.88; margin-top: 3px; font-weight: 500;
-    }
-    .hypo-dismiss {
-      background: rgba(255,255,255,0.25); border: none; color: white;
-      border-radius: 6px; padding: 4px 10px; font-size: 0.78rem;
-      cursor: pointer; flex-shrink: 0; font-weight: 600;
-    }
+    .bg-warn-row  { display:flex; align-items:center; gap:10px; }
+    .bg-warn-icon { font-size:1.5rem; flex-shrink:0; }
+    .bg-warn-body { flex:1; }
+    .bg-warn-title{ font-size:1rem; font-weight:800; }
+    .bg-warn-detail{ font-size:.78rem; opacity:.88; margin-top:3px; font-weight:500; }
+    .bg-warn-dismiss{ background:rgba(255,255,255,.25); border:none; color:#fff;
+      border-radius:6px; padding:4px 10px; font-size:.78rem; cursor:pointer; flex-shrink:0; font-weight:600; }
+
+    /* ── CGM Timeline Chart (day view) ── */
+    #cgm-day-section { display: none; }
 
   </style>
 </head>
@@ -1392,15 +1379,27 @@
     </div>
   </div>
 
-  <!-- Hypoglycemia Prediction Warning Banner -->
-  <div class="hypo-warning" id="hypo-warning">
-    <div class="hypo-warning-row">
-      <div class="hypo-warning-icon">🚨</div>
-      <div class="hypo-warning-body">
-        <div class="hypo-warning-title" id="hypo-warning-title">預計低血糖警報</div>
-        <div class="hypo-warning-detail" id="hypo-warning-detail"></div>
+  <!-- Hypo Prediction Warning -->
+  <div class="bg-warning" id="hypo-warning">
+    <div class="bg-warn-row">
+      <div class="bg-warn-icon">🚨</div>
+      <div class="bg-warn-body">
+        <div class="bg-warn-title" id="hypo-warn-title">低血糖警報</div>
+        <div class="bg-warn-detail" id="hypo-warn-detail"></div>
       </div>
-      <button class="hypo-dismiss" onclick="dismissHypoWarning()">忽略</button>
+      <button class="bg-warn-dismiss" onclick="dismissWarning('hypo')">忽略</button>
+    </div>
+  </div>
+
+  <!-- Hyper Prediction Warning -->
+  <div class="bg-warning" id="hyper-warning">
+    <div class="bg-warn-row">
+      <div class="bg-warn-icon">⚠️</div>
+      <div class="bg-warn-body">
+        <div class="bg-warn-title" id="hyper-warn-title">高血糖警報</div>
+        <div class="bg-warn-detail" id="hyper-warn-detail"></div>
+      </div>
+      <button class="bg-warn-dismiss" onclick="dismissWarning('hyper')">忽略</button>
     </div>
   </div>
 
@@ -1693,6 +1692,24 @@
   </div>
 
   <div class="settings-section">
+    <h3>🔔 低 / 高血糖推播通知</h3>
+    <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:12px;">
+      開啟後，即使 App 切到背景或螢幕關閉，血糖異常時仍會跳出系統通知。<br>
+      <strong style="color:#f59e0b;">iOS 需先將 App 加入主畫面才能收到通知。</strong>
+    </p>
+    <div id="notif-status" style="margin-bottom:12px;font-size:.85rem;font-weight:600;color:var(--text-muted);">載入中…</div>
+    <button class="settings-save-btn" id="notif-request-btn" onclick="requestPushPermission()" style="display:none;">🔔 開啟通知權限</button>
+    <div style="margin-top:12px;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="set-notif-enabled" style="width:16px;height:16px;" onchange="saveNotifSettings()" />
+      <label for="set-notif-enabled" style="font-size:.88rem;">啟用低 / 高血糖推播通知</label>
+    </div>
+    <div style="margin-top:8px;display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="set-notif-sound" style="width:16px;height:16px;" onchange="saveNotifSettings()" />
+      <label for="set-notif-sound" style="font-size:.88rem;">同時播放警示音效</label>
+    </div>
+  </div>
+
+  <div class="settings-section">
     <h3>資料管理</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px;">
       資料同步儲存於本機與雲端。建議定期匯出 CSV 備份。
@@ -1870,22 +1887,19 @@ function getBGColor(cls) {
 // ══════════════════════════════════════════
 //  DATE UTILITIES
 // ══════════════════════════════════════════
-// Local-date helpers — always use device local time, not UTC
 function dateToLocalStr(d) {
   return d.getFullYear() + '-' +
     String(d.getMonth() + 1).padStart(2, '0') + '-' +
     String(d.getDate()).padStart(2, '0');
 }
-function todayStr() {
-  return dateToLocalStr(new Date());
-}
+function todayStr() { return dateToLocalStr(new Date()); }
 function getNowTime() {
   const now = new Date();
-  return now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+  return now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
 }
 function currentMonthStr() {
   const d = new Date();
-  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
 }
 
 // ── 24-hour time input helpers (replace <input type="time"> for cross-device) ──
@@ -1960,92 +1974,218 @@ const NS_TREND = {
   'NOT COMPUTABLE': '?', 'RATE OUT OF RANGE': '~',
 };
 
-// Track whether user has manually dismissed the current warning
-let hypoDismissedAt = null;   // sgv value at time of dismiss
+// ── Warning banner state ──────────────────────────────
+var warnDismissed = { hypo: null, hyper: null };  // dismissed-at sgv
 
-function dismissHypoWarning() {
-  const warningEl = document.getElementById('hypo-warning');
-  if (warningEl) warningEl.style.display = 'none';
-  // Remember the current sgv so we don't re-show until BG rises then drops again
-  const valEl = document.getElementById('cgm-value');
-  hypoDismissedAt = valEl ? parseFloat(valEl.textContent) : null;
+function dismissWarning(type) {
+  var el = document.getElementById(type + '-warning');
+  if (el) el.style.display = 'none';
+  var v = parseFloat((document.getElementById('cgm-value') || {}).textContent);
+  warnDismissed[type] = isNaN(v) ? null : v;
+}
+
+function showBanner(type, levelCls, title, detail) {
+  var el = document.getElementById(type + '-warning');
+  var te = document.getElementById(type + '-warn-title');
+  var de = document.getElementById(type + '-warn-detail');
+  if (!el) return;
+  el.style.display = 'block';
+  el.className = 'bg-warning ' + levelCls;
+  if (te) te.textContent = title;
+  if (de) de.textContent = detail;
+}
+
+function hideBanner(type) {
+  var el = document.getElementById(type + '-warning');
+  if (el) el.style.display = 'none';
 }
 
 function updateCGMWidget(entry) {
-  const widget = document.getElementById('cgm-widget');
+  var widget = document.getElementById('cgm-widget');
   if (!entry || !entry.sgv) { if (widget) widget.style.display = 'none'; return; }
   if (widget) widget.style.display = 'flex';
-  const sgv = Math.round(entry.sgv);
-  const rawDelta = entry.delta != null ? entry.delta : null;   // mg/dL per 5 min
-  const trend = NS_TREND[entry.direction] || '→';
-  const deltaStr = rawDelta != null
-    ? (rawDelta >= 0 ? '+' : '') + Math.round(rawDelta * 10) / 10 + ' mg/dL'
-    : '';
-  const mins = Math.round((Date.now() - (entry.date || entry.dateString
-    ? new Date(entry.dateString || entry.date).getTime() : Date.now())) / 60000);
-  const timeAgo = mins < 2 ? '剛剛' : mins + ' 分鐘前';
+  var sgv      = Math.round(entry.sgv);
+  var rawDelta = entry.delta != null ? entry.delta : null;
+  var trend    = NS_TREND[entry.direction] || '→';
+  var deltaStr = rawDelta != null
+    ? (rawDelta >= 0 ? '+' : '') + Math.round(rawDelta * 10) / 10 + ' mg/dL' : '';
+  var ms   = entry.date || (entry.dateString ? new Date(entry.dateString).getTime() : Date.now());
+  var mins = Math.round((Date.now() - ms) / 60000);
+  var timeAgo = mins < 2 ? '剛剛' : mins + ' 分鐘前';
 
-  // Color by classification
-  const result = classifyBG(sgv);
-  const colorClass = result ? 'cgm-status-' + result.cls : '';
-  const valEl = document.getElementById('cgm-value');
+  var result = classifyBG(sgv);
+  var colorClass = result ? 'cgm-status-' + result.cls : '';
+  var valEl = document.getElementById('cgm-value');
   valEl.textContent = sgv;
   valEl.className = 'cgm-value ' + colorClass;
   document.getElementById('cgm-trend').textContent = trend;
   document.getElementById('cgm-delta').textContent = deltaStr;
   document.getElementById('cgm-meta').textContent  = 'CGM · ' + timeAgo;
 
-  // ── Hypoglycemia prediction ──
-  const warningEl   = document.getElementById('hypo-warning');
-  const titleEl     = document.getElementById('hypo-warning-title');
-  const detailEl    = document.getElementById('hypo-warning-detail');
-  const WARN_MINS   = 20;   // warn when predicted low within this many minutes
-  const low         = settings.low || 80;
+  var low  = settings.low  || 80;
+  var high = settings.high || 250;
+  var WARN = 20;  // minutes
 
-  // If BG already low → always show immediate alert, reset dismiss
+  // ── Hypo banner ──────────────────────────────────────
   if (sgv <= low) {
-    hypoDismissedAt = null;
-    if (warningEl) {
-      warningEl.style.display = 'block';
-      warningEl.className = 'hypo-warning level-urgent';
-      titleEl.textContent  = '🚨 目前已低血糖！';
-      detailEl.textContent = '當前 ' + sgv + ' mg/dL · 低血糖閾值 ' + low + ' mg/dL · 請立即補糖';
-    }
-    return;
+    warnDismissed.hypo = null;
+    showBanner('hypo','hypo-urgent','🚨 目前已低血糖！',
+      '當前 '+sgv+' mg/dL · 警戒 '+low+' mg/dL · 請立即補糖');
+  } else if (rawDelta !== null && rawDelta < 0) {
+    var minsLow = (sgv - low) / (-rawDelta / 5);
+    if (minsLow <= WARN) {
+      if (warnDismissed.hypo !== null && sgv < warnDismissed.hypo + 5) {
+        hideBanner('hypo');
+      } else {
+        warnDismissed.hypo = null;
+        var lvl = minsLow <= 10 ? 'hypo-urgent' : 'hypo-warn';
+        showBanner('hypo', lvl,
+          '⚠️ 預計 '+Math.round(minsLow)+' 分鐘後低血糖',
+          '當前 '+sgv+' mg/dL　'+deltaStr+'/5min　警戒 '+low+' mg/dL');
+      }
+    } else { hideBanner('hypo'); }
+  } else { hideBanner('hypo'); }
+
+  // ── Hyper banner ─────────────────────────────────────
+  if (sgv >= high) {
+    warnDismissed.hyper = null;
+    showBanner('hyper','hyper-urgent','🔴 目前已高血糖！',
+      '當前 '+sgv+' mg/dL · 警戒 '+high+' mg/dL · 請確認是否需要補打胰島素');
+  } else if (rawDelta !== null && rawDelta > 0) {
+    var minsHigh = (high - sgv) / (rawDelta / 5);
+    if (minsHigh <= WARN) {
+      if (warnDismissed.hyper !== null && sgv > warnDismissed.hyper - 5) {
+        hideBanner('hyper');
+      } else {
+        warnDismissed.hyper = null;
+        var lvlH = minsHigh <= 10 ? 'hyper-urgent' : 'hyper-warn';
+        showBanner('hyper', lvlH,
+          '⚠️ 預計 '+Math.round(minsHigh)+' 分鐘後高血糖',
+          '當前 '+sgv+' mg/dL　'+deltaStr+'/5min　警戒 '+high+' mg/dL');
+      }
+    } else { hideBanner('hyper'); }
+  } else { hideBanner('hyper'); }
+}
+
+// ── Push notification helpers ──────────────────────────
+var lastNotifTime = { hypo: 0, hyper: 0 };
+var NOTIF_COOLDOWN = 8 * 60 * 1000;
+
+function notifEnabled() { return localStorage.getItem('notif_enabled') === 'true'; }
+function notifSound()   { return localStorage.getItem('notif_sound')   === 'true'; }
+
+async function requestPushPermission() {
+  if (!('Notification' in window)) { showToast('❌ 此裝置不支援推播通知'); return; }
+  var result = await Notification.requestPermission();
+  if (result === 'granted') {
+    localStorage.setItem('notif_enabled','true');
+    showToast('✅ 通知權限已開啟！');
+  } else {
+    showToast('❌ 通知權限被拒絕，請至系統設定手動開啟');
+  }
+  loadNotifSettingsUI();
+}
+
+function saveNotifSettings() {
+  localStorage.setItem('notif_enabled', document.getElementById('set-notif-enabled').checked ? 'true' : 'false');
+  localStorage.setItem('notif_sound',   document.getElementById('set-notif-sound').checked   ? 'true' : 'false');
+}
+
+function loadNotifSettingsUI() {
+  var statusEl = document.getElementById('notif-status');
+  var btnEl    = document.getElementById('notif-request-btn');
+  if (!statusEl) return;
+  if (!('Notification' in window)) {
+    statusEl.textContent = '⚠️ 此裝置不支援推播通知'; statusEl.style.color = '#f59e0b'; return;
+  }
+  var perm = Notification.permission;
+  if (perm === 'granted') {
+    statusEl.textContent = '✅ 通知權限已授予'; statusEl.style.color = '#22c55e';
+    if (btnEl) btnEl.style.display = 'none';
+  } else if (perm === 'denied') {
+    statusEl.textContent = '❌ 已被拒絕，請至系統設定 → 瀏覽器 → 通知 手動開啟';
+    statusEl.style.color = '#ef4444'; if (btnEl) btnEl.style.display = 'none';
+  } else {
+    statusEl.textContent = '尚未授予通知權限'; statusEl.style.color = 'var(--text-muted)';
+    if (btnEl) btnEl.style.display = 'block';
+  }
+  var enEl = document.getElementById('set-notif-enabled');
+  var snEl = document.getElementById('set-notif-sound');
+  if (enEl) enEl.checked = notifEnabled();
+  if (snEl) snEl.checked = notifSound();
+}
+
+function playBeep(urgent) {
+  try {
+    var ctx = new (window.AudioContext || window.webkitAudioContext)();
+    var freqs = urgent ? [880,1046,880] : [660,880];
+    freqs.forEach(function(freq, i) {
+      var osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type = 'sine'; osc.frequency.value = freq;
+      var t = ctx.currentTime + i * 0.32;
+      gain.gain.setValueAtTime(0.55, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.28);
+      osc.start(t); osc.stop(t + 0.3);
+    });
+  } catch(e) {}
+}
+
+async function sendPushNotif(key, title, body, urgent) {
+  if (!notifEnabled() || Notification.permission !== 'granted') return;
+  var now = Date.now();
+  if (now - lastNotifTime[key] < NOTIF_COOLDOWN) return;
+  lastNotifTime[key] = now;
+  if (notifSound()) playBeep(urgent);
+  try {
+    var reg = await navigator.serviceWorker.ready;
+    reg.showNotification(title, {
+      body: body,
+      icon: '/insulin-tracker/apple-touch-icon.png',
+      badge: '/insulin-tracker/apple-touch-icon.png',
+      tag: 'bg-alert-' + key,
+      renotify: true,
+      vibrate: urgent ? [300,100,300,100,500] : [200,100,200],
+      requireInteraction: true,
+      data: { url: '/insulin-tracker/' }
+    });
+  } catch(e) { try { new Notification(title, { body: body }); } catch(e2) {} }
+}
+
+function checkAndNotify(entry) {
+  if (!entry || !entry.sgv) return;
+  var sgv      = Math.round(entry.sgv);
+  var rawDelta = entry.delta != null ? entry.delta : null;
+  var low      = settings.low  || 80;
+  var high     = settings.high || 250;
+
+  // Hypo
+  if (sgv <= low) {
+    sendPushNotif('hypo','🚨 低血糖警報',
+      '目前血糖 '+sgv+' mg/dL，低於警戒值 '+low+' mg/dL，請立即補糖！', true);
+  } else if (rawDelta !== null && rawDelta < 0) {
+    var mL = (sgv - low) / (-rawDelta / 5);
+    if (mL <= 20) sendPushNotif('hypo',
+      '⚠️ 預計 '+Math.round(mL)+' 分鐘後低血糖',
+      '當前 '+sgv+' mg/dL　趨勢 '+Math.round(rawDelta*10)/10+' mg/5min', mL <= 10);
   }
 
-  // If BG is dropping and > low, calculate ETA
-  if (rawDelta !== null && rawDelta < 0) {
-    const ratePerMin     = rawDelta / 5;                          // mg/dL per minute
-    const minsUntilLow   = (sgv - low) / (-ratePerMin);          // positive number
-
-    if (minsUntilLow <= WARN_MINS) {
-      // Re-show if BG has risen above dismissed value (+ 5 mg/dL buffer) since dismiss
-      if (hypoDismissedAt !== null && sgv < hypoDismissedAt + 5) {
-        // Still near dismiss point — keep hidden
-        if (warningEl) warningEl.style.display = 'none';
-        return;
-      }
-      hypoDismissedAt = null;   // reset dismiss when new warning triggers
-      const minsRounded = Math.round(minsUntilLow);
-      const level = minsUntilLow <= 10 ? 'level-urgent' : 'level-warn';
-      if (warningEl) {
-        warningEl.style.display = 'block';
-        warningEl.className = 'hypo-warning ' + level;
-        titleEl.textContent  = '⚠️ 預計 ' + minsRounded + ' 分鐘後低血糖';
-        detailEl.textContent = '當前 ' + sgv + ' mg/dL　趨勢 ' + deltaStr + '/5min　目標警戒 ' + low + ' mg/dL';
-      }
-      return;
-    }
+  // Hyper
+  if (sgv >= high) {
+    sendPushNotif('hyper','🔴 高血糖警報',
+      '目前血糖 '+sgv+' mg/dL，高於警戒值 '+high+' mg/dL，請確認是否補打胰島素。', true);
+  } else if (rawDelta !== null && rawDelta > 0) {
+    var mH = (high - sgv) / (rawDelta / 5);
+    if (mH <= 20) sendPushNotif('hyper',
+      '⚠️ 預計 '+Math.round(mH)+' 分鐘後高血糖',
+      '當前 '+sgv+' mg/dL　趨勢 +'+Math.round(rawDelta*10)/10+' mg/5min', mH <= 10);
   }
-
-  // No warning needed
-  if (warningEl) warningEl.style.display = 'none';
 }
 
 async function pollCGM() {
   const entry = await fetchNSCurrent();
   updateCGMWidget(entry);
+  checkAndNotify(entry);
 }
 
 function startCGMPolling() {
@@ -3154,6 +3294,7 @@ function loadSettingsUI() {
   document.getElementById('set-ns-url').value     = settings.nsUrl    || '';
   document.getElementById('set-ns-token').value   = settings.nsToken  || '';
   document.getElementById('set-ns-autofill').checked = settings.nsAutoFill !== false;
+  loadNotifSettingsUI();
 }
 
 function saveNSSettings() {
@@ -3802,4 +3943,101 @@ if ('serviceWorker' in navigator) {
         <div class="calc-food-row">
           <span class="calc-food-badge badge-side">餐食2</span>
           <select id="calc-food-2" onchange="calcRecalc()"></select>
-          <input type="number" id="calc-qty-2" min="0" step="0.1" value="1" oninput="calcRec
+          <input type="number" id="calc-qty-2" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-fruit">甜點</span>
+          <select id="calc-food-3" onchange="calcRecalc()">
+            <option value="">不選擇</option>
+            <option value="guava">芭樂 100g (碳水10.6g)</option>
+            <option value="apple">蘋果 100g (碳水11.9g)</option>
+            <option value="cherry">櫻桃 100g (碳水19.12g)</option>
+            <option value="banana_peel">香蕉帶皮 100g (碳水10.6g)</option>
+            <option value="banana">香蕉去皮 100g (碳水22.1g)</option>
+            <option value="pineapple">鳳梨 100g (碳水13.6g)</option>
+            <option value="dragon_fruit">火龍果 100g (碳水12.36g)</option>
+            <option value="strawberry">草莓去蒂 100g (碳水9.3g)</option>
+          </select>
+          <input type="number" id="calc-qty-3" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-drink">飲品</span>
+          <select id="calc-food-4" onchange="calcRecalc()">
+            <option value="">不選擇</option>
+            <option value="milk_100">牛奶 100g (碳水4.8g)</option>
+            <option value="milk_150">牛奶 150g (碳水7g)</option>
+            <option value="milk_200">牛奶 200g (碳水10g)</option>
+            <option value="yogurt_100">優酪乳 100g (碳水12g)</option>
+            <option value="yakult">養樂多 90ML (碳水14.7g)</option>
+          </select>
+          <input type="number" id="calc-qty-4" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-other">其他</span>
+          <input type="text" id="calc-other-name" placeholder="食物名稱（選填）"
+                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 8px;font-size:0.8rem;outline:none;width:100%;color:var(--text);" />
+          <input type="number" id="calc-other-carbs" min="0" step="1" placeholder="克"
+                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 4px;font-size:0.82rem;outline:none;text-align:center;width:100%;"
+                 oninput="calcRecalc()" />
+        </div>
+      </div>
+
+      <!-- 劑量計算 -->
+      <div class="calc-section">
+        <div class="calc-section-title">劑量計算</div>
+        <div class="calc-grid-2">
+          <div class="calc-field">
+            <label>預計碳水量 (克)</label>
+            <input type="number" id="calc-carbs" min="0" step="1" value="60" oninput="calcRecalc()" />
+          </div>
+          <div class="calc-field">
+            <label>有效胰島素 IOB (單位)</label>
+            <input type="number" id="calc-iob" min="0" step="0.1" value="0" oninput="calcRecalc()" />
+          </div>
+        </div>
+        <div class="calc-preset-row">
+          <div class="calc-preset-item">
+            <span>CIR 醣類係數</span>
+            <strong id="calc-cir-display">10</strong>
+            <span>g / 單位</span>
+          </div>
+          <div class="calc-preset-item">
+            <span>ISF 敏感係數</span>
+            <strong id="calc-isf-display">50</strong>
+            <span>mg/dL / 單位</span>
+          </div>
+          <div class="calc-preset-item">
+            <span>目標血糖</span>
+            <strong id="calc-target-display">110</strong>
+            <span>mg/dL</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 警示 -->
+      <div id="calc-warnings"></div>
+
+      <!-- 計算結果 -->
+      <div class="calc-result-box">
+        <div class="calc-result-main"><span id="calc-result-dose">0</span><small> 單位</small></div>
+        <div class="calc-result-label">建議估算劑量</div>
+        <div class="calc-breakdown">
+          <div class="calc-breakdown-item"><span>碳水劑量</span><strong id="calc-meal-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>血糖校正</span><strong id="calc-corr-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>扣除 IOB</span><strong id="calc-iob-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>計算值</span><strong id="calc-raw-dose">0</strong></div>
+        </div>
+      </div>
+
+      <!-- 餐別備註 -->
+      <div id="calc-meal-notes" class="calc-notes" style="display:none"></div>
+
+      <!-- 帶入按鈕 -->
+      <button class="calc-apply-btn" type="button" onclick="calcApply()">✅ 帶入紀錄表</button>
+    </div>
+  </div>
+</div>
+
+
+</body>
+</html>
