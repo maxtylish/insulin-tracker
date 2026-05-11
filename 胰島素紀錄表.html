@@ -1815,68 +1815,74 @@ function switchTab(tab) {
 // ══════════════════════════════════════════
 function buildPeriodCards() {
   const container = document.getElementById('period-cards');
-  container.innerHTML = '';
   const snackMap = {};
   SNACK_SECTIONS.forEach(s => { snackMap[s.after] = s; });
 
+  // Build entire HTML string first, then set innerHTML ONCE.
+  // Avoid innerHTML += in a loop — repeated serialise/re-parse drops onclick on iOS Safari.
+  let html = '';
   PERIODS.forEach(p => {
-    container.innerHTML += `
-      <div class="period-card ${p.cls}" id="card-${p.id}">
-        <div class="period-header">
-          <div class="period-title">
-            <div class="period-icon">${p.icon}</div>
-            <span>${p.label}</span>
-          </div>
-          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
-            <div class="period-time-input">
-              <span>注射時間</span>
-              <input type="text" class="time-input" id="${p.id}-time"
-                     value="" inputmode="numeric" maxlength="5"
-                     placeholder="--:--"
-                     oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />
-            </div>
-            ${p.id !== 'bedtime' ? `<button class="calc-open-btn" type="button" onclick="openCalcModal('${p.id}')">💊 計算劑量</button>` : ''}
-          </div>
-        </div>
-        <div class="fields-row">
-          <div class="field-group">
-            <label>血糖值</label>
-            <div class="field-input-wrap">
-              <input type="number" id="${p.id}-bg" placeholder="--"
-                     min="20" max="600" step="1"
-                     oninput="onBGInput('${p.id}')"
-                     onfocus="autoFillTime('${p.id}')" />
-              <span class="field-unit">mg/dL</span>
-            </div>
-            <div id="${p.id}-bg-badge"></div>
-          </div>
-          <div class="field-group">
-            <label>胰島素劑量${p.id === 'bedtime' ? '【長效】' : '【速效】'}</label>
-            <div class="field-input-wrap">
-              <input type="number" id="${p.id}-insulin" placeholder="--"
-                     min="0" max="100" step="0.5"
-                     onfocus="autoFillTime('${p.id}')" />
-              <span class="field-unit">單位</span>
-            </div>
-          </div>
-        </div>
-        <div class="period-note">
-          <textarea id="${p.id}-note" rows="2" placeholder="備註（症狀、飲食、活動…）"></textarea>
-        </div>
-      </div>`;
+    const calcBtn = p.id !== 'bedtime'
+      ? '<button class="calc-open-btn" type="button" onclick="openCalcModal(\'' + p.id + '\')">💊 計算劑量</button>'
+      : '';
+    const insulinLabel = '胰島素劑量' + (p.id === 'bedtime' ? '【長效】' : '【速效】');
+
+    html += '<div class="period-card ' + p.cls + '" id="card-' + p.id + '">'
+      + '<div class="period-header">'
+        + '<div class="period-title">'
+          + '<div class="period-icon">' + p.icon + '</div>'
+          + '<span>' + p.label + '</span>'
+        + '</div>'
+        + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">'
+          + '<div class="period-time-input">'
+            + '<span>注射時間</span>'
+            + '<input type="text" class="time-input" id="' + p.id + '-time"'
+            + ' value="" inputmode="numeric" maxlength="5" placeholder="--:--"'
+            + ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />'
+          + '</div>'
+          + calcBtn
+        + '</div>'
+      + '</div>'
+      + '<div class="fields-row">'
+        + '<div class="field-group">'
+          + '<label>血糖值</label>'
+          + '<div class="field-input-wrap">'
+            + '<input type="number" id="' + p.id + '-bg" placeholder="--"'
+            + ' min="20" max="600" step="1"'
+            + ' oninput="onBGInput(\'' + p.id + '\')"'
+            + ' onfocus="autoFillTime(\'' + p.id + '\')" />'
+            + '<span class="field-unit">mg/dL</span>'
+          + '</div>'
+          + '<div id="' + p.id + '-bg-badge"></div>'
+        + '</div>'
+        + '<div class="field-group">'
+          + '<label>' + insulinLabel + '</label>'
+          + '<div class="field-input-wrap">'
+            + '<input type="number" id="' + p.id + '-insulin" placeholder="--"'
+            + ' min="0" max="100" step="0.5"'
+            + ' onfocus="autoFillTime(\'' + p.id + '\')" />'
+            + '<span class="field-unit">單位</span>'
+          + '</div>'
+        + '</div>'
+      + '</div>'
+      + '<div class="period-note">'
+        + '<textarea id="' + p.id + '-note" rows="2" placeholder="備註（症狀、飲食、活動…）"></textarea>'
+      + '</div>'
+    + '</div>';
 
     const snack = snackMap[p.id];
     if (snack) {
-      container.innerHTML += `
-        <div class="snack-divider" id="${snack.id}-section">
-          <div class="snack-divider-header" id="${snack.id}-header">
-            <span class="snack-divider-label">${snack.icon} ${snack.label}</span>
-            <button class="suppl-add-btn" onclick="addSnackRow('${snack.id}')">＋ 新增點心</button>
-          </div>
-          <div id="${snack.id}-list"></div>
-        </div>`;
+      html += '<div class="snack-divider" id="' + snack.id + '-section">'
+        + '<div class="snack-divider-header" id="' + snack.id + '-header">'
+          + '<span class="snack-divider-label">' + snack.icon + ' ' + snack.label + '</span>'
+          + '<button class="suppl-add-btn" onclick="addSnackRow(\'' + snack.id + '\')">＋ 新增點心</button>'
+        + '</div>'
+        + '<div id="' + snack.id + '-list"></div>'
+      + '</div>';
     }
   });
+
+  container.innerHTML = html;  // single DOM write — preserves all onclick handlers
 }
 
 function onBGInput(periodId) {
