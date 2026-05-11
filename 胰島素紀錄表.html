@@ -1312,6 +1312,43 @@
     /* ── CGM Timeline Chart (day view) ── */
     #cgm-day-section { display: none; }
 
+    /* ── Hypoglycemia Prediction Warning ── */
+    .hypo-warning {
+      display: none;
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 20px rgba(239,68,68,0.35);
+      animation: hypo-pulse 1.6s ease-in-out infinite;
+    }
+    .hypo-warning.level-warn {
+      background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+      color: white;
+    }
+    .hypo-warning.level-urgent {
+      background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
+      color: white;
+      animation-duration: 0.9s;
+    }
+    @keyframes hypo-pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 4px 20px rgba(239,68,68,0.35); }
+      50%       { opacity: 0.88; box-shadow: 0 4px 28px rgba(239,68,68,0.6); }
+    }
+    .hypo-warning-row { display: flex; align-items: center; gap: 10px; }
+    .hypo-warning-icon { font-size: 1.5rem; flex-shrink: 0; }
+    .hypo-warning-body { flex: 1; }
+    .hypo-warning-title {
+      font-size: 1rem; font-weight: 800; letter-spacing: 0.3px;
+    }
+    .hypo-warning-detail {
+      font-size: 0.78rem; opacity: 0.88; margin-top: 3px; font-weight: 500;
+    }
+    .hypo-dismiss {
+      background: rgba(255,255,255,0.25); border: none; color: white;
+      border-radius: 6px; padding: 4px 10px; font-size: 0.78rem;
+      cursor: pointer; flex-shrink: 0; font-weight: 600;
+    }
+
   </style>
 </head>
 <body>
@@ -1352,6 +1389,18 @@
     <div class="cgm-right">
       <div class="cgm-delta" id="cgm-delta">--</div>
       <div class="cgm-meta" id="cgm-meta">CGM 即時血糖</div>
+    </div>
+  </div>
+
+  <!-- Hypoglycemia Prediction Warning Banner -->
+  <div class="hypo-warning" id="hypo-warning">
+    <div class="hypo-warning-row">
+      <div class="hypo-warning-icon">🚨</div>
+      <div class="hypo-warning-body">
+        <div class="hypo-warning-title" id="hypo-warning-title">預計低血糖警報</div>
+        <div class="hypo-warning-detail" id="hypo-warning-detail"></div>
+      </div>
+      <button class="hypo-dismiss" onclick="dismissHypoWarning()">忽略</button>
     </div>
   </div>
 
@@ -1911,16 +1960,29 @@ const NS_TREND = {
   'NOT COMPUTABLE': '?', 'RATE OUT OF RANGE': '~',
 };
 
+// Track whether user has manually dismissed the current warning
+let hypoDismissedAt = null;   // sgv value at time of dismiss
+
+function dismissHypoWarning() {
+  const warningEl = document.getElementById('hypo-warning');
+  if (warningEl) warningEl.style.display = 'none';
+  // Remember the current sgv so we don't re-show until BG rises then drops again
+  const valEl = document.getElementById('cgm-value');
+  hypoDismissedAt = valEl ? parseFloat(valEl.textContent) : null;
+}
+
 function updateCGMWidget(entry) {
   const widget = document.getElementById('cgm-widget');
   if (!entry || !entry.sgv) { if (widget) widget.style.display = 'none'; return; }
   if (widget) widget.style.display = 'flex';
   const sgv = Math.round(entry.sgv);
+  const rawDelta = entry.delta != null ? entry.delta : null;   // mg/dL per 5 min
   const trend = NS_TREND[entry.direction] || '→';
-  const delta = entry.delta != null
-    ? (entry.delta >= 0 ? '+' : '') + Math.round(entry.delta * 10) / 10 + ' mg/dL'
+  const deltaStr = rawDelta != null
+    ? (rawDelta >= 0 ? '+' : '') + Math.round(rawDelta * 10) / 10 + ' mg/dL'
     : '';
-  const mins = Math.round((Date.now() - (entry.date || entry.dateString ? new Date(entry.dateString || entry.date).getTime() : Date.now())) / 60000);
+  const mins = Math.round((Date.now() - (entry.date || entry.dateString
+    ? new Date(entry.dateString || entry.date).getTime() : Date.now())) / 60000);
   const timeAgo = mins < 2 ? '剛剛' : mins + ' 分鐘前';
 
   // Color by classification
@@ -1929,9 +1991,56 @@ function updateCGMWidget(entry) {
   const valEl = document.getElementById('cgm-value');
   valEl.textContent = sgv;
   valEl.className = 'cgm-value ' + colorClass;
-  document.getElementById('cgm-trend').textContent  = trend;
-  document.getElementById('cgm-delta').textContent  = delta;
-  document.getElementById('cgm-meta').textContent   = 'CGM · ' + timeAgo;
+  document.getElementById('cgm-trend').textContent = trend;
+  document.getElementById('cgm-delta').textContent = deltaStr;
+  document.getElementById('cgm-meta').textContent  = 'CGM · ' + timeAgo;
+
+  // ── Hypoglycemia prediction ──
+  const warningEl   = document.getElementById('hypo-warning');
+  const titleEl     = document.getElementById('hypo-warning-title');
+  const detailEl    = document.getElementById('hypo-warning-detail');
+  const WARN_MINS   = 20;   // warn when predicted low within this many minutes
+  const low         = settings.low || 80;
+
+  // If BG already low → always show immediate alert, reset dismiss
+  if (sgv <= low) {
+    hypoDismissedAt = null;
+    if (warningEl) {
+      warningEl.style.display = 'block';
+      warningEl.className = 'hypo-warning level-urgent';
+      titleEl.textContent  = '🚨 目前已低血糖！';
+      detailEl.textContent = '當前 ' + sgv + ' mg/dL · 低血糖閾值 ' + low + ' mg/dL · 請立即補糖';
+    }
+    return;
+  }
+
+  // If BG is dropping and > low, calculate ETA
+  if (rawDelta !== null && rawDelta < 0) {
+    const ratePerMin     = rawDelta / 5;                          // mg/dL per minute
+    const minsUntilLow   = (sgv - low) / (-ratePerMin);          // positive number
+
+    if (minsUntilLow <= WARN_MINS) {
+      // Re-show if BG has risen above dismissed value (+ 5 mg/dL buffer) since dismiss
+      if (hypoDismissedAt !== null && sgv < hypoDismissedAt + 5) {
+        // Still near dismiss point — keep hidden
+        if (warningEl) warningEl.style.display = 'none';
+        return;
+      }
+      hypoDismissedAt = null;   // reset dismiss when new warning triggers
+      const minsRounded = Math.round(minsUntilLow);
+      const level = minsUntilLow <= 10 ? 'level-urgent' : 'level-warn';
+      if (warningEl) {
+        warningEl.style.display = 'block';
+        warningEl.className = 'hypo-warning ' + level;
+        titleEl.textContent  = '⚠️ 預計 ' + minsRounded + ' 分鐘後低血糖';
+        detailEl.textContent = '當前 ' + sgv + ' mg/dL　趨勢 ' + deltaStr + '/5min　目標警戒 ' + low + ' mg/dL';
+      }
+      return;
+    }
+  }
+
+  // No warning needed
+  if (warningEl) warningEl.style.display = 'none';
 }
 
 async function pollCGM() {

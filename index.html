@@ -1312,6 +1312,43 @@
     /* ── CGM Timeline Chart (day view) ── */
     #cgm-day-section { display: none; }
 
+    /* ── Hypoglycemia Prediction Warning ── */
+    .hypo-warning {
+      display: none;
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 20px rgba(239,68,68,0.35);
+      animation: hypo-pulse 1.6s ease-in-out infinite;
+    }
+    .hypo-warning.level-warn {
+      background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+      color: white;
+    }
+    .hypo-warning.level-urgent {
+      background: linear-gradient(135deg, #991b1b 0%, #dc2626 100%);
+      color: white;
+      animation-duration: 0.9s;
+    }
+    @keyframes hypo-pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 4px 20px rgba(239,68,68,0.35); }
+      50%       { opacity: 0.88; box-shadow: 0 4px 28px rgba(239,68,68,0.6); }
+    }
+    .hypo-warning-row { display: flex; align-items: center; gap: 10px; }
+    .hypo-warning-icon { font-size: 1.5rem; flex-shrink: 0; }
+    .hypo-warning-body { flex: 1; }
+    .hypo-warning-title {
+      font-size: 1rem; font-weight: 800; letter-spacing: 0.3px;
+    }
+    .hypo-warning-detail {
+      font-size: 0.78rem; opacity: 0.88; margin-top: 3px; font-weight: 500;
+    }
+    .hypo-dismiss {
+      background: rgba(255,255,255,0.25); border: none; color: white;
+      border-radius: 6px; padding: 4px 10px; font-size: 0.78rem;
+      cursor: pointer; flex-shrink: 0; font-weight: 600;
+    }
+
   </style>
 </head>
 <body>
@@ -1352,6 +1389,18 @@
     <div class="cgm-right">
       <div class="cgm-delta" id="cgm-delta">--</div>
       <div class="cgm-meta" id="cgm-meta">CGM 即時血糖</div>
+    </div>
+  </div>
+
+  <!-- Hypoglycemia Prediction Warning Banner -->
+  <div class="hypo-warning" id="hypo-warning">
+    <div class="hypo-warning-row">
+      <div class="hypo-warning-icon">🚨</div>
+      <div class="hypo-warning-body">
+        <div class="hypo-warning-title" id="hypo-warning-title">預計低血糖警報</div>
+        <div class="hypo-warning-detail" id="hypo-warning-detail"></div>
+      </div>
+      <button class="hypo-dismiss" onclick="dismissHypoWarning()">忽略</button>
     </div>
   </div>
 
@@ -1911,16 +1960,29 @@ const NS_TREND = {
   'NOT COMPUTABLE': '?', 'RATE OUT OF RANGE': '~',
 };
 
+// Track whether user has manually dismissed the current warning
+let hypoDismissedAt = null;   // sgv value at time of dismiss
+
+function dismissHypoWarning() {
+  const warningEl = document.getElementById('hypo-warning');
+  if (warningEl) warningEl.style.display = 'none';
+  // Remember the current sgv so we don't re-show until BG rises then drops again
+  const valEl = document.getElementById('cgm-value');
+  hypoDismissedAt = valEl ? parseFloat(valEl.textContent) : null;
+}
+
 function updateCGMWidget(entry) {
   const widget = document.getElementById('cgm-widget');
   if (!entry || !entry.sgv) { if (widget) widget.style.display = 'none'; return; }
   if (widget) widget.style.display = 'flex';
   const sgv = Math.round(entry.sgv);
+  const rawDelta = entry.delta != null ? entry.delta : null;   // mg/dL per 5 min
   const trend = NS_TREND[entry.direction] || '→';
-  const delta = entry.delta != null
-    ? (entry.delta >= 0 ? '+' : '') + Math.round(entry.delta * 10) / 10 + ' mg/dL'
+  const deltaStr = rawDelta != null
+    ? (rawDelta >= 0 ? '+' : '') + Math.round(rawDelta * 10) / 10 + ' mg/dL'
     : '';
-  const mins = Math.round((Date.now() - (entry.date || entry.dateString ? new Date(entry.dateString || entry.date).getTime() : Date.now())) / 60000);
+  const mins = Math.round((Date.now() - (entry.date || entry.dateString
+    ? new Date(entry.dateString || entry.date).getTime() : Date.now())) / 60000);
   const timeAgo = mins < 2 ? '剛剛' : mins + ' 分鐘前';
 
   // Color by classification
@@ -1929,9 +1991,56 @@ function updateCGMWidget(entry) {
   const valEl = document.getElementById('cgm-value');
   valEl.textContent = sgv;
   valEl.className = 'cgm-value ' + colorClass;
-  document.getElementById('cgm-trend').textContent  = trend;
-  document.getElementById('cgm-delta').textContent  = delta;
-  document.getElementById('cgm-meta').textContent   = 'CGM · ' + timeAgo;
+  document.getElementById('cgm-trend').textContent = trend;
+  document.getElementById('cgm-delta').textContent = deltaStr;
+  document.getElementById('cgm-meta').textContent  = 'CGM · ' + timeAgo;
+
+  // ── Hypoglycemia prediction ──
+  const warningEl   = document.getElementById('hypo-warning');
+  const titleEl     = document.getElementById('hypo-warning-title');
+  const detailEl    = document.getElementById('hypo-warning-detail');
+  const WARN_MINS   = 20;   // warn when predicted low within this many minutes
+  const low         = settings.low || 80;
+
+  // If BG already low → always show immediate alert, reset dismiss
+  if (sgv <= low) {
+    hypoDismissedAt = null;
+    if (warningEl) {
+      warningEl.style.display = 'block';
+      warningEl.className = 'hypo-warning level-urgent';
+      titleEl.textContent  = '🚨 目前已低血糖！';
+      detailEl.textContent = '當前 ' + sgv + ' mg/dL · 低血糖閾值 ' + low + ' mg/dL · 請立即補糖';
+    }
+    return;
+  }
+
+  // If BG is dropping and > low, calculate ETA
+  if (rawDelta !== null && rawDelta < 0) {
+    const ratePerMin     = rawDelta / 5;                          // mg/dL per minute
+    const minsUntilLow   = (sgv - low) / (-ratePerMin);          // positive number
+
+    if (minsUntilLow <= WARN_MINS) {
+      // Re-show if BG has risen above dismissed value (+ 5 mg/dL buffer) since dismiss
+      if (hypoDismissedAt !== null && sgv < hypoDismissedAt + 5) {
+        // Still near dismiss point — keep hidden
+        if (warningEl) warningEl.style.display = 'none';
+        return;
+      }
+      hypoDismissedAt = null;   // reset dismiss when new warning triggers
+      const minsRounded = Math.round(minsUntilLow);
+      const level = minsUntilLow <= 10 ? 'level-urgent' : 'level-warn';
+      if (warningEl) {
+        warningEl.style.display = 'block';
+        warningEl.className = 'hypo-warning ' + level;
+        titleEl.textContent  = '⚠️ 預計 ' + minsRounded + ' 分鐘後低血糖';
+        detailEl.textContent = '當前 ' + sgv + ' mg/dL　趨勢 ' + deltaStr + '/5min　目標警戒 ' + low + ' mg/dL';
+      }
+      return;
+    }
+  }
+
+  // No warning needed
+  if (warningEl) warningEl.style.display = 'none';
 }
 
 async function pollCGM() {
@@ -3693,91 +3802,4 @@ if ('serviceWorker' in navigator) {
         <div class="calc-food-row">
           <span class="calc-food-badge badge-side">餐食2</span>
           <select id="calc-food-2" onchange="calcRecalc()"></select>
-          <input type="number" id="calc-qty-2" min="0" step="0.1" value="1" oninput="calcRecalc()" />
-        </div>
-        <div class="calc-food-row">
-          <span class="calc-food-badge badge-fruit">甜點</span>
-          <select id="calc-food-3" onchange="calcRecalc()">
-            <option value="">不選擇</option>
-            <option value="guava">芭樂 100g (碳水10.6g)</option>
-            <option value="apple">蘋果 100g (碳水11.9g)</option>
-            <option value="cherry">櫻桃 100g (碳水19.12g)</option>
-            <option value="banana_peel">香蕉帶皮 100g (碳水10.6g)</option>
-            <option value="banana">香蕉去皮 100g (碳水22.1g)</option>
-            <option value="pineapple">鳳梨 100g (碳水13.6g)</option>
-            <option value="dragon_fruit">火龍果 100g (碳水12.36g)</option>
-            <option value="strawberry">草莓去蒂 100g (碳水9.3g)</option>
-          </select>
-          <input type="number" id="calc-qty-3" min="0" step="0.1" value="1" oninput="calcRecalc()" />
-        </div>
-        <div class="calc-food-row">
-          <span class="calc-food-badge badge-drink">飲品</span>
-          <select id="calc-food-4" onchange="calcRecalc()">
-            <option value="">不選擇</option>
-            <option value="milk_100">牛奶 100g (碳水4.8g)</option>
-            <option value="milk_150">牛奶 150g (碳水7g)</option>
-            <option value="milk_200">牛奶 200g (碳水10g)</option>
-            <option value="yogurt_100">優酪乳 100g (碳水12g)</option>
-            <option value="yakult">養樂多 90ML (碳水14.7g)</option>
-          </select>
-          <input type="number" id="calc-qty-4" min="0" step="0.1" value="1" oninput="calcRecalc()" />
-        </div>
-        <div class="calc-food-row">
-          <span class="calc-food-badge badge-other">其他</span>
-          <input type="text" id="calc-other-name" placeholder="食物名稱（選填）"
-                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 8px;font-size:0.8rem;outline:none;width:100%;color:var(--text);" />
-          <input type="number" id="calc-other-carbs" min="0" step="1" placeholder="克"
-                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 4px;font-size:0.82rem;outline:none;text-align:center;width:100%;"
-                 oninput="calcRecalc()" />
-        </div>
-      </div>
-
-      <!-- 劑量計算 -->
-      <div class="calc-section">
-        <div class="calc-section-title">劑量計算</div>
-        <div class="calc-grid-2">
-          <div class="calc-field">
-            <label>預計碳水量 (克)</label>
-            <input type="number" id="calc-carbs" min="0" step="1" value="60" oninput="calcRecalc()" />
-          </div>
-          <div class="calc-field">
-            <label>有效胰島素 IOB (單位)</label>
-            <input type="number" id="calc-iob" min="0" step="0.1" value="0" oninput="calcRecalc()" />
-          </div>
-        </div>
-        <div class="calc-preset-row">
-          <div class="calc-preset-item">
-            <span>CIR 醣類係數</span>
-            <strong id="calc-cir-display">10</strong>
-            <span>g / 單位</span>
-          </div>
-          <div class="calc-preset-item">
-            <span>ISF 敏感係數</span>
-            <strong id="calc-isf-display">50</strong>
-            <span>mg/dL / 單位</span>
-          </div>
-          <div class="calc-preset-item">
-            <span>目標血糖</span>
-            <strong id="calc-target-display">110</strong>
-            <span>mg/dL</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- 警示 -->
-      <div id="calc-warnings"></div>
-
-      <!-- 計算結果 -->
-      <div class="calc-result-box">
-        <div class="calc-result-main"><span id="calc-result-dose">0</span><small> 單位</small></div>
-        <div class="calc-result-label">建議估算劑量</div>
-        <div class="calc-breakdown">
-          <div class="calc-breakdown-item"><span>碳水劑量</span><strong id="calc-meal-dose">0</strong></div>
-          <div class="calc-breakdown-item"><span>血糖校正</span><strong id="calc-corr-dose">0</strong></div>
-          <div class="calc-breakdown-item"><span>扣除 IOB</span><strong id="calc-iob-dose">0</strong></div>
-          <div class="calc-breakdown-item"><span>計算值</span><strong id="calc-raw-dose">0</strong></div>
-        </div>
-      </div>
-
-      <!-- 餐別備註 -->
-      <div id="calc-meal-notes" class="calc-notes" style="display:
+          <input type="number" id="calc-qty-2" min="0" step="0.1" value="1" oninput="calcRec
