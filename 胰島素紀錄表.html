@@ -1821,15 +1821,22 @@ function getBGColor(cls) {
 // ══════════════════════════════════════════
 //  DATE UTILITIES
 // ══════════════════════════════════════════
+// Local-date helpers — always use device local time, not UTC
+function dateToLocalStr(d) {
+  return d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+}
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  return dateToLocalStr(new Date());
 }
 function getNowTime() {
   const now = new Date();
   return now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
 }
 function currentMonthStr() {
-  return new Date().toISOString().slice(0, 7);
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
 }
 
 // ── 24-hour time input helpers (replace <input type="time"> for cross-device) ──
@@ -2217,7 +2224,7 @@ function changeDate(delta) {
   const input = document.getElementById('todayDate');
   const d = new Date(input.value + 'T00:00:00');
   d.setDate(d.getDate() + delta);
-  input.value = d.toISOString().slice(0, 10);
+  input.value = dateToLocalStr(d);
   loadDayData();
 }
 
@@ -2402,19 +2409,19 @@ function getStatDateRange() {
   } else if (statPeriod === 'week') {
     end = statAnchor;
     const s = new Date(anchor); s.setDate(s.getDate() - 6);
-    start = s.toISOString().slice(0, 10);
+    start = dateToLocalStr(s);
   } else if (statPeriod === 'biweek') {
     end = statAnchor;
     const s = new Date(anchor); s.setDate(s.getDate() - 13);
-    start = s.toISOString().slice(0, 10);
+    start = dateToLocalStr(s);
   } else if (statPeriod === 'month') {
     end = statAnchor;
     const s = new Date(anchor); s.setDate(s.getDate() - 29);
-    start = s.toISOString().slice(0, 10);
+    start = dateToLocalStr(s);
   } else {
     end = statAnchor;
     const s = new Date(anchor); s.setDate(s.getDate() - 89);
-    start = s.toISOString().slice(0, 10);
+    start = dateToLocalStr(s);
   }
   return { start, end };
 }
@@ -2424,7 +2431,7 @@ function getDatesBetween(start, end) {
   const cur = new Date(start + 'T00:00:00');
   const last = new Date(end + 'T00:00:00');
   while (cur <= last) {
-    dates.push(cur.toISOString().slice(0, 10));
+    dates.push(dateToLocalStr(cur));
     cur.setDate(cur.getDate() + 1);
   }
   return dates;
@@ -2451,7 +2458,7 @@ function navigateStat(dir) {
   const steps = { day:1, week:7, biweek:14, month:30, quarter:90 };
   anchor.setDate(anchor.getDate() + dir * steps[statPeriod]);
   if (anchor > new Date()) anchor.setTime(new Date().getTime());
-  statAnchor = anchor.toISOString().slice(0, 10);
+  statAnchor = dateToLocalStr(anchor);
   renderCharts();
 }
 
