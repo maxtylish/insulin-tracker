@@ -1368,6 +1368,21 @@
 
     /* ── CGM Timeline Chart (day view) ── */
     #cgm-day-section { display: none; }
+    .mini-cgm-card {
+      background: var(--card);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 10px 14px 8px;
+      margin-bottom: 10px;
+    }
+    .mini-cgm-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      letter-spacing: 0.02em;
+    }
+    #miniCgmChart { width: 100% !important; }
 
   </style>
 </head>
@@ -1434,6 +1449,12 @@
       </div>
       <button class="bg-warn-dismiss" onclick="dismissWarning('hyper')">忽略</button>
     </div>
+  </div>
+
+  <!-- Mini CGM Chart -->
+  <div class="mini-cgm-card" id="mini-cgm-card" style="display:none;">
+    <div class="mini-cgm-header">📈 今日血糖曲線</div>
+    <canvas id="miniCgmChart" height="90"></canvas>
   </div>
 
   <!-- Legend -->
@@ -2221,6 +2242,7 @@ async function pollCGM() {
   const entry = await fetchNSCurrent();
   updateCGMWidget(entry);
   checkAndNotify(entry);
+  renderMiniCGMChart();
 }
 
 function startCGMPolling() {
@@ -2338,6 +2360,96 @@ async function renderCGMDayChart(dateStr) {
     }
   });
 }
+let miniCgmChart = null;
+async function renderMiniCGMChart() {
+  const card = document.getElementById('mini-cgm-card');
+  const canvas = document.getElementById('miniCgmChart');
+  if (!settings.nsUrl || !card || !canvas) return;
+
+  const entries = await fetchNSEntries(todayStr());
+  if (!entries || !entries.length) { card.style.display = 'none'; return; }
+
+  entries.sort((a, b) => (a.date || 0) - (b.date || 0));
+  const labels = entries.map(e => {
+    const d = new Date(e.date || e.dateString);
+    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  });
+  const values = entries.map(e => e.sgv || null);
+  const pointColors = values.map(v => {
+    if (!v) return '#94a3b8';
+    if (v < settings.low)         return '#8b5cf6';
+    if (v <= settings.normalHigh) return '#22c55e';
+    if (v <= settings.high)       return '#f59e0b';
+    return '#ef4444';
+  });
+
+  card.style.display = 'block';
+  if (miniCgmChart) { miniCgmChart.destroy(); miniCgmChart = null; }
+
+  miniCgmChart = new Chart(canvas, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'CGM',
+        data: values,
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59,130,246,0.07)',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        pointHoverRadius: 3,
+        pointBackgroundColor: pointColors,
+        tension: 0.3,
+        fill: true,
+        spanGaps: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: ctx => ctx[0].label,
+            label: ctx => ctx.parsed.y ? ctx.parsed.y + ' mg/dL' : '--',
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            maxTicksLimit: 6,
+            font: { size: 9 },
+            callback: (_, i) => (i % 24 === 0 || i === 0) ? labels[i] : null,
+          },
+          grid: { display: false },
+        },
+        y: {
+          min: 40, suggestedMax: 300,
+          ticks: { font: { size: 9 }, maxTicksLimit: 4 },
+          grid: { color: '#f1f5f9' },
+        }
+      },
+      plugins2: [{
+        id: 'miniCgmZones',
+        afterDraw(chart) {
+          const ctx2 = chart.ctx, ca = chart.chartArea, y = chart.scales.y;
+          if (!y || !ca) return;
+          [[settings.normalHigh,'#22c55e88'],[settings.low,'#8b5cf688'],[settings.high,'#ef444488']].forEach(([v,c]) => {
+            const yp = y.getPixelForValue(v);
+            if (yp < ca.top || yp > ca.bottom) return;
+            ctx2.save(); ctx2.beginPath(); ctx2.setLineDash([3,3]);
+            ctx2.strokeStyle = c; ctx2.lineWidth = 1;
+            ctx2.moveTo(ca.left, yp); ctx2.lineTo(ca.right, yp); ctx2.stroke(); ctx2.restore();
+          });
+        }
+      }]
+    }
+  });
+}
+
 function formatDateDisplay(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   const days = ['日', '一', '二', '三', '四', '五', '六'];
@@ -3022,6 +3134,21 @@ function renderIOBChart() {
     });
   });
 
+  // Correction (補打) injections – purple dashed line
+  var corrections = dayData.corrections || [];
+  corrections.forEach(function(rec, j) {
+    if (rec.dose && rec.time) {
+      var dose = parseFloat(rec.dose);
+      if (dose > 0) {
+        injections.push({
+          time: rec.time, dose: dose, type: 'noverapid',
+          label: '補打 NovoRapid' + (corrections.length > 1 ? ' #' + (j+1) : ''),
+          color: '#8b5cf6', isCorrection: true
+        });
+      }
+    }
+  });
+
   function timeToMin(ts) {
     var parts = ts.split(':').map(Number);
     return parts[0] * 60 + parts[1];
@@ -3037,7 +3164,9 @@ function renderIOBChart() {
     return {
       label: inj.label, data: data,
       borderColor: inj.color, backgroundColor: inj.color + '28',
-      fill: true, tension: 0.4, pointRadius: 0, borderWidth: 1.5
+      fill: true, tension: 0.4, pointRadius: 0,
+      borderWidth: inj.isCorrection ? 2 : 1.5,
+      borderDash: inj.isCorrection ? [5, 3] : []
     };
   });
 
