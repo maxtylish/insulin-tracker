@@ -1309,6 +1309,39 @@
     .cgm-status-normal { color: #86efac; }
     .cgm-status-warn   { color: #fcd34d; }
     .cgm-status-high   { color: #fca5a5; }
+    /* ── Corrections row extra layout ── */
+    .corr-bg-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .corr-suggestion {
+      background: linear-gradient(135deg, #eff6ff, #dbeafe);
+      border: 1.5px solid #93c5fd;
+      border-radius: 10px;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .corr-sugg-label { font-size: .75rem; color: #1d4ed8; font-weight: 600; }
+    .corr-sugg-dose  { font-size: 1.35rem; font-weight: 800; color: #1d4ed8; font-variant-numeric: tabular-nums; }
+    .corr-sugg-unit  { font-size: .72rem; color: #3b82f6; font-weight: 500; }
+    .corr-sugg-meta  { font-size: .7rem; color: #64748b; margin-top: 2px; }
+    .corr-fill-btn {
+      background: #3b82f6; color: white; border: none;
+      border-radius: 7px; padding: 4px 10px;
+      font-size: .75rem; font-weight: 700; cursor: pointer; flex-shrink: 0;
+    }
+    .corr-cgm-btn {
+      background: #1d4ed8; color: white; border: none;
+      border-radius: 7px; padding: 3px 9px;
+      font-size: .72rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+    }
+
     /* ── Hypo / Hyper Prediction Banners ── */
     .bg-warning {
       display: none;
@@ -1975,6 +2008,7 @@ const NS_TREND = {
 };
 
 // ── Warning banner state ──────────────────────────────
+var lastCGMEntry = null;  // kept for correction dose calc
 var warnDismissed = { hypo: null, hyper: null };  // dismissed-at sgv
 
 function dismissWarning(type) {
@@ -2001,6 +2035,7 @@ function hideBanner(type) {
 }
 
 function updateCGMWidget(entry) {
+  lastCGMEntry = entry;
   var widget = document.getElementById('cgm-widget');
   if (!entry || !entry.sgv) { if (widget) widget.style.display = 'none'; return; }
   if (widget) widget.style.display = 'flex';
@@ -3381,68 +3416,187 @@ function showToast(msg) {
 //  SUPPLEMENTAL RECORDS (補打/補糖)
 // ════════════════════════════════
 
+// ── Correction dose helpers ───────────────────────────
+function getCorrectionPreset() {
+  // Pick ISF/target by current hour
+  var h = new Date().getHours();
+  if (h >= 6  && h < 11) return CALC_MEAL_PRESETS.breakfast;
+  if (h >= 11 && h < 15) return CALC_MEAL_PRESETS.lunch;
+  if (h >= 15 && h < 22) return CALC_MEAL_PRESETS.dinner;
+  return CALC_MEAL_PRESETS.dinner;  // overnight → use dinner preset
+}
+
+function calcCorrectionSuggestion(bg) {
+  var bgNum = parseFloat(bg);
+  if (!bgNum || isNaN(bgNum) || bgNum < 20) return null;
+  var preset  = getCorrectionPreset();
+  var isf     = preset.isf;
+  var target  = preset.target;
+  // Base correction: (current BG - target) / ISF
+  var dose    = (bgNum - target) / isf;
+  // Trend adjustment: add expected BG change over next 30 min
+  // delta = mg/dL per 5 min → 30 min = 6 periods
+  if (lastCGMEntry && lastCGMEntry.delta != null) {
+    dose += (lastCGMEntry.delta * 6) / isf;
+  }
+  dose = Math.max(0, dose);
+  // Round to nearest 0.5
+  return Math.round(dose * 2) / 2;
+}
+
+function corrSuggMeta() {
+  var p = getCorrectionPreset();
+  var trendPart = '';
+  if (lastCGMEntry && lastCGMEntry.delta != null) {
+    var d = lastCGMEntry.delta;
+    trendPart = '　趨勢 ' + (d >= 0 ? '+' : '') + Math.round(d * 10) / 10 + ' mg/5min';
+  }
+  return 'ISF ' + p.isf + '　目標 ' + p.target + ' mg/dL' + trendPart;
+}
+
+function updateCorrSuggestion(idx) {
+  var bgEl   = document.querySelector('#corrections-row-' + idx + ' [data-field="bg"]');
+  var boxEl  = document.getElementById('corr-sugg-box-' + idx);
+  var doseEl = document.getElementById('corr-sugg-dose-' + idx);
+  var metaEl = document.getElementById('corr-sugg-meta-' + idx);
+  if (!bgEl || !boxEl) return;
+  var sug = calcCorrectionSuggestion(bgEl.value);
+  if (sug === null) { boxEl.style.display = 'none'; return; }
+  boxEl.style.display = 'flex';
+  if (doseEl) doseEl.textContent = sug;
+  if (metaEl) metaEl.textContent = corrSuggMeta();
+}
+
+function fillCorrDose(idx) {
+  var doseEl = document.querySelector('#corrections-row-' + idx + ' [data-field="dose"]');
+  var sugEl  = document.getElementById('corr-sugg-dose-' + idx);
+  if (doseEl && sugEl && sugEl.textContent !== '--') {
+    doseEl.value = sugEl.textContent;
+  }
+}
+
+async function autoFillCorrBG(idx) {
+  // Fill time first
+  var timeEl = document.querySelector('#corrections-row-' + idx + ' [data-field="time"]');
+  if (timeEl && !timeEl.value) timeEl.value = getNowTime();
+  // Then fill BG from CGM
+  var bgEl = document.querySelector('#corrections-row-' + idx + ' [data-field="bg"]');
+  if (!bgEl) return;
+  if (bgEl.value) { updateCorrSuggestion(idx); return; } // already filled
+  var src = lastCGMEntry;
+  if (!src && settings.nsUrl) src = await fetchNSCurrent();
+  if (src && src.sgv) {
+    bgEl.value = Math.round(src.sgv);
+    updateCorrSuggestion(idx);
+  }
+}
+
 function renderSupplList(type, items) {
-  const listEl = document.getElementById(type + '-list');
+  var listEl = document.getElementById(type + '-list');
   if (!listEl) return;
 
   if (items.length === 0) {
-    const labels = { corrections: '尚無補打記錄', carbs: '尚無補糖記錄' };
-    listEl.innerHTML = `<div class="suppl-empty">${labels[type] || '尚無記錄'}</div>`;
+    var labels = { corrections: '尚無補打記錄', carbs: '尚無補糖記錄' };
+    listEl.innerHTML = '<div class="suppl-empty">' + (labels[type] || '尚無記錄') + '</div>';
     return;
   }
 
-  listEl.innerHTML = items.map((item, idx) => {
-    const isCorr = type === 'corrections';
-    const mainField = isCorr
-      ? `<div class="suppl-field">
-           <label>劑量</label>
-           <div class="field-input-wrap">
-             <input type="number" data-idx="${idx}" data-field="dose"
-                    class="suppl-val" value="${item.dose || ''}"
-                    min="0" max="100" step="0.5" placeholder="--" />
-             <span class="field-unit">單位</span>
-           </div>
-         </div>`
-      : `<div class="suppl-field">
-           <label>碳水量</label>
-           <div class="field-input-wrap">
-             <input type="number" data-idx="${idx}" data-field="carb"
-                    class="suppl-val" value="${item.carb || ''}"
-                    min="0" max="500" step="1" placeholder="--" />
-             <span class="field-unit">克</span>
-           </div>
-         </div>`;
+  listEl.innerHTML = items.map(function(item, idx) {
+    var isCorr = type === 'corrections';
 
-    const bgField = !isCorr ? `
-      <div class="suppl-field">
-        <label>當前血糖</label>
-        <div class="field-input-wrap">
-          <input type="number" data-idx="${idx}" data-field="bg"
-                 class="suppl-val" value="${item.bg || ''}"
-                 min="20" max="600" step="1" placeholder="--" />
-          <span class="field-unit">mg/dL</span>
-        </div>
-      </div>` : '';
+    // ── Corrections: BG field + suggestion box + dose ──────────
+    if (isCorr) {
+      var bgVal   = item.bg   || '';
+      var doseVal = item.dose || '';
+      var sugg    = bgVal ? calcCorrectionSuggestion(bgVal) : null;
+      var meta    = bgVal ? corrSuggMeta() : '';
 
-    return `
-      <div class="suppl-row" id="${type}-row-${idx}">
-        <div class="suppl-row-top" style="${!isCorr ? 'grid-template-columns:1fr 1fr 1fr auto' : ''}">
-          ${mainField}
-          ${bgField}
-          <div class="suppl-field">
-            <label>時間</label>
-            <input type="text" data-idx="${idx}" data-field="time"
-                   class="suppl-val time-input" value="${item.time || ''}"
-                   inputmode="numeric" maxlength="5" placeholder="--:--"
-                   oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />
-          </div>
-          <button class="suppl-del-btn" onclick="removeSupplRow('${type}', ${idx})" title="刪除">✕</button>
-        </div>
-        <div class="suppl-note">
-          <textarea rows="1" data-idx="${idx}" data-field="note"
-                    class="suppl-val" placeholder="備註（症狀、原因…）">${item.note || ''}</textarea>
-        </div>
-      </div>`;
+      return '<div class="suppl-row" id="corrections-row-' + idx + '">'
+        // BG + time on top row
+        + '<div class="corr-bg-row">'
+          + '<div class="suppl-field">'
+            + '<label>當前血糖 <button class="corr-cgm-btn" type="button" onclick="autoFillCorrBG(' + idx + ')">CGM 帶入</button></label>'
+            + '<div class="field-input-wrap">'
+              + '<input type="number" data-idx="' + idx + '" data-field="bg" class="suppl-val"'
+              + ' value="' + bgVal + '" min="20" max="600" step="1" placeholder="--"'
+              + ' oninput="updateCorrSuggestion(' + idx + ')"'
+              + ' onfocus="autoFillCorrBG(' + idx + ')" />'
+              + '<span class="field-unit">mg/dL</span>'
+            + '</div>'
+          + '</div>'
+          + '<div class="suppl-field">'
+            + '<label>時間</label>'
+            + '<input type="text" data-idx="' + idx + '" data-field="time"'
+            + ' class="suppl-val time-input" value="' + (item.time || '') + '"'
+            + ' inputmode="numeric" maxlength="5" placeholder="--:--"'
+            + ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />'
+          + '</div>'
+        + '</div>'
+        // Suggestion box
+        + '<div class="corr-suggestion" id="corr-sugg-box-' + idx + '" style="' + (sugg !== null ? 'display:flex' : 'display:none') + '">'
+          + '<div>'
+            + '<div class="corr-sugg-label">💊 建議補打劑量</div>'
+            + '<div style="display:flex;align-items:baseline;gap:4px;margin-top:2px;">'
+              + '<span class="corr-sugg-dose" id="corr-sugg-dose-' + idx + '">' + (sugg !== null ? sugg : '--') + '</span>'
+              + '<span class="corr-sugg-unit">單位【速效】</span>'
+            + '</div>'
+            + '<div class="corr-sugg-meta" id="corr-sugg-meta-' + idx + '">' + meta + '</div>'
+          + '</div>'
+          + '<button class="corr-fill-btn" type="button" onclick="fillCorrDose(' + idx + ')">帶入</button>'
+        + '</div>'
+        // Actual dose + delete
+        + '<div class="suppl-row-top" style="grid-template-columns:1fr auto">'
+          + '<div class="suppl-field">'
+            + '<label>實際施打劑量</label>'
+            + '<div class="field-input-wrap">'
+              + '<input type="number" data-idx="' + idx + '" data-field="dose" class="suppl-val"'
+              + ' value="' + doseVal + '" min="0" max="100" step="0.5" placeholder="--" />'
+              + '<span class="field-unit">單位</span>'
+            + '</div>'
+          + '</div>'
+          + '<button class="suppl-del-btn" onclick="removeSupplRow(\'corrections\', ' + idx + ')" title="刪除">✕</button>'
+        + '</div>'
+        // Note
+        + '<div class="suppl-note">'
+          + '<textarea rows="1" data-idx="' + idx + '" data-field="note"'
+          + ' class="suppl-val" placeholder="備註（症狀、原因…）">' + (item.note || '') + '</textarea>'
+        + '</div>'
+      + '</div>';
+    }
+
+    // ── Carbs row (unchanged layout) ───────────────────────────
+    return '<div class="suppl-row" id="' + type + '-row-' + idx + '">'
+      + '<div class="suppl-row-top" style="grid-template-columns:1fr 1fr 1fr auto">'
+        + '<div class="suppl-field">'
+          + '<label>碳水量</label>'
+          + '<div class="field-input-wrap">'
+            + '<input type="number" data-idx="' + idx + '" data-field="carb" class="suppl-val"'
+            + ' value="' + (item.carb || '') + '" min="0" max="500" step="1" placeholder="--" />'
+            + '<span class="field-unit">克</span>'
+          + '</div>'
+        + '</div>'
+        + '<div class="suppl-field">'
+          + '<label>當前血糖</label>'
+          + '<div class="field-input-wrap">'
+            + '<input type="number" data-idx="' + idx + '" data-field="bg" class="suppl-val"'
+            + ' value="' + (item.bg || '') + '" min="20" max="600" step="1" placeholder="--" />'
+            + '<span class="field-unit">mg/dL</span>'
+          + '</div>'
+        + '</div>'
+        + '<div class="suppl-field">'
+          + '<label>時間</label>'
+          + '<input type="text" data-idx="' + idx + '" data-field="time"'
+          + ' class="suppl-val time-input" value="' + (item.time || '') + '"'
+          + ' inputmode="numeric" maxlength="5" placeholder="--:--"'
+          + ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />'
+        + '</div>'
+        + '<button class="suppl-del-btn" onclick="removeSupplRow(\'' + type + '\', ' + idx + ')" title="刪除">✕</button>'
+      + '</div>'
+      + '<div class="suppl-note">'
+        + '<textarea rows="1" data-idx="' + idx + '" data-field="note"'
+        + ' class="suppl-val" placeholder="備註（症狀、原因…）">' + (item.note || '') + '</textarea>'
+      + '</div>'
+    + '</div>';
   }).join('');
 }
 
@@ -3462,14 +3616,18 @@ function collectSupplRows(type) {
 }
 
 function addSupplRow(type) {
-  const current = collectSupplRows(type);
+  var current = collectSupplRows(type);
   current.push({});
   renderSupplList(type, current);
-  // Focus the first input of the new row
-  const listEl = document.getElementById(type + '-list');
+  var listEl = document.getElementById(type + '-list');
   if (listEl) {
-    const last = listEl.querySelector('.suppl-row:last-child input');
+    var last = listEl.querySelector('.suppl-row:last-child input');
     if (last) last.focus();
+  }
+  // For corrections: auto-fill time + CGM BG on new row
+  if (type === 'corrections') {
+    var newIdx = current.length - 1;
+    autoFillCorrBG(newIdx);
   }
 }
 
