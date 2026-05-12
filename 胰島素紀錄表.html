@@ -4072,7 +4072,19 @@ function openCalcModal(periodId) {
     document.getElementById('calc-meal-period').value = meal;
 
     const bgVal = document.getElementById(periodId + '-bg').value;
-    if (bgVal) document.getElementById('calc-bg').value = bgVal;
+    if (bgVal) {
+      document.getElementById('calc-bg').value = bgVal;
+    } else if (lastCGMEntry && lastCGMEntry.sgv) {
+      // 自動帶入 CGM 即時血糖
+      const cgmBG = Math.round(lastCGMEntry.sgv);
+      document.getElementById('calc-bg').value = cgmBG;
+      // 同步填入各餐血糖欄位
+      const periodBgEl = document.getElementById(periodId + '-bg');
+      if (periodBgEl && !periodBgEl.value) {
+        periodBgEl.value = cgmBG;
+        onBGInput(periodId);
+      }
+    }
 
     // Reset food & IOB
     [1,2,3,4].forEach(i => {
