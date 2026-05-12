@@ -2573,12 +2573,35 @@ function buildPeriodCards() {
           var opts = SITE_OPTIONS.map(function(o) {
             return '<option value="' + o.value + '"' + (o.value === defVal ? ' selected' : '') + '>' + o.label + '</option>';
           }).join('');
+          var alarmRow = '';
+          if (p.id !== 'bedtime') {
+            var am = SITE_ALARM_MAP[defVal] || { def: 15, opts: [15, 30] };
+            var minOpts = am.opts.map(function(m){ return '<option value="'+m+'"'+(m===am.def?' selected':'')+'>'+m+'</option>'; }).join('');
+            alarmRow = '<div class="meal-alarm-row" id="' + p.id + '-alarm-row">'
+              + '<span class="alarm-label">⏰ 用餐倒計時</span>'
+              + '<div class="alarm-choice-btns" id="' + p.id + '-alarm-btns">'
+                + '<button class="alarm-btn-no active" type="button" onclick="alarmSelectNo(\'' + p.id + '\')">無鬧鐘</button>'
+                + '<button class="alarm-btn-set" type="button" onclick="alarmSelectSet(\'' + p.id + '\')">設定倒計時</button>'
+              + '</div>'
+              + '<div class="alarm-setup-row" id="' + p.id + '-alarm-setup" style="display:none">'
+                + '<select class="alarm-min-select" id="' + p.id + '-alarm-min">' + minOpts + '</select>'
+                + '<span class="alarm-unit-text">分鐘後用餐</span>'
+                + '<button class="alarm-start-btn" type="button" onclick="startMealAlarm(\'' + p.id + '\')">▶ 開始</button>'
+                + '<button class="alarm-cancel-setup-btn" type="button" onclick="alarmSelectNo(\'' + p.id + '\')">✕</button>'
+              + '</div>'
+              + '<div class="alarm-running-row" id="' + p.id + '-alarm-running" style="display:none">'
+                + '<span class="alarm-countdown-display" id="' + p.id + '-alarm-display">--:--</span>'
+                + '<button class="alarm-stop-btn" type="button" onclick="stopMealAlarm(\'' + p.id + '\')">■ 取消</button>'
+              + '</div>'
+            + '</div>';
+          }
           return '<div class="site-row">'
             + '<span class="site-label">📍 施打部位</span>'
             + '<select class="site-select" id="' + p.id + '-site"'
             + ' onchange="onSiteChange(\'' + p.id + '\')">' + opts + '</select>'
             + '<span class="site-note" id="' + p.id + '-site-note">' + defNote + '</span>'
-            + '</div>';
+            + '</div>'
+            + alarmRow;
         })()
     + '</div>';
 
@@ -4262,6 +4285,96 @@ if ('serviceWorker' in navigator) {
       .then(() => console.log('SW registered'))
       .catch(e => console.log('SW error:', e));
   });
+}
+
+// ── Meal Alarm ────────────────────────────────────────────────────────────────
+const mealAlarmTimers = {}; // periodId -> { intervalId, endTime } | null
+
+function alarmSelectNo(periodId) {
+  var btns  = document.getElementById(periodId + '-alarm-btns');
+  var setup = document.getElementById(periodId + '-alarm-setup');
+  var run   = document.getElementById(periodId + '-alarm-running');
+  if (btns)  {
+    btns.style.display = 'flex';
+    btns.querySelector('.alarm-btn-no').classList.add('active');
+    btns.querySelector('.alarm-btn-set').classList.remove('active');
+  }
+  if (setup) setup.style.display = 'none';
+  if (run)   run.style.display   = 'none';
+  stopMealAlarm(periodId, true);
+}
+
+function alarmSelectSet(periodId) {
+  var btns  = document.getElementById(periodId + '-alarm-btns');
+  var setup = document.getElementById(periodId + '-alarm-setup');
+  if (btns) {
+    btns.querySelector('.alarm-btn-set').classList.add('active');
+    btns.querySelector('.alarm-btn-no').classList.remove('active');
+  }
+  if (setup) setup.style.display = 'flex';
+}
+
+function startMealAlarm(periodId) {
+  var minSel = document.getElementById(periodId + '-alarm-min');
+  if (!minSel) return;
+  var mins = parseInt(minSel.value, 10) || 15;
+  var endTime = Date.now() + mins * 60000;
+
+  stopMealAlarm(periodId, true);
+
+  var btns  = document.getElementById(periodId + '-alarm-btns');
+  var setup = document.getElementById(periodId + '-alarm-setup');
+  var run   = document.getElementById(periodId + '-alarm-running');
+  if (btns)  btns.style.display  = 'none';
+  if (setup) setup.style.display = 'none';
+  if (run)   run.style.display   = 'flex';
+
+  mealAlarmTimers[periodId] = { endTime: endTime, intervalId: null };
+
+  function tick() {
+    var remaining = endTime - Date.now();
+    var dispEl = document.getElementById(periodId + '-alarm-display');
+    if (!dispEl) { stopMealAlarm(periodId, true); return; }
+
+    if (remaining <= 0) {
+      stopMealAlarm(periodId, true);
+      var runEl = document.getElementById(periodId + '-alarm-running');
+      if (runEl) {
+        runEl.innerHTML = '<span class="alarm-done-text">🍽️ 可以用餐了！</span>'
+          + '<button class="alarm-stop-btn" type="button" onclick="alarmSelectNo(\'' + periodId + '\')">✕</button>';
+        runEl.style.display = 'flex';
+      }
+      var periodLabel = { morning: '早餐', noon: '午餐', evening: '晚餐' }[periodId] || '用餐';
+      sendPushNotif('meal-' + periodId, '🍽️ ' + periodLabel + '時間到！', '胰島素已生效，現在可以用餐囉！', false);
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+      return;
+    }
+
+    var totalSec = Math.ceil(remaining / 1000);
+    var mm = Math.floor(totalSec / 60).toString().padStart(2, '0');
+    var ss = (totalSec % 60).toString().padStart(2, '0');
+    dispEl.textContent = mm + ':' + ss;
+    dispEl.classList.toggle('alarm-urgent', remaining < 60000);
+  }
+
+  tick();
+  mealAlarmTimers[periodId].intervalId = setInterval(tick, 1000);
+}
+
+function stopMealAlarm(periodId, silent) {
+  var t = mealAlarmTimers[periodId];
+  if (t && t.intervalId) clearInterval(t.intervalId);
+  mealAlarmTimers[periodId] = null;
+  if (!silent) {
+    var run  = document.getElementById(periodId + '-alarm-running');
+    var btns = document.getElementById(periodId + '-alarm-btns');
+    if (run)  run.style.display  = 'none';
+    if (btns) {
+      btns.style.display = 'flex';
+      btns.querySelector('.alarm-btn-no').classList.add('active');
+      btns.querySelector('.alarm-btn-set').classList.remove('active');
+    }
+  }
 }
 </script>
 
