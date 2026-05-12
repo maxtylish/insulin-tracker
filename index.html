@@ -54,6 +54,15 @@
     }
     header h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.5px; }
     header .subtitle { font-size: 0.75rem; opacity: 0.8; margin-top: 2px; }
+    #headerDate { font-size: 0.8rem; opacity: 0.85; white-space: nowrap; }
+    .sync-badge { font-size: 0.7rem !important; white-space: nowrap; }
+    @media (max-width: 420px) {
+      header { padding: 12px 12px; grid-template-columns: auto 1fr auto; gap: 6px; }
+      header h1 { font-size: 1rem; }
+      header .subtitle { font-size: 0.65rem; }
+      #headerDate { font-size: 0.68rem; }
+      .sync-badge { font-size: 0.62rem !important; padding: 1px 5px !important; }
+    }
 
     /* ── Nav Tabs ── */
     nav {
@@ -775,11 +784,13 @@
       align-items: center;
     }
     .history-row:last-child { border-bottom: none; }
-    .history-row .period-label { font-weight: 700; color: var(--text-muted); }
+    .history-row > * { text-align: center; }
+    .history-row .period-label { font-weight: 700; color: var(--text-muted); text-align: left; }
     .history-row .bg-val { font-weight: 700; }
-    .history-row .insulin-val { color: var(--primary); font-weight: 700; }
+    .history-row .insulin-val { color: var(--primary); font-weight: 700; display:flex; flex-direction:column; align-items:center; gap:2px; line-height:1.3; }
     .history-row .time-val { color: var(--text-muted); font-size: 0.78rem; }
     .history-row .empty { color: #cbd5e1; }
+    .insulin-type-badge { font-size: 0.68rem; font-weight: 600; color: #6b7280; letter-spacing: 0.01em; }
 
     .history-empty {
       text-align: center;
@@ -1392,6 +1403,73 @@
       background-position: right 8px center;
     }
     .site-note { font-size: 0.7rem; color: #6366f1; font-weight: 500; flex-shrink: 0; }
+
+    /* ── Meal Alarm ── */
+    .meal-alarm-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px 10px;
+      background: linear-gradient(135deg,rgba(99,102,241,.05),rgba(139,92,246,.04));
+      border-top: 1px solid var(--border);
+      border-radius: 0 0 14px 14px;
+      flex-wrap: wrap;
+    }
+    .alarm-label { font-size: 0.7rem; color: #6366f1; font-weight: 700; white-space: nowrap; letter-spacing: .02em; }
+    /* Segmented pill */
+    .alarm-choice-btns {
+      display: inline-flex;
+      background: rgba(0,0,0,.07);
+      border-radius: 20px;
+      padding: 2px;
+    }
+    .alarm-btn-no, .alarm-btn-set {
+      font-size: 0.72rem; padding: 4px 13px; border-radius: 18px;
+      border: none; background: transparent; cursor: pointer;
+      color: var(--text-muted); font-weight: 500; transition: all .2s;
+      white-space: nowrap;
+    }
+    .alarm-btn-no.active  { background:#fff; color:#475569; font-weight:600; box-shadow:0 1px 4px rgba(0,0,0,.13); }
+    .alarm-btn-set.active { background:#6366f1; color:#fff; font-weight:600; box-shadow:0 1px 6px rgba(99,102,241,.35); }
+    /* Setup */
+    .alarm-setup-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; animation:alarmFade .2s ease; }
+    @keyframes alarmFade { from{opacity:0;transform:translateY(-4px)} to{opacity:1;transform:none} }
+    .alarm-min-select {
+      font-size:.8rem; border:1.5px solid #6366f1; border-radius:10px;
+      padding:4px 26px 4px 10px; background:var(--card); color:#6366f1;
+      font-weight:600; appearance:none; cursor:pointer;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236366f1'/%3E%3C/svg%3E");
+      background-repeat:no-repeat; background-position:right 8px center;
+    }
+    .alarm-unit-text { font-size:.72rem; color:var(--text-muted); }
+    .alarm-start-btn {
+      font-size:.75rem; padding:5px 16px; border-radius:20px;
+      background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff;
+      border:none; cursor:pointer; font-weight:700;
+      box-shadow:0 2px 8px rgba(99,102,241,.35); transition:opacity .15s;
+    }
+    .alarm-start-btn:active { opacity:.8; }
+    .alarm-cancel-setup-btn {
+      font-size:.72rem; padding:4px 10px; border-radius:20px;
+      background:transparent; color:#94a3b8; border:1px solid #e2e8f0; cursor:pointer;
+    }
+    /* Running */
+    .alarm-running-row { display:flex; align-items:center; gap:10px; animation:alarmFade .2s ease; }
+    .alarm-countdown-display {
+      font-size:1.25rem; font-weight:800; font-variant-numeric:tabular-nums;
+      color:#6366f1; letter-spacing:.04em;
+      background:rgba(99,102,241,.1); padding:2px 12px; border-radius:10px;
+    }
+    .alarm-countdown-display.alarm-urgent {
+      color:#ef4444; background:rgba(239,68,68,.1);
+      animation:urgentPulse .8s ease-in-out infinite;
+    }
+    @keyframes urgentPulse { 0%,100%{opacity:1} 50%{opacity:.55} }
+    .alarm-stop-btn {
+      font-size:.72rem; padding:4px 12px; border-radius:20px;
+      background:transparent; color:#ef4444; border:1px solid #ef4444; cursor:pointer;
+    }
+    .alarm-done-text { font-size:.85rem; font-weight:700; color:#22c55e; animation:alarmFade .3s ease; }
     .mini-cgm-card {
       background: var(--card);
       border-radius: 14px;
@@ -2761,7 +2839,9 @@ function renderHistory() {
             ${carbBadge}
           </span>
           <span class="insulin-val ${!rec.insulin ? 'empty' : ''}">
-            ${rec.insulin ? rec.insulin + '<small style="font-weight:400"> 單位</small><small style="font-weight:500;color:#6b7280;margin-left:3px;">' + (p.id === 'bedtime' ? '【長效】' : '【速效】') + '</small>' : '—'}
+            ${rec.insulin
+              ? rec.insulin + '<small style="font-weight:400"> 單位</small><br><span class="insulin-type-badge">' + (p.id === 'bedtime' ? '【長效】' : '【速效】') + '</span>'
+              : '—'}
             ${correctionBadge}
           </span>
           <span style="font-size:0.75rem;color:#6366f1;font-weight:600;">${rec.site || SITE_DEFAULTS[p.id] || '—'}</span>
