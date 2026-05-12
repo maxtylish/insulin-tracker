@@ -1470,6 +1470,10 @@
       background:transparent; color:#ef4444; border:1px solid #ef4444; cursor:pointer;
     }
     .alarm-done-text { font-size:.85rem; font-weight:700; color:#22c55e; animation:alarmFade .3s ease; }
+    .alarm-running-label { font-size:.7rem; color:var(--text-muted); font-weight:600; white-space:nowrap; }
+    .alarm-countdown-display.alarm-done {
+      color:#22c55e; background:rgba(34,197,94,.1);
+    }
     .mini-cgm-card {
       background: var(--card);
       border-radius: 14px;
@@ -2676,6 +2680,7 @@ function buildPeriodCards() {
                 + '<button class="alarm-cancel-setup-btn" type="button" onclick="alarmSelectNo(\'' + p.id + '\')">✕</button>'
               + '</div>'
               + '<div class="alarm-running-row" id="' + p.id + '-alarm-running" style="display:none">'
+                + '<span class="alarm-running-label" id="' + p.id + '-alarm-rlabel">⏳ 倒計時</span>'
                 + '<span class="alarm-countdown-display" id="' + p.id + '-alarm-display">--:--</span>'
                 + '<button class="alarm-stop-btn" type="button" onclick="stopMealAlarm(\'' + p.id + '\')">■ 取消</button>'
               + '</div>'
@@ -4425,32 +4430,56 @@ function startMealAlarm(periodId) {
   if (setup) setup.style.display = 'none';
   if (run)   run.style.display   = 'flex';
 
-  mealAlarmTimers[periodId] = { endTime: endTime, intervalId: null };
+  mealAlarmTimers[periodId] = { endTime: endTime, intervalId: null, done: false, doneAt: 0 };
 
   function tick() {
-    var remaining = endTime - Date.now();
-    var dispEl = document.getElementById(periodId + '-alarm-display');
+    var now = Date.now();
+    var dispEl   = document.getElementById(periodId + '-alarm-display');
+    var labelEl  = document.getElementById(periodId + '-alarm-rlabel');
+    var stopBtn  = document.querySelector('#' + periodId + '-alarm-running .alarm-stop-btn');
     if (!dispEl) { stopMealAlarm(periodId, true); return; }
 
-    if (remaining <= 0) {
-      stopMealAlarm(periodId, true);
-      var runEl = document.getElementById(periodId + '-alarm-running');
-      if (runEl) {
-        runEl.innerHTML = '<span class="alarm-done-text">🍽️ 可以用餐了！</span>'
-          + '<button class="alarm-stop-btn" type="button" onclick="alarmSelectNo(\'' + periodId + '\')">✕</button>';
-        runEl.style.display = 'flex';
-      }
-      var periodLabel = { morning: '早餐', noon: '午餐', evening: '晚餐' }[periodId] || '用餐';
-      sendPushNotif('meal-' + periodId, '🍽️ ' + periodLabel + '時間到！', '胰島素已生效，現在可以用餐囉！', false);
-      if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
-      return;
-    }
+    var t = mealAlarmTimers[periodId];
+    if (!t) return;
 
-    var totalSec = Math.ceil(remaining / 1000);
-    var mm = Math.floor(totalSec / 60).toString().padStart(2, '0');
-    var ss = (totalSec % 60).toString().padStart(2, '0');
-    dispEl.textContent = mm + ':' + ss;
-    dispEl.classList.toggle('alarm-urgent', remaining < 60000);
+    if (!t.done) {
+      var remaining = endTime - now;
+      if (remaining <= 0) {
+        // ── 時間到 ──
+        t.done   = true;
+        t.doneAt = now;
+
+        // 直接播音（不依賴通知設定）
+        playBeep(false);
+
+        // 震動
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
+
+        // 更新 UI → 切換到正數模式
+        if (labelEl)  { labelEl.textContent = '🍽️ 可以用餐！已過'; }
+        dispEl.textContent = '+00:00';
+        dispEl.classList.remove('alarm-urgent');
+        dispEl.classList.add('alarm-done');
+        if (stopBtn) stopBtn.textContent = '✕ 結束';
+
+        // 推播通知（如果有開啟）
+        var periodLabel = { morning: '早餐', noon: '午餐', evening: '晚餐' }[periodId] || '用餐';
+        sendPushNotif('meal-' + periodId, '🍽️ ' + periodLabel + '時間到！', '胰島素已生效，現在可以用餐囉！', false);
+      } else {
+        // 倒數中
+        var totalSec = Math.ceil(remaining / 1000);
+        var mm = Math.floor(totalSec / 60).toString().padStart(2, '0');
+        var ss = (totalSec % 60).toString().padStart(2, '0');
+        dispEl.textContent = mm + ':' + ss;
+        dispEl.classList.toggle('alarm-urgent', remaining < 60000);
+      }
+    } else {
+      // 正數（時間到後已過多久）
+      var elapsed = Math.floor((now - t.doneAt) / 1000);
+      var em = Math.floor(elapsed / 60).toString().padStart(2, '0');
+      var es = (elapsed % 60).toString().padStart(2, '0');
+      dispEl.textContent = '+' + em + ':' + es;
+    }
   }
 
   tick();
