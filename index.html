@@ -1840,6 +1840,14 @@ const SITE_DEFAULTS = {
   bedtime: '右大腿',
 };
 
+// Meal alarm: site → { default minutes, options }
+const SITE_ALARM_MAP = {
+  '肚子':   { def: 15, opts: [10, 15, 20, 30] },
+  '手臂':   { def: 20, opts: [10, 15, 20, 30] },
+  '左大腿': { def: 30, opts: [15, 30, 45] },
+  '右大腿': { def: 30, opts: [15, 30, 45] },
+};
+
 const SNACK_SECTIONS = [
   { id: 'snack-morning-noon',    label: '早餐後～午餐前點心', icon: '🍎', after: 'morning', cir: 7,  isf: 110, target: 130, cirLabel: '早餐 CIR=7'  },
   { id: 'snack-noon-evening',    label: '午餐後～晚餐前點心', icon: '🥝', after: 'noon',    cir: 10, isf: 110, target: 150, cirLabel: '午餐 CIR=10' },
@@ -2641,6 +2649,14 @@ function onSiteChange(periodId) {
   if (!sel || !noteEl) return;
   var opt = SITE_OPTIONS.find(function(o){ return o.value === sel.value; }) || {};
   noteEl.textContent = opt.note || '';
+  // 同步更新用餐倒計時的時間選項
+  var minSel = document.getElementById(periodId + '-alarm-min');
+  if (minSel) {
+    var am = SITE_ALARM_MAP[sel.value] || { def: 15, opts: [15, 30] };
+    minSel.innerHTML = am.opts.map(function(m){
+      return '<option value="'+m+'"'+(m===am.def?' selected':'')+'>'+m+'</option>';
+    }).join('');
+  }
 }
 
 // ══════════════════════════════════════════
