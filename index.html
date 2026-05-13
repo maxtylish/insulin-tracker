@@ -4718,6 +4718,42 @@ const SUPPLY_DEFS = [
 ];
 
 
+// 設定初始處方資料（只在第一次或強制時執行）
+function initRxDefaults(force) {
+  var meds = getMedications();
+  if (!force && meds.length > 0) return;
+  var rx = {
+    id: 'rx_zhongshan_2026',
+    title: '中山醫大附設醫院 慢性處方簽',
+    nextRefill:      '2026-05-19',
+    nextAppointment: '',
+    clinic:   '小兒科',
+    hospital: '中山醫學大學附設醫院（大慶院區）',
+    note: '慢簽編號：34185809｜可調劑 2 次｜第 1 次已領：2026/04/30｜有效期限：2026/06/24｜建議第 2 次領藥：2026/05/19～05/28｜診治醫師：陳大揚 醫師（醫字第 059016 號）｜聯絡電話：(04)24739595',
+    drugs: [
+      { name: 'NovoRapid 速效胰島素 FlexPen 300U/3ml',
+        dose: '7 IU / 次，共 2 vials',
+        freq: '三餐前 皮下注射（TIDAC）' },
+      { name: 'Tresiba 長效胰島素 FlexTouch 300IU/3ml',
+        dose: '3 IU / 次，共 1 vial',
+        freq: '睡前 皮下注射（HS）' },
+      { name: 'BD 筆針頭 4mm/32G（三餐+睡前用）',
+        dose: '84 支 / 28 天',
+        freq: '三餐前注射用（TIDAC）' },
+      { name: 'BD 筆針頭 4mm/32G（睡前用）',
+        dose: '28 支 / 28 天',
+        freq: '睡前注射用（HS）' },
+      { name: 'ACCU-CHEK Guide 血糖試紙 50片/盒',
+        dose: '100 片 / 2 盒',
+        freq: 'PRN（需要時）' },
+      { name: 'ACCU-CHEK Guide 血糖試紙 10片/盒',
+        dose: '20 片 / 2 盒',
+        freq: 'PRN（需要時）' },
+    ]
+  };
+  setMedications([rx]);
+}
+
 // 設定初始庫存數量（只在第一次或強制時執行）
 function initSupplyDefaults(force) {
   var d = getSupplies();
@@ -4797,6 +4833,7 @@ function renderSupplyBanner() {
 
 function renderManagePage() {
   initSupplyDefaults();
+  initRxDefaults();
   renderSupplyList();
   renderPrescriptionList();
 }
@@ -4891,6 +4928,16 @@ function rxCountdownHTML(days, label, dateStr, type) {
     + '<span class="rx-date-sub">' + sub + '</span></div>';
 }
 
+function toggleRxDetail(id) {
+  var det = document.getElementById('rx-detail-' + id);
+  var btn = document.getElementById('rx-det-btn-' + id);
+  if (!det || !btn) return;
+  var open = det.classList.toggle('open');
+  btn.classList.toggle('open', open);
+  btn.querySelector('.arr').textContent = open ? '▲' : '▼';
+  btn.childNodes[0].textContent = open ? '收起詳細資料 ' : '詳細資料 ';
+}
+
 function renderPrescriptionList() {
   var meds = getMedications();
   var el = document.getElementById('prescription-list');
@@ -4902,6 +4949,7 @@ function renderPrescriptionList() {
   el.innerHTML = meds.map(function(rx) {
     var refillDays = rxDaysLeft(rx.nextRefill);
     var apptDays   = rxDaysLeft(rx.nextAppointment);
+
     var drugsHTML = (rx.drugs || []).map(function(dr) {
       return '<div class="rx-drug-row">'
         + '<span class="rx-drug-name">💊 ' + (dr.name || '—') + '</span>'
@@ -4909,26 +4957,40 @@ function renderPrescriptionList() {
         + '<span class="rx-drug-dose" style="margin-left:6px;color:#6366f1;">' + (dr.freq || '') + '</span>'
       + '</div>';
     }).join('');
+
+    var expNote = '';
+    if (rx.note) {
+      var m = rx.note.match(/有效期限[：:]\s*([\d\/]+)/);
+      if (m) expNote = '<div style="font-size:.78rem;color:#f59e0b;font-weight:600;margin-top:4px;">⏳ 有效期限：' + m[1] + '</div>';
+    }
+
     return '<div class="rx-card">'
       + '<div class="rx-header">'
         + '<span class="rx-title">📋 ' + (rx.title || '慢性處方簽') + '</span>'
         + '<div class="rx-header-btns">'
-          + '<button class="rx-edit-btn" onclick="editPrescription(\'' + rx.id + '\')">編輯</button>'
-          + '<button class="rx-del-btn" onclick="deletePrescription(\'' + rx.id + '\')">刪除</button>'
+          + '<button class="rx-edit-btn" data-rxid="' + rx.id + '" onclick="editPrescription(this.dataset.rxid)">編輯</button>'
+          + '<button class="rx-del-btn"  data-rxid="' + rx.id + '" onclick="deletePrescription(this.dataset.rxid)">刪除</button>'
         + '</div>'
       + '</div>'
-      + '<div class="rx-body">'
+      + '<div class="rx-body" style="padding-bottom:6px;">'
         + '<div class="rx-dates">'
           + rxCountdownHTML(refillDays, '💊 下次領藥', rx.nextRefill, 'refill')
           + rxCountdownHTML(apptDays,   '📅 下次回診', rx.nextAppointment, 'appt')
         + '</div>'
-        + '<div class="rx-drugs">' + (drugsHTML || '<span style="color:var(--text-muted);font-size:.82rem;">尚未新增藥品</span>') + '</div>'
-        + (rx.clinic    ? '<div class="rx-note">🏥 ' + rx.clinic + (rx.hospital ? '　' + rx.hospital : '') + '</div>' : '')
-        + (rx.note      ? '<div class="rx-note">📝 ' + rx.note + '</div>' : '')
+        + expNote
       + '</div>'
+      + '<div class="rx-detail" id="rx-detail-' + rx.id + '">'
+        + (rx.clinic || rx.hospital ? '<div class="rx-note" style="margin-bottom:8px;">🏥 ' + [rx.clinic, rx.hospital].filter(Boolean).join('　') + '</div>' : '')
+        + '<div class="rx-drugs">' + (drugsHTML || '<span style="color:var(--text-muted);font-size:.82rem;">尚未新增藥品</span>') + '</div>'
+        + (rx.note ? '<div class="rx-note" style="margin-top:8px;white-space:pre-wrap;line-height:1.6;">📝 ' + rx.note + '</div>' : '')
+      + '</div>'
+      + '<button class="rx-detail-btn" id="rx-det-btn-' + rx.id + '" data-rxid="' + rx.id + '" onclick="toggleRxDetail(this.dataset.rxid)">'
+        + '詳細資料 <span class="arr">▼</span>'
+      + '</button>'
     + '</div>';
   }).join('');
 }
+
 
 function addPrescription() {
   rxEditId = null;
