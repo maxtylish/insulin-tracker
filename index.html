@@ -4294,6 +4294,7 @@ function init() {
     if (!hadLocalDataToday) loadDayData();
   });
   startCGMPolling();   // start real-time CGM widget
+  setTimeout(checkAndNotifyLowSupplies, 4000); // delayed supply check on load
 }
 
 
@@ -4825,6 +4826,38 @@ function renderSupplyBanner() {
   }
 }
 
+async function checkAndNotifyLowSupplies() {
+  // 需要推播權限且已開啟通知設定
+  if (!notifEnabled()) return;
+  if (Notification.permission !== 'granted') return;
+
+  // 每天最多提醒一次（以 localStorage 日期做 gate）
+  var today = todayStr();
+  var lastDate = localStorage.getItem('supply_notif_last_date') || '';
+  if (lastDate === today) return;
+
+  // 找出所有偏低耗材
+  var d = getSupplies();
+  var low = [];
+  SUPPLY_DEFS.forEach(function(def) {
+    var qty = d[def.key] || 0;
+    var days = def.ratePerDay > 0 ? qty / def.ratePerDay : Infinity;
+    if (isFinite(days) && days < def.warnDays) {
+      var daysTxt = days < 1 ? '不足 1 天' : '約 ' + Math.floor(days) + ' 天';
+      low.push(def.icon + ' ' + def.name + '（剩 ' + daysTxt + '）');
+    }
+  });
+
+  if (low.length === 0) return;
+
+  // 寫入今日日期，避免重複推播
+  localStorage.setItem('supply_notif_last_date', today);
+
+  var title = '⚠️ 耗材庫存偏低提醒';
+  var body  = low.join('\n');
+  sendPushNotif('supply-low', title, body, false);
+}
+
 function renderManagePage() {
   initSupplyDefaults();
   initRxDefaults();
@@ -4903,6 +4936,9 @@ function autoDeductSupplies(dayData, dateStr) {
 
   // Refresh UI if on manage page
   if (document.getElementById('supply-list')) renderSupplyList();
+
+  // Push-notify if any supply is now low (delayed so SW has time to register)
+  setTimeout(checkAndNotifyLowSupplies, 2000);
 }
 
 // ── Prescription Modal ─────────────────────────────────────────────────────
