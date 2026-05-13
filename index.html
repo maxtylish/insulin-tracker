@@ -4731,24 +4731,18 @@ function initRxDefaults(force) {
     hospital: '中山醫學大學附設醫院（大慶院區）',
     note: '慢簽編號：34185809｜可調劑 2 次｜第 1 次已領：2026/04/30｜有效期限：2026/06/24｜建議第 2 次領藥：2026/05/19～05/28｜診治醫師：陳大揚 醫師（醫字第 059016 號）｜聯絡電話：(04)24739595',
     drugs: [
-      { name: 'NovoRapid 速效胰島素 FlexPen 300U/3ml',
-        dose: '7 IU / 次，共 2 vials',
-        freq: '三餐前 皮下注射（TIDAC）' },
-      { name: 'Tresiba 長效胰島素 FlexTouch 300IU/3ml',
-        dose: '3 IU / 次，共 1 vial',
-        freq: '睡前 皮下注射（HS）' },
-      { name: 'BD 筆針頭 4mm/32G（三餐+睡前用）',
-        dose: '84 支 / 28 天',
-        freq: '三餐前注射用（TIDAC）' },
-      { name: 'BD 筆針頭 4mm/32G（睡前用）',
-        dose: '28 支 / 28 天',
-        freq: '睡前注射用（HS）' },
-      { name: 'ACCU-CHEK Guide 血糖試紙 50片/盒',
-        dose: '100 片 / 2 盒',
-        freq: 'PRN（需要時）' },
-      { name: 'ACCU-CHEK Guide 血糖試紙 10片/盒',
-        dose: '20 片 / 2 盒',
-        freq: 'PRN（需要時）' },
+      { coverage:'健保', name:'(KC00823266) NovoRapid 300U/3ml（需冷藏）FlexPen 速效胰島素',
+        dose:'7', unit:'iu', usage:'TIDAC10M', route:'SC', days:28, totalQty:'2 vial', amount:474 },
+      { coverage:'健保', name:'(KC01054266) Tresiba FlexTouch 300IU/3ml（需冷藏）長效胰島素',
+        dose:'3', unit:'iu', usage:'HS', route:'SC', days:28, totalQty:'1 vial', amount:473 },
+      { coverage:'健保', name:'(NAN02A1000ZZ) BD輕薄壁五切面平棱式針座筆針頭 4mm/32G（三餐+睡前）',
+        dose:'1', unit:'ndl', usage:'TIDAC10M', route:'SC', days:28, totalQty:'84 ndl', amount:269 },
+      { coverage:'健保', name:'(NAN02A1000ZZ) BD輕薄壁五切面平棱式針座筆針頭 4mm/32G（睡前）',
+        dose:'1', unit:'ndl', usage:'HS', route:'SC', days:28, totalQty:'28 ndl', amount:90 },
+      { coverage:'健保', name:'(TSS01000091R) ACCU-CHEK Guide 血糖試紙 50片/瓶（健保限T1DM）',
+        dose:'100', unit:'片', usage:'PRN', route:'XX', days:28, totalQty:'2 box', amount:16 },
+      { coverage:'健保', name:'(TSS01000091R) ACCU-CHEK Guide 血糖試紙 10片/瓶（健保限T1DM）',
+        dose:'20', unit:'片', usage:'PRN', route:'XX', days:28, totalQty:'2 box', amount:16 },
     ]
   };
   setMedications([rx]);
@@ -4952,13 +4946,39 @@ function renderPrescriptionList() {
     var refillDays = rxDaysLeft(rx.nextRefill);
     var apptDays   = rxDaysLeft(rx.nextAppointment);
 
-    var drugsHTML = (rx.drugs || []).map(function(dr) {
-      return '<div class="rx-drug-row">'
-        + '<span class="rx-drug-name">💊 ' + (dr.name || '—') + '</span>'
-        + '<span class="rx-drug-dose">' + (dr.dose || '') + '</span>'
-        + '<span class="rx-drug-dose" style="margin-left:6px;color:#6366f1;">' + (dr.freq || '') + '</span>'
-      + '</div>';
-    }).join('');
+    // ── Drug table display (matches real 慢性處方簽 layout) ──
+    var drugsHTML = '';
+    if (rx.drugs && rx.drugs.length) {
+      drugsHTML = '<table style="width:100%;border-collapse:collapse;font-size:0.76rem;margin-top:4px;">'
+        + '<thead><tr style="background:#f1f5f9;">'
+          + '<th style="padding:5px 6px;text-align:left;color:var(--text-muted);font-weight:600;white-space:nowrap;">費用</th>'
+          + '<th style="padding:5px 6px;text-align:left;color:var(--text-muted);font-weight:600;">藥品名稱及規格</th>'
+          + '<th style="padding:5px 6px;text-align:center;color:var(--text-muted);font-weight:600;white-space:nowrap;">劑量</th>'
+          + '<th style="padding:5px 6px;text-align:center;color:var(--text-muted);font-weight:600;white-space:nowrap;">用法</th>'
+          + '<th style="padding:5px 6px;text-align:center;color:var(--text-muted);font-weight:600;white-space:nowrap;">途徑</th>'
+          + '<th style="padding:5px 6px;text-align:center;color:var(--text-muted);font-weight:600;white-space:nowrap;">天</th>'
+          + '<th style="padding:5px 6px;text-align:right;color:var(--text-muted);font-weight:600;white-space:nowrap;">總量</th>'
+          + '<th style="padding:5px 6px;text-align:right;color:var(--text-muted);font-weight:600;white-space:nowrap;">金額</th>'
+        + '</tr></thead>'
+        + '<tbody>'
+        + rx.drugs.map(function(dr, idx) {
+            var bg = idx % 2 === 0 ? '' : 'background:rgba(0,0,0,.02);';
+            return '<tr style="border-top:1px solid var(--border);' + bg + '">'
+              + '<td style="padding:5px 6px;white-space:nowrap;color:#0ea5e9;font-weight:600;">' + (dr.coverage||'健保') + '</td>'
+              + '<td style="padding:5px 6px;color:var(--text);line-height:1.4;">' + (dr.name||'—') + '</td>'
+              + '<td style="padding:5px 6px;text-align:center;white-space:nowrap;font-weight:700;">' + (dr.dose||'') + ' <span style="font-weight:400;color:var(--text-muted);">' + (dr.unit||'') + '</span></td>'
+              + '<td style="padding:5px 6px;text-align:center;white-space:nowrap;color:#6366f1;font-weight:600;">' + (dr.usage||'—') + '</td>'
+              + '<td style="padding:5px 6px;text-align:center;white-space:nowrap;">' + (dr.route||'—') + '</td>'
+              + '<td style="padding:5px 6px;text-align:center;white-space:nowrap;">' + (dr.days||'—') + '</td>'
+              + '<td style="padding:5px 6px;text-align:right;white-space:nowrap;font-weight:600;">' + (dr.totalQty||'—') + '</td>'
+              + '<td style="padding:5px 6px;text-align:right;white-space:nowrap;color:#64748b;">' + (dr.amount ? dr.amount + ' 元' : '—') + '</td>'
+            + '</tr>';
+          }).join('')
+        + '</tbody></table>';
+    } else {
+      drugsHTML = '<span style="color:var(--text-muted);font-size:.82rem;">尚未新增藥品</span>';
+    }
+
 
     var expNote = '';
     if (rx.note) {
@@ -4996,7 +5016,19 @@ function renderPrescriptionList() {
 
 function addPrescription() {
   rxEditId = null;
-  openRxModal({});
+  // Pre-fill hospital/clinic from existing prescriptions (most recent first)
+  var meds = getMedications();
+  var prefill = {};
+  if (meds.length > 0) {
+    var last = meds[meds.length - 1];
+    prefill.hospital = last.hospital || '';
+    prefill.clinic   = last.clinic   || '';
+  } else {
+    // Default from 慢性處方簽
+    prefill.hospital = '中山醫學大學附設醫院（大慶院區）';
+    prefill.clinic   = '小兒科';
+  }
+  openRxModal(prefill);
 }
 
 function editPrescription(id) {
@@ -5036,21 +5068,37 @@ function renderRxDrugEditor(drugs) {
 }
 
 function refreshRxDrugEditor() {
+  var ROUTES  = ['SC','PO','XX','IM','IV','吸入'];
+  var COVS    = ['健保','自費'];
   var html = rxDrugs.map(function(dr, i) {
+    var routeOpts = ROUTES.map(function(r){ return '<option value="'+r+'"'+(dr.route===r?' selected':'')+'>'+r+'</option>'; }).join('');
+    var covOpts   = COVS.map(function(c){ return '<option value="'+c+'"'+(dr.coverage===c?' selected':'')+'>'+c+'</option>'; }).join('');
     return '<div class="rx-drug-editor">'
-      + '<div class="rx-drug-editor-row">'
-        + '<input placeholder="藥品名稱" value="' + (dr.name||'') + '" oninput="rxDrugs['+i+'].name=this.value">'
-        + '<input placeholder="劑量（如 4 units）" value="' + (dr.dose||'') + '" oninput="rxDrugs['+i+'].dose=this.value" style="max-width:130px;">'
+      // Row 1: 費用 + 藥品名稱
+      + '<div class="rx-drug-editor-row" style="align-items:center;">'
+        + '<select style="width:70px;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:.78rem;background:var(--card);color:var(--text);" onchange="rxDrugs['+i+'].coverage=this.value">' + covOpts + '</select>'
+        + '<input placeholder="藥品名稱及規格" value="' + (dr.name||'') + '" oninput="rxDrugs['+i+'].name=this.value" style="flex:1;">'
       + '</div>'
-      + '<div class="rx-drug-editor-row">'
-        + '<input placeholder="頻次（如 三餐前）" value="' + (dr.freq||'') + '" oninput="rxDrugs['+i+'].freq=this.value">'
-        + '<button onclick="rxDrugs.splice('+i+',1);refreshRxDrugEditor()" style="background:#fef2f2;color:#ef4444;border:1px solid #fca5a5;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:.78rem;">移除</button>'
+      // Row 2: 劑量 + 單位 + 用法 + 途徑
+      + '<div class="rx-drug-editor-row" style="align-items:center;">'
+        + '<input placeholder="劑量" value="' + (dr.dose||'') + '" oninput="rxDrugs['+i+'].dose=this.value" style="width:60px;flex:none;">'
+        + '<input placeholder="單位" value="' + (dr.unit||'') + '" oninput="rxDrugs['+i+'].unit=this.value" style="width:60px;flex:none;">'
+        + '<input placeholder="用法（如 TIDAC、PRN、HS）" value="' + (dr.usage||'') + '" oninput="rxDrugs['+i+'].usage=this.value" style="flex:1;">'
+        + '<select style="width:60px;padding:4px 4px;border:1px solid var(--border);border-radius:6px;font-size:.78rem;background:var(--card);color:var(--text);flex:none;" onchange="rxDrugs['+i+'].route=this.value">' + routeOpts + '</select>'
+      + '</div>'
+      // Row 3: 日數 + 總量 + 金額 + 移除
+      + '<div class="rx-drug-editor-row" style="align-items:center;">'
+        + '<input placeholder="日數" value="' + (dr.days||'') + '" oninput="rxDrugs['+i+'].days=this.value" style="width:60px;flex:none;" type="number" min="1">'
+        + '<input placeholder="總量（如 2 vial）" value="' + (dr.totalQty||'') + '" oninput="rxDrugs['+i+'].totalQty=this.value" style="flex:1;">'
+        + '<input placeholder="金額" value="' + (dr.amount||'') + '" oninput="rxDrugs['+i+'].amount=this.value" style="width:70px;flex:none;" type="number" min="0">'
+        + '<button data-idx="'+i+'" onclick="rxDrugs.splice(parseInt(this.dataset.idx),1);refreshRxDrugEditor()" style="background:#fef2f2;color:#ef4444;border:1px solid #fca5a5;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:.78rem;white-space:nowrap;">移除</button>'
       + '</div>'
     + '</div>';
   }).join('');
-  html += '<button onclick="rxDrugs.push({});refreshRxDrugEditor()" style="font-size:.8rem;color:#0ea5e9;background:transparent;border:1px dashed #0ea5e9;border-radius:8px;padding:5px 14px;cursor:pointer;width:100%;">＋ 新增藥品</button>';
+  html += '<button onclick="rxDrugs.push({coverage:\'健保\',route:\'SC\',days:28});refreshRxDrugEditor()" style="font-size:.8rem;color:#0ea5e9;background:transparent;border:1px dashed #0ea5e9;border-radius:8px;padding:5px 14px;cursor:pointer;width:100%;">＋ 新增藥品</button>';
   document.getElementById('rx-drug-editor-area').innerHTML = html;
 }
+
 
 function saveRxModal() {
   var rx = {
