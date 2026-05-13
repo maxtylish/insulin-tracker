@@ -2253,7 +2253,7 @@ function updateCGMWidget(entry) {
 }
 
 // ── Push notification helpers ──────────────────────────
-var lastNotifTime = { hypo: 0, hyper: 0 };
+var lastNotifTime = { hypo: 0, hyper: 0, 'meal-morning': 0, 'meal-noon': 0, 'meal-evening': 0 };
 var NOTIF_COOLDOWN = 8 * 60 * 1000;
 
 function notifEnabled() { return localStorage.getItem('notif_enabled') === 'true'; }
@@ -2298,6 +2298,64 @@ function loadNotifSettingsUI() {
   var snEl = document.getElementById('set-notif-sound');
   if (enEl) enEl.checked = notifEnabled();
   if (snEl) snEl.checked = notifSound();
+}
+
+// 用餐鬧鐘專用：繞過 notifEnabled 設定，直接響鈴 + 通知
+function fireMealAlarm(periodId, audioCtx) {
+  // 響鈴：用已建立（已 resume）的 AudioContext
+  try {
+    var ctx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    var resume = ctx.state === 'suspended' ? ctx.resume() : Promise.resolve();
+    resume.then(function() {
+      var freqs = [660, 880, 660, 880];
+      freqs.forEach(function(freq, i) {
+        var osc = ctx.createOscillator(), gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = 'sine'; osc.frequency.value = freq;
+        var t = ctx.currentTime + i * 0.28;
+        gain.gain.setValueAtTime(0.6, t);
+        gain.gain.exponentialRampToValueAtTime(0.001, t + 0.24);
+        osc.start(t); osc.stop(t + 0.25);
+      });
+    });
+  } catch(e) { console.warn('meal alarm beep error', e); }
+
+  // 震動
+  try { if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 500]); } catch(e) {}
+
+  // 推播通知（不受 notifEnabled 設定限制）
+  var periodLabel = { morning: '早餐', noon: '午餐', evening: '晚餐' }[periodId] || '用餐';
+  var title = '🍽️ ' + periodLabel + '時間到！';
+  var body  = '胰島素已生效，現在可以用餐囉！';
+  var now   = Date.now();
+  var key   = 'meal-' + periodId;
+  if (now - (lastNotifTime[key] || 0) > 60000) {
+    lastNotifTime[key] = now;
+    if (Notification.permission === 'granted') {
+      try {
+        navigator.serviceWorker.ready.then(function(reg) {
+          reg.showNotification(title, {
+            body: body,
+            icon: '/insulin-tracker/apple-touch-icon.png',
+            tag: key,
+            renotify: true,
+            vibrate: [250, 100, 250, 100, 500],
+            requireInteraction: true
+          });
+        }).catch(function() {
+          new Notification(title, { body: body });
+        });
+      } catch(e) {
+        try { new Notification(title, { body: body }); } catch(e2) {}
+      }
+    } else if (Notification.permission !== 'denied') {
+      Notification.requestPermission().then(function(p) {
+        if (p === 'granted') {
+          try { new Notification(title, { body: body }); } catch(e) {}
+        }
+      });
+    }
+  }
 }
 
 function playBeep(urgent) {
@@ -4423,6 +4481,13 @@ function startMealAlarm(periodId) {
 
   stopMealAlarm(periodId, true);
 
+  // 在使用者手勢（按鈕點擊）期間建立並 resume AudioContext
+  var audioCtx = null;
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.resume();   // 趁有手勢先 resume，之後 interval 裡才能發聲
+  } catch(e) {}
+
   var btns  = document.getElementById(periodId + '-alarm-btns');
   var setup = document.getElementById(periodId + '-alarm-setup');
   var run   = document.getElementById(periodId + '-alarm-running');
@@ -4430,13 +4495,13 @@ function startMealAlarm(periodId) {
   if (setup) setup.style.display = 'none';
   if (run)   run.style.display   = 'flex';
 
-  mealAlarmTimers[periodId] = { endTime: endTime, intervalId: null, done: false, doneAt: 0 };
+  mealAlarmTimers[periodId] = { endTime: endTime, intervalId: null, done: false, doneAt: 0, audioCtx: audioCtx };
 
   function tick() {
     var now = Date.now();
-    var dispEl   = document.getElementById(periodId + '-alarm-display');
-    var labelEl  = document.getElementById(periodId + '-alarm-rlabel');
-    var stopBtn  = document.querySelector('#' + periodId + '-alarm-running .alarm-stop-btn');
+    var dispEl  = document.getElementById(periodId + '-alarm-display');
+    var labelEl = document.getElementById(periodId + '-alarm-rlabel');
+    var stopBtn = document.querySelector('#' + periodId + '-alarm-running .alarm-stop-btn');
     if (!dispEl) { stopMealAlarm(periodId, true); return; }
 
     var t = mealAlarmTimers[periodId];
@@ -4445,28 +4510,19 @@ function startMealAlarm(periodId) {
     if (!t.done) {
       var remaining = endTime - now;
       if (remaining <= 0) {
-        // ── 時間到 ──
         t.done   = true;
         t.doneAt = now;
 
-        // 直接播音（不依賴通知設定）
-        playBeep(false);
+        // 響鈴 + 震動 + 推播（用已 resume 的 ctx）
+        fireMealAlarm(periodId, t.audioCtx);
 
-        // 震動
-        if (navigator.vibrate) navigator.vibrate([200, 100, 200, 100, 400]);
-
-        // 更新 UI → 切換到正數模式
-        if (labelEl)  { labelEl.textContent = '🍽️ 可以用餐！已過'; }
+        // UI 切換到正數模式
+        if (labelEl) labelEl.textContent = '🍽️ 可以用餐！已過';
         dispEl.textContent = '+00:00';
         dispEl.classList.remove('alarm-urgent');
         dispEl.classList.add('alarm-done');
         if (stopBtn) stopBtn.textContent = '✕ 結束';
-
-        // 推播通知（如果有開啟）
-        var periodLabel = { morning: '早餐', noon: '午餐', evening: '晚餐' }[periodId] || '用餐';
-        sendPushNotif('meal-' + periodId, '🍽️ ' + periodLabel + '時間到！', '胰島素已生效，現在可以用餐囉！', false);
       } else {
-        // 倒數中
         var totalSec = Math.ceil(remaining / 1000);
         var mm = Math.floor(totalSec / 60).toString().padStart(2, '0');
         var ss = (totalSec % 60).toString().padStart(2, '0');
@@ -4474,7 +4530,7 @@ function startMealAlarm(periodId) {
         dispEl.classList.toggle('alarm-urgent', remaining < 60000);
       }
     } else {
-      // 正數（時間到後已過多久）
+      // 正數
       var elapsed = Math.floor((now - t.doneAt) / 1000);
       var em = Math.floor(elapsed / 60).toString().padStart(2, '0');
       var es = (elapsed % 60).toString().padStart(2, '0');
