@@ -4713,8 +4713,25 @@ const SUPPLY_DEFS = [
     rateLabel: '每 14 天換一個',             ratePerDay: 1/14, warnDays: 1 },
   { key: 'lancet',           name: '採血針',     unit: '顆', icon: '🩸',
     rateLabel: '每 6 天換一顆（每日晨測）',  ratePerDay: 1/6,  warnDays: 6 },
+  { key: 'ketone_strip',     name: '血酮試紙',   unit: '片', icon: '🩺',
+    rateLabel: '手動調整（視需要使用）',       ratePerDay: 0,    warnDays: 10 },
 ];
 
+
+// 設定初始庫存數量（只在第一次或強制時執行）
+function initSupplyDefaults(force) {
+  var d = getSupplies();
+  if (!force && d._initialized) return;
+  d.alcohol_swab     = 3868;
+  d.lancet           = 8;
+  d.ketone_strip     = 120;
+  d.needle           = 157;
+  d.waterproof_patch = 7;
+  d.cgm_sensor       = 4;
+  d.autoDeduct       = true;
+  d._initialized     = true;
+  setSupplies(d);
+}
 function getSupplies() {
   try { return JSON.parse(localStorage.getItem('insulin_supplies') || '{}'); } catch(e) { return {}; }
 }
@@ -4779,6 +4796,7 @@ function renderSupplyBanner() {
 }
 
 function renderManagePage() {
+  initSupplyDefaults();
   renderSupplyList();
   renderPrescriptionList();
 }
