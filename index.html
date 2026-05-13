@@ -1474,6 +1474,110 @@
     .alarm-countdown-display.alarm-done {
       color:#22c55e; background:rgba(34,197,94,.1);
     }
+    /* ── Manage Page ── */
+    .supply-item {
+      display: grid;
+      grid-template-columns: 28px 1fr auto auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 4px;
+      border-bottom: 1px solid var(--border);
+    }
+    .supply-item:last-child { border-bottom: none; }
+    .supply-icon { font-size: 1.3rem; text-align: center; }
+    .supply-info { min-width: 0; }
+    .supply-name { font-size: 0.88rem; font-weight: 700; color: var(--text); }
+    .supply-rate { font-size: 0.72rem; color: var(--text-muted); margin-top: 1px; }
+    .supply-days { font-size: 0.75rem; font-weight: 600; margin-top: 2px; }
+    .supply-days.ok   { color: #22c55e; }
+    .supply-days.warn { color: #f59e0b; }
+    .supply-days.low  { color: #ef4444; }
+    .supply-qty-ctrl { display: flex; align-items: center; gap: 4px; }
+    .qty-btn {
+      width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border);
+      background: var(--card); color: var(--text); font-size: 1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-weight: 700;
+    }
+    .qty-btn:active { background: #e2e8f0; }
+    .qty-input {
+      width: 52px; text-align: center; font-size: 0.9rem; font-weight: 700;
+      border: 1.5px solid #6366f1; border-radius: 8px; padding: 3px 4px;
+      background: var(--card); color: var(--text);
+    }
+    /* Prescription cards */
+    .rx-card {
+      border: 1.5px solid var(--border); border-radius: 12px;
+      margin-bottom: 12px; overflow: hidden;
+    }
+    .rx-header {
+      background: linear-gradient(135deg,#0ea5e9,#0284c7);
+      padding: 10px 14px; display: flex; align-items: center;
+      justify-content: space-between;
+    }
+    .rx-title { font-size: 0.88rem; font-weight: 700; color: #fff; }
+    .rx-header-btns { display: flex; gap: 6px; }
+    .rx-edit-btn, .rx-del-btn {
+      font-size: 0.7rem; padding: 2px 10px; border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.5); background: transparent;
+      color: #fff; cursor: pointer;
+    }
+    .rx-del-btn { border-color: rgba(239,68,68,0.7); color: #fca5a5; }
+    .rx-body { padding: 12px 14px; }
+    .rx-dates { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+    .rx-date-chip {
+      display: flex; flex-direction: column; align-items: center;
+      background: #f1f5f9; border-radius: 10px; padding: 8px 14px; flex: 1; min-width: 120px;
+    }
+    .rx-date-chip.refill  { background: #f0fdf4; }
+    .rx-date-chip.appt    { background: #f0f9ff; }
+    .rx-date-label { font-size: 0.68rem; color: var(--text-muted); font-weight: 600; }
+    .rx-date-countdown { font-size: 1.5rem; font-weight: 800; line-height: 1.1; }
+    .rx-date-countdown.ok   { color: #22c55e; }
+    .rx-date-countdown.warn { color: #f59e0b; }
+    .rx-date-countdown.past { color: #ef4444; }
+    .rx-date-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+    .rx-drugs { margin-bottom: 8px; }
+    .rx-drug-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 0.82rem;
+    }
+    .rx-drug-row:last-child { border-bottom: none; }
+    .rx-drug-name { flex: 1; font-weight: 600; color: var(--text); }
+    .rx-drug-dose { color: var(--text-muted); font-size: 0.78rem; }
+    .rx-note { font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; }
+    /* Modal */
+    .rx-modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+      z-index: 300; align-items: center; justify-content: center; padding: 16px;
+    }
+    .rx-modal-overlay.open { display: flex; }
+    .rx-modal {
+      background: var(--card); border-radius: 16px; width: 100%;
+      max-width: 480px; max-height: 90vh; overflow-y: auto;
+      box-shadow: 0 8px 40px rgba(0,0,0,.25); padding: 20px;
+    }
+    .rx-modal h3 { margin: 0 0 14px; font-size: 1rem; }
+    .rx-field { margin-bottom: 12px; }
+    .rx-field label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--text-muted); margin-bottom: 4px; }
+    .rx-field input, .rx-field textarea, .rx-field select {
+      width: 100%; box-sizing: border-box; border: 1.5px solid var(--border);
+      border-radius: 8px; padding: 7px 10px; font-size: 0.88rem;
+      background: var(--card); color: var(--text);
+    }
+    .rx-field textarea { resize: vertical; min-height: 60px; }
+    .rx-drug-editor { border: 1px solid var(--border); border-radius: 8px; padding: 8px; margin-bottom: 8px; }
+    .rx-drug-editor-row { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+    .rx-drug-editor-row input { flex: 1; min-width: 80px; }
+    .rx-modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+    .rx-save-btn {
+      padding: 8px 20px; border-radius: 20px; border: none;
+      background: #0ea5e9; color: #fff; font-weight: 700; cursor: pointer;
+    }
+    .rx-cancel-btn {
+      padding: 8px 16px; border-radius: 20px; border: 1px solid var(--border);
+      background: transparent; color: var(--text-muted); cursor: pointer;
+    }
+
     .mini-cgm-card {
       background: var(--card);
       border-radius: 14px;
@@ -1515,6 +1619,7 @@
   <button class="active" onclick="switchTab('today')">📋 今日記錄</button>
   <button onclick="switchTab('history')">📅 歷史紀錄</button>
   <button onclick="switchTab('chart')">📊 統計分析</button>
+  <button onclick="switchTab('manage')">📦 管理</button>
   <button onclick="switchTab('settings')">⚙️ 設定</button>
 </nav>
 
@@ -1743,6 +1848,31 @@
     <canvas id="iobChart" height="220"></canvas>
   </div>
 
+</div>
+
+<!-- ══════════════ MANAGE PAGE ══════════════ -->
+<div id="page-manage" class="page">
+  <!-- 耗材庫存 -->
+  <div class="chart-card" style="margin-bottom:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h3 style="margin:0;">🧴 耗材庫存</h3>
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;">
+        <input type="checkbox" id="supply-auto-deduct" style="width:15px;height:15px;" onchange="saveSupplies()">
+        <span>儲存紀錄時自動扣除</span>
+      </label>
+    </div>
+    <div id="supply-low-banner" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:0.82rem;color:#dc2626;"></div>
+    <div id="supply-list"></div>
+  </div>
+
+  <!-- 藥品管理 -->
+  <div class="chart-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h3 style="margin:0;">💊 藥品 &amp; 回診管理</h3>
+      <button class="suppl-add-btn" onclick="addPrescription()">＋ 新增處方</button>
+    </div>
+    <div id="prescription-list"></div>
+  </div>
 </div>
 
 <!-- ══════════════ SETTINGS PAGE ══════════════ -->
@@ -2655,6 +2785,7 @@ function formatDateDisplay(dateStr) {
 //  TAB NAVIGATION
 // ══════════════════════════════════════════
 function switchTab(tab) {
+  if (tab === 'manage') renderManagePage();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + tab).classList.add('active');
@@ -2860,6 +2991,7 @@ function saveDayData() {
   // Save snack sections
   SNACK_SECTIONS.forEach(s => { all[date][s.id] = collectSnackRows(s.id); });
 
+  autoDeductSupplies(all[date], date);
   setAllData(all);
   syncDayToCloud(date, all[date]);
   showToast('✅ 紀錄已儲存！');
@@ -4565,6 +4697,303 @@ function stopMealAlarm(periodId, silent) {
     }
   }
 }
+
+// ══════════════════════════════════════════════════════════════════════════
+//  MANAGE PAGE — Supplies & Medications
+// ══════════════════════════════════════════════════════════════════════════
+
+const SUPPLY_DEFS = [
+  { key: 'alcohol_swab',     name: '酒精棉片',   unit: '張', icon: '🧴',
+    rateLabel: '每次注射 ×2（每日 ~8 張）', ratePerDay: 8,   warnDays: 14 },
+  { key: 'needle',           name: '拋棄式針頭', unit: '支', icon: '💉',
+    rateLabel: '每次注射 ×1（每日 ~4 支）', ratePerDay: 4,   warnDays: 14 },
+  { key: 'waterproof_patch', name: '防水貼',     unit: '片', icon: '🩹',
+    rateLabel: '每日洗澡 ×1',               ratePerDay: 1,   warnDays: 14 },
+  { key: 'cgm_sensor',       name: 'CGM 感應器', unit: '個', icon: '📡',
+    rateLabel: '每 14 天換一個',             ratePerDay: 1/14, warnDays: 1 },
+  { key: 'lancet',           name: '採血針',     unit: '顆', icon: '🩸',
+    rateLabel: '每 6 天換一顆（每日晨測）',  ratePerDay: 1/6,  warnDays: 6 },
+];
+
+function getSupplies() {
+  try { return JSON.parse(localStorage.getItem('insulin_supplies') || '{}'); } catch(e) { return {}; }
+}
+function setSupplies(d) { localStorage.setItem('insulin_supplies', JSON.stringify(d)); }
+
+function getMedications() {
+  try { return JSON.parse(localStorage.getItem('insulin_medications') || '[]'); } catch(e) { return []; }
+}
+function setMedications(d) { localStorage.setItem('insulin_medications', JSON.stringify(d)); }
+
+function saveSupplies() {
+  const d = getSupplies();
+  d.autoDeduct = document.getElementById('supply-auto-deduct').checked;
+  SUPPLY_DEFS.forEach(function(def) {
+    var inp = document.getElementById('supply-qty-' + def.key);
+    if (inp) d[def.key] = Math.max(0, parseFloat(inp.value) || 0);
+  });
+  setSupplies(d);
+  renderSupplyBanner();
+}
+
+function adjustQty(key, delta) {
+  var inp = document.getElementById('supply-qty-' + key);
+  if (!inp) return;
+  var val = Math.max(0, (parseFloat(inp.value) || 0) + delta);
+  inp.value = Number.isInteger(val) ? val : val.toFixed(1);
+  saveSupplies();
+  renderSupplyDays(key);
+  renderSupplyBanner();
+}
+
+function renderSupplyDays(key) {
+  var def = SUPPLY_DEFS.find(function(d){ return d.key === key; });
+  if (!def) return;
+  var inp = document.getElementById('supply-qty-' + key);
+  var daysEl = document.getElementById('supply-days-' + key);
+  if (!inp || !daysEl) return;
+  var qty = parseFloat(inp.value) || 0;
+  var days = def.ratePerDay > 0 ? qty / def.ratePerDay : Infinity;
+  var cls = days >= def.warnDays * 2 ? 'ok' : days >= def.warnDays ? 'warn' : 'low';
+  var txt = days === Infinity ? '—' : (days < 1 ? '不足 1 天' : '剩約 ' + Math.floor(days) + ' 天');
+  daysEl.textContent = txt;
+  daysEl.className = 'supply-days ' + cls;
+}
+
+function renderSupplyBanner() {
+  var d = getSupplies();
+  var low = [];
+  SUPPLY_DEFS.forEach(function(def) {
+    var qty = d[def.key] || 0;
+    var days = def.ratePerDay > 0 ? qty / def.ratePerDay : Infinity;
+    if (days < def.warnDays) low.push(def.name + '（剩約 ' + Math.floor(days) + ' 天）');
+  });
+  var banner = document.getElementById('supply-low-banner');
+  if (!banner) return;
+  if (low.length) {
+    banner.style.display = 'block';
+    banner.innerHTML = '⚠️ 庫存偏低：' + low.join('、');
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function renderManagePage() {
+  renderSupplyList();
+  renderPrescriptionList();
+}
+
+function renderSupplyList() {
+  var d = getSupplies();
+  var el = document.getElementById('supply-auto-deduct');
+  if (el) el.checked = d.autoDeduct !== false;
+
+  var html = '';
+  SUPPLY_DEFS.forEach(function(def) {
+    var qty = d[def.key] || 0;
+    var days = def.ratePerDay > 0 ? qty / def.ratePerDay : Infinity;
+    var cls = days >= def.warnDays * 2 ? 'ok' : days >= def.warnDays ? 'warn' : 'low';
+    var txt = days === Infinity ? '—' : (days < 1 ? '不足 1 天' : '剩約 ' + Math.floor(days) + ' 天');
+    var qtyDisplay = Number.isInteger(qty) ? qty : qty.toFixed(1);
+    html += '<div class="supply-item">'
+      + '<div class="supply-icon">' + def.icon + '</div>'
+      + '<div class="supply-info">'
+        + '<div class="supply-name">' + def.name + '</div>'
+        + '<div class="supply-rate">' + def.rateLabel + '</div>'
+        + '<div class="supply-days ' + cls + '" id="supply-days-' + def.key + '">' + txt + '</div>'
+      + '</div>'
+      + '<div style="font-size:0.72rem;color:var(--text-muted);text-align:center;min-width:28px;">' + def.unit + '</div>'
+      + '<div class="supply-qty-ctrl">'
+        + '<button class="qty-btn" onclick="adjustQty(\'' + def.key + '\',-1)">－</button>'
+        + '<input class="qty-input" id="supply-qty-' + def.key + '" type="number" min="0" step="1" value="' + qtyDisplay + '"'
+        + ' onchange="saveSupplies();renderSupplyDays(\'' + def.key + '\');renderSupplyBanner()">'
+        + '<button class="qty-btn" onclick="adjustQty(\'' + def.key + '\',1)">＋</button>'
+      + '</div>'
+    + '</div>';
+  });
+  var listEl = document.getElementById('supply-list');
+  if (listEl) listEl.innerHTML = html;
+  renderSupplyBanner();
+}
+
+// ── Auto-deduct (called from saveDayData) ─────────────────────────────────
+function autoDeductSupplies(dayData, dateStr) {
+  var d = getSupplies();
+  if (!d.autoDeduct) return;
+  if (d.lastDeductDate === dateStr) return; // already deducted today
+
+  // Count injection periods
+  var injections = 0;
+  PERIODS.forEach(function(p) {
+    var rec = dayData[p.id] || {};
+    if (rec.insulin && parseFloat(rec.insulin) > 0) injections++;
+  });
+
+  if (injections === 0) return; // nothing to deduct
+
+  // Alcohol swabs & needles: per injection
+  d.alcohol_swab    = Math.max(0, (d.alcohol_swab    || 0) - injections * 2);
+  d.needle          = Math.max(0, (d.needle          || 0) - injections);
+  // Waterproof patch: 1 per day
+  d.waterproof_patch = Math.max(0, (d.waterproof_patch || 0) - 1);
+
+  // Lancet: 1 every 6 days
+  var lancetAcc = (d.lancetAccDays || 0) + 1;
+  if (lancetAcc >= 6) { d.lancet = Math.max(0, (d.lancet || 0) - 1); lancetAcc = 0; }
+  d.lancetAccDays = lancetAcc;
+
+  // CGM: 1 every 14 days
+  var cgmAcc = (d.cgmAccDays || 0) + 1;
+  if (cgmAcc >= 14) { d.cgm_sensor = Math.max(0, (d.cgm_sensor || 0) - 1); cgmAcc = 0; }
+  d.cgmAccDays = cgmAcc;
+
+  d.lastDeductDate = dateStr;
+  setSupplies(d);
+
+  // Refresh UI if on manage page
+  if (document.getElementById('supply-list')) renderSupplyList();
+}
+
+// ── Prescription Modal ─────────────────────────────────────────────────────
+var rxEditId = null;
+
+function rxDaysLeft(dateStr) {
+  if (!dateStr) return null;
+  var diff = Math.ceil((new Date(dateStr) - new Date(new Date().toDateString())) / 86400000);
+  return diff;
+}
+
+function rxCountdownHTML(days, label, dateStr, type) {
+  if (!dateStr) return '<div class="rx-date-chip ' + type + '"><span class="rx-date-label">' + label + '</span><span class="rx-date-countdown" style="font-size:.9rem;color:var(--text-muted)">未設定</span></div>';
+  var cls = days > 14 ? 'ok' : days > 3 ? 'warn' : 'past';
+  var txt = days > 0 ? '剩 ' + days + ' 天' : days === 0 ? '今天' : '已過 ' + Math.abs(days) + ' 天';
+  var sub = dateStr + (type === 'appt' ? '' : '');
+  return '<div class="rx-date-chip ' + type + '"><span class="rx-date-label">' + label + '</span>'
+    + '<span class="rx-date-countdown ' + cls + '">' + txt + '</span>'
+    + '<span class="rx-date-sub">' + sub + '</span></div>';
+}
+
+function renderPrescriptionList() {
+  var meds = getMedications();
+  var el = document.getElementById('prescription-list');
+  if (!el) return;
+  if (!meds.length) {
+    el.innerHTML = '<div style="text-align:center;padding:32px;color:var(--text-muted);font-size:.88rem;">尚無處方紀錄，點上方「＋ 新增處方」開始</div>';
+    return;
+  }
+  el.innerHTML = meds.map(function(rx) {
+    var refillDays = rxDaysLeft(rx.nextRefill);
+    var apptDays   = rxDaysLeft(rx.nextAppointment);
+    var drugsHTML = (rx.drugs || []).map(function(dr) {
+      return '<div class="rx-drug-row">'
+        + '<span class="rx-drug-name">💊 ' + (dr.name || '—') + '</span>'
+        + '<span class="rx-drug-dose">' + (dr.dose || '') + '</span>'
+        + '<span class="rx-drug-dose" style="margin-left:6px;color:#6366f1;">' + (dr.freq || '') + '</span>'
+      + '</div>';
+    }).join('');
+    return '<div class="rx-card">'
+      + '<div class="rx-header">'
+        + '<span class="rx-title">📋 ' + (rx.title || '慢性處方簽') + '</span>'
+        + '<div class="rx-header-btns">'
+          + '<button class="rx-edit-btn" onclick="editPrescription(\'' + rx.id + '\')">編輯</button>'
+          + '<button class="rx-del-btn" onclick="deletePrescription(\'' + rx.id + '\')">刪除</button>'
+        + '</div>'
+      + '</div>'
+      + '<div class="rx-body">'
+        + '<div class="rx-dates">'
+          + rxCountdownHTML(refillDays, '💊 下次領藥', rx.nextRefill, 'refill')
+          + rxCountdownHTML(apptDays,   '📅 下次回診', rx.nextAppointment, 'appt')
+        + '</div>'
+        + '<div class="rx-drugs">' + (drugsHTML || '<span style="color:var(--text-muted);font-size:.82rem;">尚未新增藥品</span>') + '</div>'
+        + (rx.clinic    ? '<div class="rx-note">🏥 ' + rx.clinic + (rx.hospital ? '　' + rx.hospital : '') + '</div>' : '')
+        + (rx.note      ? '<div class="rx-note">📝 ' + rx.note + '</div>' : '')
+      + '</div>'
+    + '</div>';
+  }).join('');
+}
+
+function addPrescription() {
+  rxEditId = null;
+  openRxModal({});
+}
+
+function editPrescription(id) {
+  var meds = getMedications();
+  var rx = meds.find(function(r){ return r.id === id; });
+  if (!rx) return;
+  rxEditId = id;
+  openRxModal(rx);
+}
+
+function deletePrescription(id) {
+  if (!confirm('確定刪除此處方？')) return;
+  var meds = getMedications().filter(function(r){ return r.id !== id; });
+  setMedications(meds);
+  renderPrescriptionList();
+}
+
+function openRxModal(rx) {
+  document.getElementById('rx-modal-title-input').value = rx.title || '';
+  document.getElementById('rx-modal-refill').value      = rx.nextRefill || '';
+  document.getElementById('rx-modal-appt').value        = rx.nextAppointment || '';
+  document.getElementById('rx-modal-clinic').value      = rx.clinic || '';
+  document.getElementById('rx-modal-hospital').value    = rx.hospital || '';
+  document.getElementById('rx-modal-note').value        = rx.note || '';
+  renderRxDrugEditor(rx.drugs || []);
+  document.getElementById('rxModalOverlay').classList.add('open');
+}
+
+function closeRxModal() {
+  document.getElementById('rxModalOverlay').classList.remove('open');
+}
+
+var rxDrugs = [];
+function renderRxDrugEditor(drugs) {
+  rxDrugs = drugs.map(function(d){ return Object.assign({}, d); });
+  refreshRxDrugEditor();
+}
+
+function refreshRxDrugEditor() {
+  var html = rxDrugs.map(function(dr, i) {
+    return '<div class="rx-drug-editor">'
+      + '<div class="rx-drug-editor-row">'
+        + '<input placeholder="藥品名稱" value="' + (dr.name||'') + '" oninput="rxDrugs['+i+'].name=this.value">'
+        + '<input placeholder="劑量（如 4 units）" value="' + (dr.dose||'') + '" oninput="rxDrugs['+i+'].dose=this.value" style="max-width:130px;">'
+      + '</div>'
+      + '<div class="rx-drug-editor-row">'
+        + '<input placeholder="頻次（如 三餐前）" value="' + (dr.freq||'') + '" oninput="rxDrugs['+i+'].freq=this.value">'
+        + '<button onclick="rxDrugs.splice('+i+',1);refreshRxDrugEditor()" style="background:#fef2f2;color:#ef4444;border:1px solid #fca5a5;border-radius:6px;padding:3px 10px;cursor:pointer;font-size:.78rem;">移除</button>'
+      + '</div>'
+    + '</div>';
+  }).join('');
+  html += '<button onclick="rxDrugs.push({});refreshRxDrugEditor()" style="font-size:.8rem;color:#0ea5e9;background:transparent;border:1px dashed #0ea5e9;border-radius:8px;padding:5px 14px;cursor:pointer;width:100%;">＋ 新增藥品</button>';
+  document.getElementById('rx-drug-editor-area').innerHTML = html;
+}
+
+function saveRxModal() {
+  var rx = {
+    id:              rxEditId || ('rx_' + Date.now()),
+    title:           document.getElementById('rx-modal-title-input').value || '慢性處方簽',
+    nextRefill:      document.getElementById('rx-modal-refill').value,
+    nextAppointment: document.getElementById('rx-modal-appt').value,
+    clinic:          document.getElementById('rx-modal-clinic').value,
+    hospital:        document.getElementById('rx-modal-hospital').value,
+    note:            document.getElementById('rx-modal-note').value,
+    drugs:           rxDrugs.filter(function(d){ return d.name; }),
+  };
+  var meds = getMedications();
+  if (rxEditId) {
+    var idx = meds.findIndex(function(r){ return r.id === rxEditId; });
+    if (idx >= 0) meds[idx] = rx; else meds.push(rx);
+  } else {
+    meds.push(rx);
+  }
+  setMedications(meds);
+  closeRxModal();
+  renderPrescriptionList();
+  showToast('✅ 處方已儲存！');
+}
+
 </script>
 
 <!-- ══════════════ CALCULATOR MODAL ══════════════ -->
@@ -4702,5 +5131,48 @@ function stopMealAlarm(periodId, silent) {
 </div>
 
 
+
+<!-- ══ Prescription Modal ══ -->
+<div id="rxModalOverlay" class="rx-modal-overlay" onclick="if(event.target===this)closeRxModal()">
+  <div class="rx-modal">
+    <h3>📋 處方資料</h3>
+    <div class="rx-field">
+      <label>處方名稱</label>
+      <input id="rx-modal-title-input" placeholder="例：台大內分泌科 慢性處方簽">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="rx-field">
+        <label>💊 下次領藥日期</label>
+        <input id="rx-modal-refill" type="date">
+      </div>
+      <div class="rx-field">
+        <label>📅 下次回診日期</label>
+        <input id="rx-modal-appt" type="date">
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="rx-field">
+        <label>科別</label>
+        <input id="rx-modal-clinic" placeholder="內分泌科">
+      </div>
+      <div class="rx-field">
+        <label>醫院</label>
+        <input id="rx-modal-hospital" placeholder="台大醫院">
+      </div>
+    </div>
+    <div class="rx-field">
+      <label>藥品列表</label>
+      <div id="rx-drug-editor-area"></div>
+    </div>
+    <div class="rx-field">
+      <label>備註</label>
+      <textarea id="rx-modal-note" placeholder="預約號碼、注意事項…"></textarea>
+    </div>
+    <div class="rx-modal-btns">
+      <button class="rx-cancel-btn" onclick="closeRxModal()">取消</button>
+      <button class="rx-save-btn" onclick="saveRxModal()">儲存</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
