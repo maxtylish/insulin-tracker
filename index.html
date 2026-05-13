@@ -4713,8 +4713,8 @@ const SUPPLY_DEFS = [
     rateLabel: '每 14 天換一個',             ratePerDay: 1/14, warnDays: 1 },
   { key: 'lancet',           name: '採血針',     unit: '顆', icon: '🩸',
     rateLabel: '每 6 天換一顆（每日晨測）',  ratePerDay: 1/6,  warnDays: 6 },
-  { key: 'ketone_strip',     name: '血酮試紙',   unit: '片', icon: '🩺',
-    rateLabel: '手動調整（視需要使用）',       ratePerDay: 0,    warnDays: 10 },
+  { key: 'ketone_strip',     name: '血糖試紙',   unit: '片', icon: '🩺',
+    rateLabel: '每日晨測 ×1（每日 1 片）',    ratePerDay: 1,    warnDays: 14 },
 ];
 
 
@@ -4891,6 +4891,8 @@ function autoDeductSupplies(dayData, dateStr) {
   d.needle          = Math.max(0, (d.needle          || 0) - injections);
   // Waterproof patch: 1 per day
   d.waterproof_patch = Math.max(0, (d.waterproof_patch || 0) - 1);
+  // 血糖試紙: 每日晨測 1 片
+  d.ketone_strip = Math.max(0, (d.ketone_strip || 0) - 1);
 
   // Lancet: 1 every 6 days
   var lancetAcc = (d.lancetAccDays || 0) + 1;
