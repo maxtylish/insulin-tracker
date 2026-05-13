@@ -2561,9 +2561,10 @@ function refreshCarouselAlerts() {
       if (days !== null && days >= 0 && days <= 14) {
         var sLabel = rx.apptSession === 'morning' ? ' 上午診' : rx.apptSession === 'afternoon' ? ' 下午診' : '';
         var daysTxt = days === 0 ? '今天！' : '還有 ' + days + ' 天';
+        var apptMeta = [rx.apptClinic || rx.clinic, rx.apptRoom].filter(Boolean).join(' ');
         setAlertItem('appt-' + rx.id, 7,
           '📅 回診提醒：' + daysTxt,
-          rx.nextAppointment + sLabel + '　' + [rx.hospital, rx.clinic].filter(Boolean).join(' '));
+          rx.nextAppointment + sLabel + (apptMeta ? '　' + apptMeta : '') + (rx.hospital ? '\n' + rx.hospital : ''));
       } else {
         clearAlertItem('appt-' + rx.id);
       }
@@ -4934,6 +4935,8 @@ function initRxDefaults(force) {
     nextRefill:      '2026-05-19',
     nextAppointment: '',
     apptSession: 'morning',
+    apptClinic:  '小兒科',
+    apptRoom:    '209診',
     clinic:   '小兒科',
     hospital: '中山醫學大學附設醫院（大慶院區）',
     note: '慢簽編號：34185809｜可調劑 2 次｜第 1 次已領：2026/04/30｜有效期限：2026/06/24｜建議第 2 次領藥：2026/05/19～05/28｜診治醫師：陳大揚 醫師（醫字第 059016 號）｜聯絡電話：(04)24739595',
@@ -5055,9 +5058,10 @@ async function checkAndNotifyAppt() {
     if (localStorage.getItem(lsKey) === rx.nextAppointment) continue;
     localStorage.setItem(lsKey, rx.nextAppointment);
     var sessionTxt = rx.apptSession === 'morning' ? '上午診' : rx.apptSession === 'afternoon' ? '下午診' : '';
+    var roomTxt    = [rx.apptClinic || rx.clinic, rx.apptRoom].filter(Boolean).join(' ');
     var title = '\u{1F4C5} 回診提醒｜剩 ' + days + ' 天';
     var bodyParts = [rx.title || '慢性處方簽'];
-    bodyParts.push(rx.nextAppointment + (sessionTxt ? ' ' + sessionTxt : ''));
+    bodyParts.push(rx.nextAppointment + (sessionTxt ? ' ' + sessionTxt : '') + (roomTxt ? ' ' + roomTxt : ''));
     if (rx.hospital) bodyParts.push(rx.hospital);
     if (rx.clinic)   bodyParts.push(rx.clinic);
     var body = bodyParts.join('\n');
@@ -5189,12 +5193,15 @@ function rxDaysLeft(dateStr) {
   return diff;
 }
 
-function rxCountdownHTML(days, label, dateStr, type, session) {
+function rxCountdownHTML(days, label, dateStr, type, session, apptClinic, apptRoom) {
   if (!dateStr) return '<div class="rx-date-chip ' + type + '"><span class="rx-date-label">' + label + '</span><span class="rx-date-countdown" style="font-size:.9rem;color:var(--text-muted)">未設定</span></div>';
   var cls = days > 14 ? 'ok' : days > 3 ? 'warn' : 'past';
   var txt = days > 0 ? '剩 ' + days + ' 天' : days === 0 ? '今天' : '已過 ' + Math.abs(days) + ' 天';
   var sessionTxt = (type === 'appt' && session) ? (' ' + (session === 'morning' ? '🌅上午診' : '🌆下午診')) : '';
-  var sub = dateStr + sessionTxt;
+  var clinicTxt  = (type === 'appt' && (apptClinic || apptRoom))
+    ? ('　' + [apptClinic, apptRoom].filter(Boolean).join(' '))
+    : '';
+  var sub = dateStr + sessionTxt + clinicTxt;
   return '<div class="rx-date-chip ' + type + '"><span class="rx-date-label">' + label + '</span>'
     + '<span class="rx-date-countdown ' + cls + '">' + txt + '</span>'
     + '<span class="rx-date-sub">' + sub + '</span></div>';
@@ -5273,7 +5280,7 @@ function renderPrescriptionList() {
       + '<div class="rx-body" style="padding-bottom:6px;">'
         + '<div class="rx-dates">'
           + rxCountdownHTML(refillDays, '💊 下次領藥', rx.nextRefill, 'refill')
-          + rxCountdownHTML(apptDays,   '📅 下次回診', rx.nextAppointment, 'appt', rx.apptSession)
+          + rxCountdownHTML(apptDays,   '📅 下次回診', rx.nextAppointment, 'appt', rx.apptSession, rx.apptClinic, rx.apptRoom)
         + '</div>'
         + expNote
       + '</div>'
@@ -5327,6 +5334,8 @@ function openRxModal(rx) {
   document.getElementById('rx-modal-refill').value      = rx.nextRefill || '';
   document.getElementById('rx-modal-appt').value        = rx.nextAppointment || '';
   document.getElementById('rx-modal-appt-session').value = rx.apptSession || '';
+  document.getElementById('rx-modal-appt-clinic').value  = rx.apptClinic  || '';
+  document.getElementById('rx-modal-appt-room').value    = rx.apptRoom    || '';
   document.getElementById('rx-modal-clinic').value      = rx.clinic || '';
   document.getElementById('rx-modal-hospital').value    = rx.hospital || '';
   document.getElementById('rx-modal-note').value        = rx.note || '';
@@ -5384,6 +5393,8 @@ function saveRxModal() {
     nextRefill:      document.getElementById('rx-modal-refill').value,
     nextAppointment: document.getElementById('rx-modal-appt').value,
     apptSession:     document.getElementById('rx-modal-appt-session').value,
+    apptClinic:      document.getElementById('rx-modal-appt-clinic').value,
+    apptRoom:        document.getElementById('rx-modal-appt-room').value,
     clinic:          document.getElementById('rx-modal-clinic').value,
     hospital:        document.getElementById('rx-modal-hospital').value,
     note:            document.getElementById('rx-modal-note').value,
@@ -5564,6 +5575,12 @@ function saveRxModal() {
             <option value="afternoon">🌆 下午診</option>
           </select>
         </div>
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <input id="rx-modal-appt-clinic" placeholder="科別（如：小兒科）"
+            style="flex:1;min-width:0;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:.84rem;background:var(--card);color:var(--text);">
+          <input id="rx-modal-appt-room" placeholder="診間（如：209診）"
+            style="width:100px;flex:none;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:.84rem;background:var(--card);color:var(--text);">
+        </div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -5586,9 +5603,4 @@ function saveRxModal() {
     </div>
     <div class="rx-modal-btns">
       <button class="rx-cancel-btn" onclick="closeRxModal()">取消</button>
-      <button class="rx-save-btn" onclick="saveRxModal()">儲存</button>
-    </div>
-  </div>
-</div>
-</body>
-</html>
+      <button cl
