@@ -1594,7 +1594,25 @@
     }
     #miniCgmChart { width: 100% !important; }
 
-      /* ── Alert Carousel ──────────────────────────────────── */
+      .refill-status-row {
+      display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+      padding:7px 14px 6px; border-top:1px solid var(--border);
+    }
+    .refill-label { font-size:.7rem; color:var(--text-muted); font-weight:600; white-space:nowrap; }
+    .refill-chip {
+      padding:4px 10px; border-radius:20px; font-size:.75rem;
+      font-weight:600; cursor:pointer; border:1.5px solid transparent; line-height:1.3;
+    }
+    .refill-chip.picked  { background:#f0fdf4; color:#16a34a; border-color:#86efac; }
+    .refill-chip.pending { background:#f8fafc; color:#94a3b8; border-color:var(--border); }
+    .refill-chip:active  { opacity:.75; }
+    .refill-toggle-btn {
+      padding:4px 12px; border-radius:20px; font-size:.8rem;
+      font-weight:600; cursor:pointer; border:1.5px solid transparent; white-space:nowrap;
+    }
+    .refill-toggle-btn.picked  { background:#f0fdf4; color:#16a34a; border-color:#86efac; }
+    .refill-toggle-btn.pending { background:#f8fafc; color:#94a3b8; border-color:var(--border); }
+    /* ── Alert Carousel ──────────────────────────────────── */
     #alert-carousel { max-width:560px; margin:0 auto 2px; padding:0 12px; }
     #alert-carousel-inner { border-radius:13px; overflow:hidden; }
     .alert-slide {
@@ -4932,6 +4950,11 @@ function initRxDefaults(force) {
   var rx = {
     id: 'rx_zhongshan_2026',
     title: '中山醫大附設醫院 慢性處方簽',
+    refillTotal:     2,
+    refillRecords:   [
+      { status:'picked',  date:'2026-04-30' },
+      { status:'pending', date:'' }
+    ],
     nextRefill:      '2026-05-19',
     nextAppointment: '',
     apptSession: 'morning',
@@ -5187,6 +5210,63 @@ function autoDeductSupplies(dayData, dateStr) {
 }
 
 // ── Prescription Modal ─────────────────────────────────────────────────────
+// ── Refill tracker (modal editor) ───────────────────────────────────────────
+var rxRefillRecords = [];
+
+function renderRxRefillEditor(records, total) {
+  rxRefillRecords = (records || []).map(function(r){ return Object.assign({}, r); });
+  while (rxRefillRecords.length < total) rxRefillRecords.push({ status:'pending', date:'' });
+  rxRefillRecords = rxRefillRecords.slice(0, total);
+  refreshRxRefillEditor();
+}
+
+function refreshRxRefillEditor() {
+  var html = rxRefillRecords.map(function(rec, i) {
+    var picked = rec.status === 'picked';
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);">'
+      + '<span style="font-size:.82rem;font-weight:600;color:var(--text);white-space:nowrap;min-width:42px;">第 ' + (i+1) + ' 次</span>'
+      + '<button type="button" class="refill-toggle-btn ' + (picked?'picked':'pending') + '" data-idx="' + i + '" onclick="toggleRefillModalStatus(parseInt(this.dataset.idx))">'
+          + (picked ? '✅ 已領' : '⬜ 未領')
+      + '</button>'
+      + '<input type="date" value="' + (rec.date||'') + '" '
+          + (!picked ? 'disabled ' : '')
+          + 'oninput="rxRefillRecords[' + i + '].date=this.value" '
+          + 'style="flex:1;padding:5px 8px;border:1.5px solid var(--border);border-radius:8px;font-size:.84rem;background:var(--card);color:var(--text);' + (!picked?'opacity:.35;':'') + '">'
+    + '</div>';
+  }).join('');
+  var el = document.getElementById('rx-refill-records-editor');
+  if (el) el.innerHTML = html || '<span style="font-size:.8rem;color:var(--text-muted);">無調劑紀錄</span>';
+}
+
+function onRefillTotalChange() {
+  var n = Math.max(1, parseInt(document.getElementById('rx-modal-refill-total').value) || 1);
+  while (rxRefillRecords.length < n) rxRefillRecords.push({ status:'pending', date:'' });
+  rxRefillRecords = rxRefillRecords.slice(0, n);
+  refreshRxRefillEditor();
+}
+
+function toggleRefillModalStatus(idx) {
+  var rec = rxRefillRecords[idx];
+  if (!rec) return;
+  if (rec.status === 'pending') { rec.status = 'picked'; if (!rec.date) rec.date = todayStr(); }
+  else { rec.status = 'pending'; }
+  refreshRxRefillEditor();
+}
+
+// Quick toggle on card (no modal needed)
+function toggleRefillStatus(rxId, idx) {
+  var meds = getMedications();
+  var rx = meds.find(function(r){ return r.id === rxId; });
+  if (!rx || !rx.refillRecords || !rx.refillRecords[idx]) return;
+  var rec = rx.refillRecords[idx];
+  if (rec.status === 'pending') { rec.status = 'picked'; if (!rec.date) rec.date = todayStr(); }
+  else { rec.status = 'pending'; }
+  setMedications(meds);
+  renderPrescriptionList();
+  refreshCarouselAlerts();
+}
+
+
 var rxEditId = null;
 
 function rxDaysLeft(dateStr) {
@@ -5284,6 +5364,18 @@ function renderPrescriptionList() {
           + rxCountdownHTML(refillDays, '💊 下次領藥', rx.nextRefill, 'refill')
           + rxCountdownHTML(apptDays,   '📅 下次回診', rx.nextAppointment, 'appt', rx.apptSession, rx.apptClinic, rx.apptRoom)
         + '</div>'
+        + (function() {
+            if (!rx.refillRecords || !rx.refillRecords.length) return '';
+            var chips = rx.refillRecords.map(function(rec, i) {
+              var n = i + 1;
+              var cls = rec.status === 'picked' ? 'picked' : 'pending';
+              var label = rec.status === 'picked'
+                ? '✅ 第' + n + '次 ' + (rec.date ? rec.date.slice(5).replace('-','/') : '')
+                : '⬜ 第' + n + '次 待領';
+              return '<button class="refill-chip ' + cls + '" data-rxid="' + rx.id + '" data-idx="' + i + '" onclick="toggleRefillStatus(this.dataset.rxid,parseInt(this.dataset.idx))">' + label + '</button>';
+            }).join('');
+            return '<div class="refill-status-row"><span class="refill-label">調劑</span>' + chips + '</div>';
+          })()
         + expNote
       + '</div>'
       + '<div class="rx-detail" id="rx-detail-' + rx.id + '">'
@@ -5336,6 +5428,8 @@ function openRxModal(rx) {
   document.getElementById('rx-modal-refill').value      = rx.nextRefill || '';
   document.getElementById('rx-modal-appt').value        = rx.nextAppointment || '';
   document.getElementById('rx-modal-appt-session').value = rx.apptSession || '';
+  document.getElementById('rx-modal-refill-total').value  = rx.refillTotal || 2;
+  renderRxRefillEditor(rx.refillRecords || [], rx.refillTotal || 2);
   document.getElementById('rx-modal-appt-clinic').value  = rx.apptClinic  || '';
   document.getElementById('rx-modal-appt-room').value    = rx.apptRoom    || '';
   document.getElementById('rx-modal-clinic').value      = rx.clinic || '';
@@ -5393,6 +5487,8 @@ function saveRxModal() {
     id:              rxEditId || ('rx_' + Date.now()),
     title:           document.getElementById('rx-modal-title-input').value || '慢性處方簽',
     nextRefill:      document.getElementById('rx-modal-refill').value,
+    refillTotal:     parseInt(document.getElementById('rx-modal-refill-total').value) || 2,
+    refillRecords:   rxRefillRecords.map(function(r){ return Object.assign({},r); }),
     nextAppointment: document.getElementById('rx-modal-appt').value,
     apptSession:     document.getElementById('rx-modal-appt-session').value,
     apptClinic:      document.getElementById('rx-modal-appt-clinic').value,
@@ -5584,6 +5680,19 @@ function saveRxModal() {
             style="width:100px;flex:none;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:.84rem;background:var(--card);color:var(--text);">
         </div>
       </div>
+    </div>
+    <div class="rx-field">
+      <label>📋 可調劑次數 &amp; 領藥紀錄</label>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <select id="rx-modal-refill-total" onchange="onRefillTotalChange()" style="width:72px;padding:5px 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-size:.84rem;">
+          <option value="1">1 次</option>
+          <option value="2">2 次</option>
+          <option value="3">3 次</option>
+          <option value="4">4 次</option>
+        </select>
+        <span style="font-size:.75rem;color:var(--text-muted);">次（點 ⬜ 可標記已領並自動填入今日日期）</span>
+      </div>
+      <div id="rx-refill-records-editor"></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
       <div class="rx-field">
