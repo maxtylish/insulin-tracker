@@ -4295,6 +4295,7 @@ function init() {
   });
   startCGMPolling();   // start real-time CGM widget
   setTimeout(checkAndNotifyLowSupplies, 4000); // delayed supply check on load
+  setTimeout(checkAndNotifyAppt, 4500);         // delayed appt reminder check
 }
 
 
@@ -4728,6 +4729,7 @@ function initRxDefaults(force) {
     title: '中山醫大附設醫院 慢性處方簽',
     nextRefill:      '2026-05-19',
     nextAppointment: '',
+    apptSession: 'morning',
     clinic:   '小兒科',
     hospital: '中山醫學大學附設醫院（大慶院區）',
     note: '慢簽編號：34185809｜可調劑 2 次｜第 1 次已領：2026/04/30｜有效期限：2026/06/24｜建議第 2 次領藥：2026/05/19～05/28｜診治醫師：陳大揚 醫師（醫字第 059016 號）｜聯絡電話：(04)24739595',
@@ -4823,6 +4825,37 @@ function renderSupplyBanner() {
     banner.innerHTML = '⚠️ 庫存偏低：' + low.join('、');
   } else {
     banner.style.display = 'none';
+  }
+}
+
+async function checkAndNotifyAppt() {
+  if (!notifEnabled()) return;
+  if (Notification.permission !== 'granted') return;
+  var meds = getMedications();
+  var MILESTONES = [14, 7, 3, 1];
+  for (var i = 0; i < meds.length; i++) {
+    var rx = meds[i];
+    if (!rx.nextAppointment) continue;
+    var days = rxDaysLeft(rx.nextAppointment);
+    if (days === null || days <= 0 || days > 14) continue;
+    // Find the largest milestone that daysLeft is still within
+    var milestone = null;
+    for (var m = 0; m < MILESTONES.length; m++) {
+      if (days <= MILESTONES[m]) { milestone = MILESTONES[m]; break; }
+    }
+    if (!milestone) continue;
+    var lsKey = 'appt_notif_' + rx.id + '_m' + milestone;
+    // Only notify once per milestone per appointment date
+    if (localStorage.getItem(lsKey) === rx.nextAppointment) continue;
+    localStorage.setItem(lsKey, rx.nextAppointment);
+    var sessionTxt = rx.apptSession === 'morning' ? '上午診' : rx.apptSession === 'afternoon' ? '下午診' : '';
+    var title = '\u{1F4C5} 回診提醒｜剩 ' + days + ' 天';
+    var bodyParts = [rx.title || '慢性處方簽'];
+    bodyParts.push(rx.nextAppointment + (sessionTxt ? ' ' + sessionTxt : ''));
+    if (rx.hospital) bodyParts.push(rx.hospital);
+    if (rx.clinic)   bodyParts.push(rx.clinic);
+    var body = bodyParts.join('\n');
+    await sendPushNotif('appt-warn-' + rx.id, title, body, false);
   }
 }
 
@@ -4950,11 +4983,12 @@ function rxDaysLeft(dateStr) {
   return diff;
 }
 
-function rxCountdownHTML(days, label, dateStr, type) {
+function rxCountdownHTML(days, label, dateStr, type, session) {
   if (!dateStr) return '<div class="rx-date-chip ' + type + '"><span class="rx-date-label">' + label + '</span><span class="rx-date-countdown" style="font-size:.9rem;color:var(--text-muted)">未設定</span></div>';
   var cls = days > 14 ? 'ok' : days > 3 ? 'warn' : 'past';
   var txt = days > 0 ? '剩 ' + days + ' 天' : days === 0 ? '今天' : '已過 ' + Math.abs(days) + ' 天';
-  var sub = dateStr + (type === 'appt' ? '' : '');
+  var sessionTxt = (type === 'appt' && session) ? (' ' + (session === 'morning' ? '🌅上午診' : '🌆下午診')) : '';
+  var sub = dateStr + sessionTxt;
   return '<div class="rx-date-chip ' + type + '"><span class="rx-date-label">' + label + '</span>'
     + '<span class="rx-date-countdown ' + cls + '">' + txt + '</span>'
     + '<span class="rx-date-sub">' + sub + '</span></div>';
@@ -5033,7 +5067,7 @@ function renderPrescriptionList() {
       + '<div class="rx-body" style="padding-bottom:6px;">'
         + '<div class="rx-dates">'
           + rxCountdownHTML(refillDays, '💊 下次領藥', rx.nextRefill, 'refill')
-          + rxCountdownHTML(apptDays,   '📅 下次回診', rx.nextAppointment, 'appt')
+          + rxCountdownHTML(apptDays,   '📅 下次回診', rx.nextAppointment, 'appt', rx.apptSession)
         + '</div>'
         + expNote
       + '</div>'
@@ -5086,6 +5120,7 @@ function openRxModal(rx) {
   document.getElementById('rx-modal-title-input').value = rx.title || '';
   document.getElementById('rx-modal-refill').value      = rx.nextRefill || '';
   document.getElementById('rx-modal-appt').value        = rx.nextAppointment || '';
+  document.getElementById('rx-modal-appt-session').value = rx.apptSession || '';
   document.getElementById('rx-modal-clinic').value      = rx.clinic || '';
   document.getElementById('rx-modal-hospital').value    = rx.hospital || '';
   document.getElementById('rx-modal-note').value        = rx.note || '';
@@ -5142,6 +5177,7 @@ function saveRxModal() {
     title:           document.getElementById('rx-modal-title-input').value || '慢性處方簽',
     nextRefill:      document.getElementById('rx-modal-refill').value,
     nextAppointment: document.getElementById('rx-modal-appt').value,
+    apptSession:     document.getElementById('rx-modal-appt-session').value,
     clinic:          document.getElementById('rx-modal-clinic').value,
     hospital:        document.getElementById('rx-modal-hospital').value,
     note:            document.getElementById('rx-modal-note').value,
@@ -5313,7 +5349,14 @@ function saveRxModal() {
       </div>
       <div class="rx-field">
         <label>📅 下次回診日期</label>
-        <input id="rx-modal-appt" type="date">
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input id="rx-modal-appt" type="date" style="flex:1;min-width:0;">
+          <select id="rx-modal-appt-session" style="width:94px;padding:6px 4px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-size:.85rem;flex:none;">
+            <option value="">時段</option>
+            <option value="morning">🌅 上午診</option>
+            <option value="afternoon">🌆 下午診</option>
+          </select>
+        </div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
