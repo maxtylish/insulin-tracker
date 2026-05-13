@@ -2651,30 +2651,27 @@ function loadNotifSettingsUI() {
 
 // 用餐鬧鐘專用：繞過 notifEnabled 設定，直接響鈴 + 通知
 function fireMealAlarm(periodId, audioCtx) {
-  // 響鈴：用 <audio> element（最可靠，iOS/Android 皆支援）
+  // 響鈴：優先用已解鎖的 AudioContext 播振盪器（繞過 autoplay 限制）
+  try {
+    var ctx = audioCtx && audioCtx.state !== 'closed' ? audioCtx
+              : new (window.AudioContext || window.webkitAudioContext)();
+    if (ctx.state === 'suspended') ctx.resume();
+    var freqs = [880, 1046, 880, 1046];
+    freqs.forEach(function(freq, i) {
+      var osc = ctx.createOscillator(), g = ctx.createGain();
+      osc.connect(g); g.connect(ctx.destination);
+      osc.type = 'sine'; osc.frequency.value = freq;
+      var t = ctx.currentTime + i * 0.25;
+      g.gain.setValueAtTime(0.6, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+      osc.start(t); osc.stop(t + 0.23);
+    });
+  } catch(e) { console.warn('meal alarm oscillator error', e); }
+  // 同時嘗試 <audio> element（已在 startMealAlarm 解鎖過）
   try {
     var aud = document.getElementById('mealAlarmAudio');
-    if (aud) {
-      aud.currentTime = 0;
-      var p = aud.play();
-      if (p && p.catch) p.catch(function() {
-        // fallback: Web Audio API
-        try {
-          var ctx2 = new (window.AudioContext || window.webkitAudioContext)();
-          var freqs = [880, 1046, 880];
-          freqs.forEach(function(freq, i) {
-            var osc = ctx2.createOscillator(), g = ctx2.createGain();
-            osc.connect(g); g.connect(ctx2.destination);
-            osc.type = 'sine'; osc.frequency.value = freq;
-            var t = ctx2.currentTime + i * 0.22;
-            g.gain.setValueAtTime(0.5, t);
-            g.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
-            osc.start(t); osc.stop(t + 0.21);
-          });
-        } catch(e2) {}
-      });
-    }
-  } catch(e) { console.warn('meal alarm beep error', e); }
+    if (aud) { aud.currentTime = 0; aud.volume = 1; aud.play().catch(function(){}); }
+  } catch(e) {}
 
   // 震動
   try { if (navigator.vibrate) navigator.vibrate([250, 100, 250, 100, 500]); } catch(e) {}
@@ -2683,6 +2680,8 @@ function fireMealAlarm(periodId, audioCtx) {
   var periodLabel = { morning: '早餐', noon: '午餐', evening: '晚餐' }[periodId] || '用餐';
   var title = '🍽️ ' + periodLabel + '時間到！';
   var body  = '胰島素已生效，現在可以用餐囉！';
+  // 加入輪播跨頁提醒（priority 0 = 最高）
+  try { setAlertItem('meal-' + periodId, 0, title, body); } catch(e) {}
   var now   = Date.now();
   var key   = 'meal-' + periodId;
   if (now - (lastNotifTime[key] || 0) > 60000) {
@@ -3074,7 +3073,8 @@ function buildPeriodCards() {
       + '</div>'
       + (function() {
           var defVal  = SITE_DEFAULTS[p.id] || '';
-          var defNote = (SITE_OPTIONS.find(function(o){ return o.value === defVal; }) || {}).note || '';
+          var defNote = p.id === 'bedtime' ? ''
+                        : (SITE_OPTIONS.find(function(o){ return o.value === defVal; }) || {}).note || '';
           var opts = SITE_OPTIONS.map(function(o) {
             return '<option value="' + o.value + '"' + (o.value === defVal ? ' selected' : '') + '>' + o.label + '</option>';
           }).join('');
@@ -3146,7 +3146,7 @@ function onSiteChange(periodId) {
   var noteEl = document.getElementById(periodId + '-site-note');
   if (!sel || !noteEl) return;
   var opt = SITE_OPTIONS.find(function(o){ return o.value === sel.value; }) || {};
-  noteEl.textContent = opt.note || '';
+  noteEl.textContent = periodId === 'bedtime' ? '' : (opt.note || '');
   // 同步更新用餐倒計時的時間選項
   var minSel = document.getElementById(periodId + '-alarm-min');
   if (minSel) {
@@ -4295,22 +4295,44 @@ function renderSupplList(type, items) {
       + '</div>';
     }
 
-    // ── Carbs row (unchanged layout) ───────────────────────────
-    return '<div class="suppl-row" id="' + type + '-row-' + idx + '">'
-      + '<div class="suppl-row-top" style="grid-template-columns:1fr 1fr 1fr auto">'
+    // ── Carbs row (new layout: BG auto-fill + qty + timer) ──────
+    var rowId = item.rowId || ('carb-' + Date.now() + '-' + idx);
+    var carbVal = item.carb !== undefined && item.carb !== '' ? item.carb : '2.5';
+    var qtyVal  = item.qty  !== undefined && item.qty  !== '' ? item.qty  : '1';
+    var total   = (parseFloat(carbVal) || 0) * (parseFloat(qtyVal) || 0);
+    var totalStr = (total % 1 === 0 ? total : total.toFixed(1)) + ' 克';
+
+    // Timer HTML based on current state
+    var ct = carbTimers[rowId];
+    var timerBtnsDisplay  = (!ct) ? 'flex' : 'none';
+    var timerSetupDisplay = 'none';
+    var timerRunDisplay   = (ct)  ? 'flex' : 'none';
+    var timerLbl  = ct && ct.done ? '🍬 已過' : '⏳ 觀測中';
+    var timerDisp = '--:--';
+    if (ct) {
+      var now2 = Date.now();
+      if (!ct.done) {
+        var rem = Math.max(0, ct.endTime - now2);
+        var rmm = Math.floor(rem/60000).toString().padStart(2,'0');
+        var rss = Math.floor((rem%60000)/1000).toString().padStart(2,'0');
+        timerDisp = rmm + ':' + rss;
+      } else {
+        var ela = Math.floor((now2 - ct.doneAt)/1000);
+        var emm = Math.floor(ela/60).toString().padStart(2,'0');
+        var ess = (ela%60).toString().padStart(2,'0');
+        timerDisp = '+' + emm + ':' + ess;
+      }
+    }
+
+    return '<div class="suppl-row" id="carbs-row-' + idx + '" data-rowid="' + rowId + '">'
+      // ── Row 1: BG + Time + delete ──
+      + '<div class="carb-top-row">'
         + '<div class="suppl-field">'
-          + '<label>碳水量</label>'
-          + '<div class="field-input-wrap">'
-            + '<input type="number" data-idx="' + idx + '" data-field="carb" class="suppl-val"'
-            + ' value="' + (item.carb || '') + '" min="0" max="500" step="1" placeholder="--" />'
-            + '<span class="field-unit">克</span>'
-          + '</div>'
-        + '</div>'
-        + '<div class="suppl-field">'
-          + '<label>當前血糖</label>'
+          + '<label>當前血糖 <button class="corr-cgm-btn" type="button" onclick="autoFillCarbBG(\'' + rowId + '\')">CGM 帶入</button></label>'
           + '<div class="field-input-wrap">'
             + '<input type="number" data-idx="' + idx + '" data-field="bg" class="suppl-val"'
-            + ' value="' + (item.bg || '') + '" min="20" max="600" step="1" placeholder="--" />'
+            + ' value="' + (item.bg || '') + '" min="20" max="600" step="1" placeholder="--"'
+            + ' onfocus="autoFillCarbBG(\'' + rowId + '\')" />'
             + '<span class="field-unit">mg/dL</span>'
           + '</div>'
         + '</div>'
@@ -4321,8 +4343,55 @@ function renderSupplList(type, items) {
           + ' inputmode="numeric" maxlength="5" placeholder="--:--"'
           + ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />'
         + '</div>'
-        + '<button class="suppl-del-btn" onclick="removeSupplRow(\'' + type + '\', ' + idx + ')" title="刪除">✕</button>'
+        + '<button class="suppl-del-btn" onclick="removeSupplRow(\'carbs\',' + idx + ')" title="刪除" style="margin-bottom:2px">✕</button>'
       + '</div>'
+      // ── Row 2: per-unit carb × qty = total ──
+      + '<div class="carb-qty-row">'
+        + '<span class="carb-qty-label">🍬 每顆</span>'
+        + '<div class="field-input-wrap" style="width:72px">'
+          + '<input type="number" data-idx="' + idx + '" data-field="carb" class="suppl-val"'
+          + ' value="' + carbVal + '" min="0" max="100" step="0.5" placeholder="2.5"'
+          + ' oninput="updateCarbTotal(\'' + rowId + '\',this)" />'
+          + '<span class="field-unit">克</span>'
+        + '</div>'
+        + '<span class="carb-qty-label">×</span>'
+        + '<div class="field-input-wrap" style="width:60px">'
+          + '<input type="number" data-idx="' + idx + '" data-field="qty" class="suppl-val"'
+          + ' value="' + qtyVal + '" min="1" max="30" step="1" placeholder="1"'
+          + ' oninput="updateCarbTotal(\'' + rowId + '\',this)" />'
+          + '<span class="field-unit">顆</span>'
+        + '</div>'
+        + '<span class="carb-total-tag" id="carb-total-' + rowId + '">'
+          + '= ' + totalStr
+        + '</span>'
+      + '</div>'
+      // ── Hidden rowId ──
+      + '<input type="hidden" data-field="rowId" class="suppl-val" value="' + rowId + '" />'
+      // ── Row 3: Timer ──
+      + '<div class="meal-alarm-row" style="margin-top:2px">'
+        + '<span class="alarm-label">⏰ 觀測倒計時</span>'
+        + '<div class="alarm-choice-btns" id="carb-btns-' + rowId + '" style="display:' + timerBtnsDisplay + '">'
+          + '<button class="alarm-btn-no active" type="button" onclick="carbAlarmNo(\'' + rowId + '\')">無計時</button>'
+          + '<button class="alarm-btn-set" type="button" onclick="carbAlarmSet(\'' + rowId + '\')">設定</button>'
+        + '</div>'
+        + '<div class="alarm-setup-row" id="carb-setup-' + rowId + '" style="display:' + timerSetupDisplay + '">'
+          + '<select class="alarm-min-select" id="carb-min-' + rowId + '">'
+            + '<option value="15" selected>15</option>'
+            + '<option value="30">30</option>'
+            + '<option value="45">45</option>'
+            + '<option value="60">60</option>'
+          + '</select>'
+          + '<span class="alarm-unit-text">分鐘後觀測</span>'
+          + '<button class="alarm-start-btn" type="button" onclick="startCarbTimer(\'' + rowId + '\')">▶ 開始</button>'
+          + '<button class="alarm-cancel-setup-btn" type="button" onclick="carbAlarmNo(\'' + rowId + '\')">✕</button>'
+        + '</div>'
+        + '<div class="alarm-running-row" id="carb-run-' + rowId + '" style="display:' + timerRunDisplay + '">'
+          + '<span class="alarm-running-label" id="carb-lbl-' + rowId + '">' + timerLbl + '</span>'
+          + '<span class="alarm-countdown-display" id="carb-disp-' + rowId + '">' + timerDisp + '</span>'
+          + '<button class="alarm-stop-btn" type="button" onclick="stopCarbTimer(\'' + rowId + '\')">■ 停止</button>'
+        + '</div>'
+      + '</div>'
+      // ── Note ──
       + '<div class="suppl-note">'
         + '<textarea rows="1" data-idx="' + idx + '" data-field="note"'
         + ' class="suppl-val" placeholder="備註（症狀、原因…）">' + (item.note || '') + '</textarea>'
@@ -4355,10 +4424,14 @@ function addSupplRow(type) {
     var last = listEl.querySelector('.suppl-row:last-child input');
     if (last) last.focus();
   }
-  // For corrections: auto-fill time + CGM BG on new row
+  // Auto-fill time + CGM BG on new row
+  var newIdx = current.length - 1;
   if (type === 'corrections') {
-    var newIdx = current.length - 1;
     autoFillCorrBG(newIdx);
+  } else if (type === 'carbs') {
+    // find rowId of newly added row
+    var newRow = listEl.querySelector('.suppl-row:last-child');
+    if (newRow) { var rid = newRow.dataset.rowid; if (rid) autoFillCarbBG(rid); }
   }
 }
 
@@ -4366,6 +4439,106 @@ function removeSupplRow(type, idx) {
   const current = collectSupplRows(type);
   current.splice(idx, 1);
   renderSupplList(type, current);
+}
+
+// ════════════════════════════════
+//  CARB ROW FUNCTIONS
+// ════════════════════════════════
+async function autoFillCarbBG(rowId) {
+  var row = document.querySelector('[data-rowid="' + rowId + '"]');
+  if (!row) return;
+  var timeEl = row.querySelector('[data-field="time"]');
+  if (timeEl && !timeEl.value) timeEl.value = getNowTime();
+  var bgEl = row.querySelector('[data-field="bg"]');
+  if (!bgEl || bgEl.value) return;
+  var src = lastCGMEntry;
+  if (!src && settings.nsUrl) src = await fetchNSCurrent();
+  if (src && src.sgv) bgEl.value = Math.round(src.sgv);
+}
+
+function updateCarbTotal(rowId) {
+  var row = document.querySelector('[data-rowid="' + rowId + '"]');
+  if (!row) return;
+  var carbEl = row.querySelector('[data-field="carb"]');
+  var qtyEl  = row.querySelector('[data-field="qty"]');
+  var totalEl = document.getElementById('carb-total-' + rowId);
+  if (!carbEl || !qtyEl || !totalEl) return;
+  var total = (parseFloat(carbEl.value) || 0) * (parseFloat(qtyEl.value) || 0);
+  var str = (total % 1 === 0 ? total : parseFloat(total.toFixed(1))) + ' 克';
+  totalEl.textContent = '= ' + str;
+}
+
+function carbAlarmNo(rowId) {
+  var btns  = document.getElementById('carb-btns-'  + rowId);
+  var setup = document.getElementById('carb-setup-' + rowId);
+  var run   = document.getElementById('carb-run-'   + rowId);
+  if (btns)  { btns.style.display  = 'flex'; btns.querySelector('.alarm-btn-no').classList.add('active'); btns.querySelector('.alarm-btn-set').classList.remove('active'); }
+  if (setup) setup.style.display = 'none';
+  if (run)   run.style.display   = 'none';
+}
+
+function carbAlarmSet(rowId) {
+  var btns  = document.getElementById('carb-btns-'  + rowId);
+  var setup = document.getElementById('carb-setup-' + rowId);
+  if (btns)  btns.style.display  = 'none';
+  if (setup) setup.style.display = 'flex';
+}
+
+function startCarbTimer(rowId) {
+  if (carbTimers[rowId]) stopCarbTimer(rowId, true);
+  var minSel = document.getElementById('carb-min-' + rowId);
+  var mins = minSel ? (parseInt(minSel.value, 10) || 15) : 15;
+  var endTime = Date.now() + mins * 60000;
+  carbTimers[rowId] = { endTime: endTime, intervalId: null, done: false, doneAt: 0 };
+
+  var btns  = document.getElementById('carb-btns-'  + rowId);
+  var setup = document.getElementById('carb-setup-' + rowId);
+  var run   = document.getElementById('carb-run-'   + rowId);
+  if (btns)  btns.style.display  = 'none';
+  if (setup) setup.style.display = 'none';
+  if (run)   run.style.display   = 'flex';
+
+  function tick() {
+    var t = carbTimers[rowId];
+    if (!t) return;
+    var dispEl = document.getElementById('carb-disp-' + rowId);
+    var lblEl  = document.getElementById('carb-lbl-'  + rowId);
+    if (!dispEl) return; // row may have been deleted
+    var now = Date.now();
+    if (!t.done) {
+      var rem = t.endTime - now;
+      if (rem <= 0) {
+        t.done = true; t.doneAt = now;
+        // Carousel alert
+        try { setAlertItem('carb-' + rowId, 0, '🩸 補糖觀測時間到！', '請立即測量血糖，確認補糖效果'); } catch(e) {}
+        // Vibrate
+        try { if (navigator.vibrate) navigator.vibrate([250,100,250,100,500]); } catch(e) {}
+        if (lblEl) lblEl.textContent = '🍬 已過';
+        dispEl.textContent = '+00:00';
+        dispEl.classList.add('alarm-done');
+      } else {
+        var mm = Math.floor(rem/60000).toString().padStart(2,'0');
+        var ss = Math.floor((rem%60000)/1000).toString().padStart(2,'0');
+        dispEl.textContent = mm + ':' + ss;
+        dispEl.classList.toggle('alarm-urgent', rem < 60000);
+      }
+    } else {
+      var ela = Math.floor((now - t.doneAt)/1000);
+      var em = Math.floor(ela/60).toString().padStart(2,'0');
+      var es = (ela%60).toString().padStart(2,'0');
+      dispEl.textContent = '+' + em + ':' + es;
+    }
+  }
+  tick();
+  carbTimers[rowId].intervalId = setInterval(tick, 1000);
+}
+
+function stopCarbTimer(rowId, silent) {
+  var t = carbTimers[rowId];
+  if (t && t.intervalId) clearInterval(t.intervalId);
+  carbTimers[rowId] = null;
+  try { clearAlertItem('carb-' + rowId); } catch(e) {}
+  if (!silent) carbAlarmNo(rowId);
 }
 
 // ════════════════════════════════
@@ -4846,12 +5019,25 @@ function startMealAlarm(periodId) {
 
   stopMealAlarm(periodId, true);
 
-  // 在使用者手勢期間預先 load audio（確保之後可播放）
+  // 在使用者手勢期間解鎖音訊（Android autoplay policy）
+  var audioCtx = null;
   try {
-    var aud = document.getElementById('mealAlarmAudio');
-    if (aud) { aud.load(); }
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.resume();
+    // 靜音播一下解鎖 <audio> element
+    var _unlockAud = document.getElementById('mealAlarmAudio');
+    if (_unlockAud) {
+      _unlockAud.volume = 0;
+      var _up = _unlockAud.play();
+      if (_up && _up.then) {
+        _up.then(function() {
+          _unlockAud.pause();
+          _unlockAud.currentTime = 0;
+          _unlockAud.volume = 1;
+        }).catch(function() {});
+      }
+    }
   } catch(e) {}
-  var audioCtx = null; // 保留參數相容性
 
   var btns  = document.getElementById(periodId + '-alarm-btns');
   var setup = document.getElementById(periodId + '-alarm-setup');
@@ -4911,6 +5097,8 @@ function stopMealAlarm(periodId, silent) {
   var t = mealAlarmTimers[periodId];
   if (t && t.intervalId) clearInterval(t.intervalId);
   mealAlarmTimers[periodId] = null;
+  // 清除輪播提醒
+  try { clearAlertItem('meal-' + periodId); } catch(e) {}
   if (!silent) {
     var run  = document.getElementById(periodId + '-alarm-running');
     var btns = document.getElementById(periodId + '-alarm-btns');
@@ -5186,8 +5374,11 @@ function autoDeductSupplies(dayData, dateStr) {
   d.needle          = Math.max(0, (d.needle          || 0) - injections);
   // Waterproof patch: 1 per day
   d.waterproof_patch = Math.max(0, (d.waterproof_patch || 0) - 1);
-  // 血糖試紙: 每日晨測 1 片
-  d.ketone_strip = Math.max(0, (d.ketone_strip || 0) - 1);
+  // 血糖試紙: 早餐有施打時扣 1（早餐前須測血糖）
+  var morningRec = dayData['morning'] || {};
+  if (morningRec.insulin && parseFloat(morningRec.insulin) > 0) {
+    d.ketone_strip = Math.max(0, (d.ketone_strip || 0) - 1);
+  }
 
   // Lancet: 1 every 6 days
   var lancetAcc = (d.lancetAccDays || 0) + 1;
