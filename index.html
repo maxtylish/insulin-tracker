@@ -2484,7 +2484,9 @@ function _renderAlertSlide() {
 function _renderAlertCarousel() {
   var el = document.getElementById('alert-carousel');
   if (!el) return;
-  if (sessionStorage.getItem('alert_carousel_closed')) { el.style.display = 'none'; return; }
+  // Reopen carousel if a new calendar day has started
+  var closedDate = localStorage.getItem('alert_carousel_closed_date');
+  if (closedDate && closedDate === new Date().toDateString()) { el.style.display = 'none'; return; }
   if (!_alertItems.length) { el.style.display = 'none'; return; }
   el.style.display = 'block';
   _renderAlertSlide();
@@ -2498,7 +2500,8 @@ function _renderAlertCarousel() {
 }
 
 function closeAlertCarousel() {
-  sessionStorage.setItem('alert_carousel_closed', '1');
+  // Store closed-date so carousel reappears next calendar day
+  localStorage.setItem('alert_carousel_closed_date', new Date().toDateString());
   var el = document.getElementById('alert-carousel');
   if (el) el.style.display = 'none';
   if (_alertTimer) { clearInterval(_alertTimer); _alertTimer = null; }
@@ -4447,7 +4450,11 @@ function init() {
   startCGMPolling();   // start real-time CGM widget
   setTimeout(checkAndNotifyLowSupplies, 4000); // delayed supply check on load
   setTimeout(checkAndNotifyAppt, 4500);         // delayed appt reminder check
-  setTimeout(refreshCarouselAlerts, 5000);      // carousel: appt + rx-expiry alerts
+  setTimeout(function() {
+    initSupplyDefaults();       // ensure supply data exists
+    renderSupplyBanner();       // populate supply alert in carousel
+    refreshCarouselAlerts();    // populate appt + rx-expiry alerts
+  }, 5000);
 }
 
 
