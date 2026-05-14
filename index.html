@@ -1064,6 +1064,28 @@
     }
     .danger-btn:hover { background: var(--danger); color: white; }
 
+    /* ── Per-period save button ── */
+    .period-save-btn {
+      width: 100%;
+      margin-top: 10px;
+      padding: 9px 0;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 9px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+      letter-spacing: 0.02em;
+    }
+    .period-save-btn:hover  { background: var(--primary-dark); }
+    .period-save-btn:active { opacity: 0.8; }
+    .period-save-btn.saved  {
+      background: #10b981;
+      pointer-events: none;
+    }
+
     /* ── Changelog ── */
     .cl-item {
       position: relative;
@@ -3392,6 +3414,8 @@ function buildPeriodCards() {
             + '</div>'
             + alarmRow;
         })()
+      + '<button class="period-save-btn" id="save-btn-' + p.id + '"'
+        + ' onclick="savePeriod(\'' + p.id + '\')">💾 儲存此餐</button>'
     + '</div>';
 
     const snack = snackMap[p.id];
@@ -3466,6 +3490,40 @@ function loadDayData() {
   renderSupplList('carbs',       dayData.carbs       || []);
   // Load snack sections
   SNACK_SECTIONS.forEach(s => renderSnackSection(s.id, dayData[s.id] || []));
+}
+
+function savePeriod(periodId) {
+  const date    = document.getElementById('todayDate').value;
+  const all     = getAllData();
+  all[date]     = all[date] || {};
+
+  const bg      = document.getElementById(periodId + '-bg').value;
+  const insulin = document.getElementById(periodId + '-insulin').value;
+  const note    = document.getElementById(periodId + '-note').value;
+  const time    = document.getElementById(periodId + '-time').value;
+  const siteSel = document.getElementById(periodId + '-site');
+  const site    = siteSel ? siteSel.value : (SITE_DEFAULTS[periodId] || '');
+
+  all[date][periodId] = { time: (bg || insulin) ? time : '', bg, insulin, note, site };
+
+  setAllData(all);
+  syncDayToCloud(date, all[date]);
+  autoDeductSupplies(all[date], date);
+
+  // Flash button green briefly
+  const btn = document.getElementById('save-btn-' + periodId);
+  if (btn) {
+    const orig = btn.textContent;
+    btn.textContent = '✅ 已儲存';
+    btn.classList.add('saved');
+    setTimeout(function() {
+      btn.textContent = orig;
+      btn.classList.remove('saved');
+    }, 1500);
+  }
+
+  const p = PERIODS.find(function(x) { return x.id === periodId; });
+  showToast('✅ ' + (p ? p.label + '餐' : periodId) + ' 已儲存！');
 }
 
 function saveDayData() {
