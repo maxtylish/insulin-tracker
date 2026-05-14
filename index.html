@@ -2023,6 +2023,7 @@
     </div>
     <div id="supply-low-banner" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:0.82rem;color:#dc2626;"></div>
     <div id="supply-list"></div>
+    <button class="settings-save-btn" style="width:100%;margin-top:14px;" onclick="saveSuppliesManual()">💾 儲存庫存</button>
   </div>
 
   <!-- 藥品管理 -->
@@ -5550,6 +5551,11 @@ function saveSupplies() {
   });
   setSupplies(d);
   renderSupplyBanner();
+}
+
+function saveSuppliesManual() {
+  saveSupplies();
+  showToast('✅ 庫存已儲存！');
 }
 
 function adjustQty(key, delta) {
