@@ -1204,6 +1204,7 @@
     .cl-badge-major { background: var(--primary); color: #fff; }
     .cl-badge-minor { background: #e0f2fe; color: #0369a1; }
     .cl-badge-init  { background: #f0fdf4; color: #15803d; border: 1px solid #86efac; }
+    .cl-badge-patch { background: #fef3c7; color: #92400e; }
     .cl-date {
       font-size: 0.75rem;
       color: var(--text-muted);
@@ -2320,11 +2321,24 @@
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.8.2</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.8.3</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.8.3 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.8.3</span>
+          <span class="cl-date">2026-05-15</span>
+          <span class="cl-tag">緊急修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>修正：APP_VERSION const 定義在 init() 之後造成 TDZ crash，管理頁面無法進入</li>
+          <li>將 APP_VERSION 移至 init() 呼叫前，確保所有頁面正常初始化</li>
+        </ul>
+      </div>
 
       <!-- v2.8.2 -->
       <div class="cl-item">
@@ -5664,6 +5678,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
+const APP_VERSION = 'v2.8.3';  // must be before init() to avoid TDZ
 init();
 
 // ── PWA Service Worker ──
@@ -5875,8 +5890,7 @@ function initRxDefaults(force) {
 
 // 設定初始庫存數量（只在第一次或強制時執行）
 // ── Migrate custom supplies → built-in (one-time) ──────────────────────────
-// ── App version (used by auditSupplyKeys to detect upgrades) ──────────────────
-const APP_VERSION = 'v2.8.2';
+// ── App version: moved before init() call to avoid TDZ ─────────────────────────
 
 // ── Supply audit: runs once per version, fills missing keys with defaultQty ───
 function auditSupplyKeys() {
