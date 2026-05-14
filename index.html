@@ -1137,6 +1137,15 @@
       transition: all 0.15s;
     }
     .todo-cat-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+    .todo-star-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 1.05rem; padding: 4px 5px;
+      border-radius: 6px; transition: background 0.15s, transform 0.1s;
+      line-height: 1;
+    }
+    .todo-star-btn:hover { background: #fef9c3; transform: scale(1.2); }
+    .todo-item.todo-starred { background: #fffbeb; border-radius: 8px; padding-left: 6px; }
+    .todo-item.todo-starred .todo-title { color: #92400e; }
 
     /* ── Changelog ── */
     .cl-item {
@@ -2290,11 +2299,25 @@
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.8.1</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.8.2</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.8.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.8.2</span>
+          <span class="cl-date">2026-05-15</span>
+          <span class="cl-tag">待辦功能</span>
+        </div>
+        <ul class="cl-list">
+          <li>待辦事項新增「設為重要」星號按鈕（⭐）：按下後項目自動置頂並高亮顯示</li>
+          <li>重要待辦自動出現在跨頁資訊欄（Carousel priority 6），一眼掌握重要事項</li>
+          <li>已完成的重要待辦自動從資訊欄移除，不干擾完成後的清單</li>
+        </ul>
+      </div>
 
       <!-- v2.8.1 -->
       <div class="cl-item">
@@ -5824,7 +5847,7 @@ function initRxDefaults(force) {
 // 設定初始庫存數量（只在第一次或強制時執行）
 // ── Migrate custom supplies → built-in (one-time) ──────────────────────────
 // ── App version (used by auditSupplyKeys to detect upgrades) ──────────────────
-const APP_VERSION = 'v2.8.1';
+const APP_VERSION = 'v2.8.2';
 
 // ── Supply audit: runs once per version, fills missing keys with defaultQty ───
 function auditSupplyKeys() {
@@ -6887,6 +6910,12 @@ function _renderTodoList(elId, todos) {
   var el = document.getElementById(elId);
   if (!el) return;
   if (!todos.length) { el.innerHTML = '<div class="suppl-empty">尚無待辦事項</div>'; return; }
+  // 標星的排最前，已完成排最後
+  todos = todos.slice().sort(function(a, b) {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    if (!!a.starred !== !!b.starred) return a.starred ? -1 : 1;
+    return 0;
+  });
   var today = todayStr();
   el.innerHTML = todos.map(function(t) {
     var overdue  = t.dueDate && !t.completed && t.dueDate < today;
@@ -6901,7 +6930,9 @@ function _renderTodoList(elId, todos) {
     var gcalBadge  = t.gcalEventId ? '<span class="todo-gcal-badge" title="已同步 Google 行事曆">📅</span>' : '';
     var typeBadge  = t.healthType  ? '<span class="todo-type-badge">' + escapeHtml(t.healthType) + '</span>' : '';
     var noteTxt    = t.note ? '<div class="todo-note-txt">' + escapeHtml(t.note) + '</div>' : '';
-    return '<div class="todo-item' + (t.completed ? ' todo-done' : '') + '">'
+    var starIcon   = t.starred ? '⭐' : '☆';
+    var starredCls = t.starred ? ' todo-starred' : '';
+    return '<div class="todo-item' + (t.completed ? ' todo-done' : '') + starredCls + '">'
       + '<input type="checkbox" class="todo-check"' + (t.completed ? ' checked' : '')
         + ' onchange="toggleTodoComplete(\'' + t.id + '\')">'
       + '<div class="todo-body">'
@@ -6912,6 +6943,7 @@ function _renderTodoList(elId, todos) {
         + dueTxt + noteTxt
       + '</div>'
       + '<div class="todo-actions">'
+        + '<button class="todo-star-btn" onclick="toggleTodoStar(\'' + t.id + '\')" title="' + (t.starred ? '取消重要' : '設為重要') + '">' + starIcon + '</button>'
         + '<button class="todo-edit-btn" onclick="openTodoForm(\'' + t.category + '\',\'' + t.id + '\')" title="編輯">✏️</button>'
         + '<button class="todo-del-btn"  onclick="deleteTodo(\'' + t.id + '\')" title="刪除">🗑️</button>'
       + '</div>'
@@ -6919,16 +6951,36 @@ function _renderTodoList(elId, todos) {
   }).join('');
 }
 
+// ── Star (Important) ──────────────────────────────────────────────────────
+async function toggleTodoStar(id) {
+  var todos = getTodos();
+  var t = todos.find(function(x){ return x.id === id; });
+  if (!t) return;
+  t.starred = !t.starred;
+  setTodos(todos);
+  renderTodoPage();
+  checkTodoAlerts();
+}
+
 // ── Carousel integration ──
 function checkTodoAlerts() {
   var todos  = getTodos();
   var today  = todayStr();
+  // 逾期 / 今日到期
   var urgent = todos.filter(function(t){ return !t.completed && t.dueDate && t.dueDate <= today; });
   if (urgent.length) {
     var msg = urgent.map(function(t){ return (t.healthType || t.title); }).join('、');
     setAlertItem('todo-urgent', 7, '📝 待辦提醒', msg + ' — 待處理');
   } else {
     setAlertItem('todo-urgent', 7, '', '');
+  }
+  // 重要待辦（starred）
+  var starred = todos.filter(function(t){ return !t.completed && t.starred; });
+  if (starred.length) {
+    var starMsg = starred.map(function(t){ return t.title; }).join('、');
+    setAlertItem('todo-starred', 6, '⭐ 重要待辦', starMsg);
+  } else {
+    setAlertItem('todo-starred', 6, '', '');
   }
   refreshCarouselAlerts();
 }
