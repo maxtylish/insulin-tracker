@@ -55,14 +55,34 @@
     }
     header h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.5px; }
     header .subtitle { font-size: 0.75rem; opacity: 0.8; margin-top: 2px; }
-    #headerDate { font-size: 0.8rem; opacity: 0.85; white-space: nowrap; }
+    .header-right {
+      text-align: right;
+      justify-self: end;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+    }
+    #headerDate {
+      font-size: 0.8rem;
+      opacity: 0.9;
+      white-space: nowrap;
+      font-weight: 500;
+    }
+    #header-version {
+      font-size: 0.65rem;
+      opacity: 0.65;
+      white-space: nowrap;
+      letter-spacing: 0.04em;
+    }
     .sync-badge { font-size: 0.7rem !important; white-space: nowrap; }
     @media (max-width: 420px) {
-      header { padding: 12px 12px; grid-template-columns: auto 1fr auto; gap: 6px; }
+      header { padding: 10px 12px; grid-template-columns: auto 1fr auto; gap: 6px; }
       header h1 { font-size: 1rem; }
-      header .subtitle { font-size: 0.65rem; }
-      #headerDate { font-size: 0.68rem; }
-      .sync-badge { font-size: 0.62rem !important; padding: 1px 5px !important; }
+      header .subtitle { font-size: 0.63rem; }
+      .sync-badge { font-size: 0.6rem !important; padding: 1px 5px !important; }
+      #headerDate { font-size: 0.72rem; }
+      #header-version { font-size: 0.62rem; }
     }
 
     /* ── Nav Tabs ── */
@@ -1840,10 +1860,11 @@
     <div class="subtitle">血糖與胰島素注射管理</div>
     <div style="font-size:0.65rem;opacity:0.55;margin-top:3px;letter-spacing:0.06em;">Powered by Lukuarts Studio · 2026</div>
   </div>
-  <!-- 右側：日期 + 同步狀態 -->
-  <div style="text-align:right; justify-self:end;">
-    <div style="font-size:0.8rem; opacity:0.85;" id="headerDate">--</div>
-    <div id="syncBadge" class="sync-badge sync-busy" style="margin-top:3px; display:inline-block;">⏳ 初始化</div>
+  <!-- 右側：日期 + 版本號 + 同步狀態 -->
+  <div class="header-right">
+    <div id="headerDate">--</div>
+    <div id="header-version"></div>
+    <div id="syncBadge" class="sync-badge sync-busy" style="display:inline-block;">⏳ 初始化</div>
   </div>
 </header>
 
@@ -5326,8 +5347,16 @@ function init() {
   statAnchor = today;
   document.getElementById('todayDate').value    = today;
   document.getElementById('historyMonth').value = today.slice(0, 7);
-  document.getElementById('headerDate').innerHTML =
-    formatDateDisplay(today).replace('（', '<br>（');
+  // 手機：短格式「5月15日（五）」；桌面：加上年份
+  (function() {
+    var d = new Date(today + 'T00:00:00');
+    var days = ['日','一','二','三','四','五','六'];
+    var shortDate = (d.getMonth()+1) + '月' + d.getDate() + '日（' + days[d.getDay()] + '）';
+    var fullDate  = d.getFullYear() + '年' + shortDate;
+    var isMobile  = window.innerWidth <= 420;
+    document.getElementById('headerDate').textContent = isMobile ? shortDate : fullDate;
+    document.getElementById('header-version').textContent = APP_VERSION;
+  })();
   // Snapshot whether today already has local data before cloud sync
   var hadLocalDataToday = !!getAllData()[today];
   loadDayData();
