@@ -3322,6 +3322,7 @@ function buildPeriodCards() {
             + '<span>注射時間</span>'
             + '<input type="text" class="time-input" id="' + p.id + '-time"'
             + ' value="" inputmode="numeric" maxlength="5" placeholder="--:--"'
+            + ' onfocus="autoFillTime(\'' + p.id + '\')"'
             + ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />'
           + '</div>'
           + calcBtn
