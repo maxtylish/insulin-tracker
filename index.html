@@ -3490,6 +3490,7 @@ function saveDayData() {
   // Save snack sections
   SNACK_SECTIONS.forEach(s => { all[date][s.id] = collectSnackRows(s.id); });
 
+  deductFastGlucoseForDate(date, all[date].carbs);
   autoDeductSupplies(all[date], date);
   setAllData(all);
   syncDayToCloud(date, all[date]);
@@ -4993,6 +4994,7 @@ function init() {
   setTimeout(checkAndNotifyLowSupplies, 4000); // delayed supply check on load
   setTimeout(checkAndNotifyAppt, 4500);         // delayed appt reminder check
   setTimeout(function() {
+    migrateCustomSuppliesToBuiltin(); // one-time: move 肌力貼 to built-in
     initSupplyDefaults();       // ensure supply data exists
     renderSupplyBanner();       // populate supply alert in carousel
     refreshCarouselAlerts();    // populate appt + rx-expiry alerts
@@ -5437,6 +5439,10 @@ const SUPPLY_DEFS = [
     rateLabel: '每 6 天換一顆（每日晨測）',  ratePerDay: 1/6,  warnDays: 6 },
   { key: 'ketone_strip',     name: '血糖試紙',   unit: '片', icon: '🩺',
     rateLabel: '每日晨測 ×1（每日 1 片）',    ratePerDay: 1,    warnDays: 14 },
+  { key: 'muscle_patch',     name: '肌力貼',     unit: '片', icon: '🏋️',
+    rateLabel: '不定期使用',                   ratePerDay: 0 },
+  { key: 'fast_glucose',     name: '快速葡萄糖 2.5C', unit: '顆', icon: '🍬',
+    rateLabel: '補糖時自動扣除',               ratePerDay: 0,    minStock: 20 },
 ];
 
 
@@ -5485,6 +5491,30 @@ function initRxDefaults(force) {
 }
 
 // 設定初始庫存數量（只在第一次或強制時執行）
+// ── Migrate custom supplies → built-in (one-time) ──────────────────────────
+function migrateCustomSuppliesToBuiltin() {
+  var customs = getCustomSupplyDefs();
+  var sup = getSupplies();
+  var changed = false;
+  var remaining = customs.filter(function(def) {
+    if (def.name === '肌力貼') {
+      // 複製 qty 到內建 muscle_patch（若尚未設定）
+      if (!sup._muscle_patch_migrated) {
+        sup.muscle_patch = sup[def.key] || sup.muscle_patch || 0;
+        sup._muscle_patch_migrated = true;
+      }
+      changed = true;
+      return false; // 從 customs 移除
+    }
+    return true;
+  });
+  if (changed) {
+    setCustomSupplyDefs(remaining);
+    setSupplies(sup);
+    console.log('[migrate] 肌力貼 已從自訂耗材移入內建');
+  }
+}
+
 function initSupplyDefaults(force) {
   var d = getSupplies();
   if (!force && d._initialized) return;
@@ -5494,6 +5524,8 @@ function initSupplyDefaults(force) {
   d.needle           = 157;
   d.waterproof_patch = 7;
   d.cgm_sensor       = 4;
+  d.muscle_patch     = 0;
+  d.fast_glucose     = 314;
   d.autoDeduct       = true;
   d._initialized     = true;
   setSupplies(d);
@@ -5550,6 +5582,7 @@ function renderSupplyBanner() {
     var qty = d[def.key] || 0;
     var days = def.ratePerDay > 0 ? qty / def.ratePerDay : Infinity;
     if (days < def.warnDays) low.push(def.name + '（剩約 ' + Math.floor(days) + ' 天）');
+    else if (def.minStock && qty < def.minStock) low.push(def.name + '（剩 ' + qty + ' ' + def.unit + '）');
   });
   var banner = document.getElementById('supply-low-banner');
   if (!banner) return;
@@ -5614,6 +5647,8 @@ async function checkAndNotifyLowSupplies() {
     if (isFinite(days) && days < def.warnDays) {
       var daysTxt = days < 1 ? '不足 1 天' : '約 ' + Math.floor(days) + ' 天';
       low.push(def.icon + ' ' + def.name + '（剩 ' + daysTxt + '）');
+    } else if (def.minStock && qty < def.minStock) {
+      low.push(def.icon + ' ' + def.name + '（剩 ' + qty + ' ' + def.unit + '）');
     }
   });
 
@@ -5757,12 +5792,11 @@ function saveCustomSupply() {
   var name = (document.getElementById('cus-name').value || '').trim();
   var unit = (document.getElementById('cus-unit').value || '').trim();
   var icon = (document.getElementById('cus-icon').value || '').trim() || '📦';
-  var rate = parseFloat(document.getElementById('cus-rate').value);
-  var warn = parseInt(document.getElementById('cus-warn').value) || 14;
+  var rate = parseFloat(document.getElementById('cus-rate').value) || 0;
+  var warn = parseInt(document.getElementById('cus-warn').value) || 0;
   var editKey = (document.getElementById('cus-key-edit').value || '').trim();
   if (!name) { alert('請輸入耗材名稱'); return; }
   if (!unit) { alert('請輸入單位'); return; }
-  if (!rate || rate <= 0) { alert('請輸入有效的每日消耗量'); return; }
   var customs = getCustomSupplyDefs();
   if (editKey) {
     var idx = customs.findIndex(function(d){ return d.key === editKey; });
@@ -5774,6 +5808,24 @@ function saveCustomSupply() {
   closeCustomSupplyForm();
   renderSupplyList();
   showToast('✅ 耗材「' + name + '」已儲存');
+}
+
+// ── Fast-glucose deduction (linked to carb rows) ──────────────────────────
+function deductFastGlucoseForDate(date, carbs) {
+  var d = getSupplies();
+  var newTotal = (carbs || []).reduce(function(sum, row) {
+    return sum + (parseInt(row.qty, 10) || 0);
+  }, 0);
+  d.fast_glucose_deducted = d.fast_glucose_deducted || {};
+  var prev = d.fast_glucose_deducted[date] || 0;
+  var diff = newTotal - prev;
+  if (diff === 0) return;
+  d.fast_glucose = Math.max(0, (d.fast_glucose || 0) - diff);
+  d.fast_glucose_deducted[date] = newTotal;
+  setSupplies(d);
+  if (document.getElementById('supply-list')) renderSupplyList();
+  renderSupplyBanner();
+  if (diff > 0) showToast('🍬 快速葡萄糖已扣除 ' + diff + ' 顆（剩 ' + d.fast_glucose + ' 顆）');
 }
 
 // ── Auto-deduct (called from saveDayData) ─────────────────────────────────
