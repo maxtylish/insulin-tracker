@@ -4974,6 +4974,7 @@ function calcApply() {
 }
 
 
+var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 init();
 
 // ── PWA Service Worker ──
@@ -4987,7 +4988,6 @@ if ('serviceWorker' in navigator) {
 
 // ── Meal Alarm ────────────────────────────────────────────────────────────────
 const mealAlarmTimers = {}; // periodId -> { intervalId, endTime } | null
-var   carbTimers       = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 
 function alarmSelectNo(periodId) {
   var btns  = document.getElementById(periodId + '-alarm-btns');
