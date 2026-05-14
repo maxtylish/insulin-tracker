@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>胰島素紀錄表</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231d4ed8'/%3E%3Cg transform='translate(32,32) rotate(-45)'%3E%3Crect x='-3' y='-18' width='6' height='20' rx='2' fill='%23bfdbfe'/%3E%3Crect x='-3' y='2' width='6' height='16' rx='1' fill='%23fff'/%3E%3Crect x='-5' y='12' width='10' height='6' rx='1' fill='%23bfdbfe'/%3E%3Crect x='-1.5' y='18' width='3' height='8' rx='1.5' fill='%23bfdbfe'/%3E%3Crect x='-1' y='-20' width='2' height='4' rx='1' fill='%23fff'/%3E%3Crect x='-8' y='4' width='4' height='2' rx='1' fill='%2393c5fd'/%3E%3Crect x='-8' y='8' width='4' height='2' rx='1' fill='%2393c5fd'/%3E%3C/g%3E%3C/svg%3E" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#1d4ed8" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -610,14 +611,18 @@
       box-shadow: var(--shadow);
     }
     .legend-card h3 { font-size: 0.85rem; font-weight: 700; margin-bottom: 10px; color: var(--text-muted); }
-    .legend-items { display: flex; gap: 8px; flex-wrap: wrap; }
+    .legend-items { display: flex; gap: 6px; flex-wrap: nowrap; overflow-x: auto; padding-bottom: 2px; }
     .legend-item {
       display: flex;
       align-items: center;
-      gap: 5px;
-      font-size: 0.75rem;
+      gap: 4px;
+      font-size: 0.72rem;
+      white-space: nowrap;
+      background: var(--bg);
+      border-radius: 20px;
+      padding: 3px 8px;
     }
-    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
     /* ── Toast ── */
     /* ── Footer ── */
@@ -1758,30 +1763,21 @@
 
   <!-- Mini CGM Chart -->
   <div class="mini-cgm-card" id="mini-cgm-card" style="display:none;">
-    <div class="mini-cgm-header">📈 今日血糖曲線</div>
+    <div class="mini-cgm-header" style="display:flex;align-items:center;justify-content:space-between;">
+      <button onclick="switchMiniCgmMode(-1)" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--text-muted);padding:0 4px;">‹</button>
+      <span id="miniCgmTitle">📈 近5小時血糖</span>
+      <button onclick="switchMiniCgmMode(1)" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--text-muted);padding:0 4px;">›</button>
+    </div>
     <canvas id="miniCgmChart" height="90"></canvas>
   </div>
 
   <!-- Legend -->
-  <div class="legend-card">
-    <h3>血糖範圍參考</h3>
+  <div class="legend-card" style="padding:10px 14px;">
     <div class="legend-items">
-      <div class="legend-item">
-        <div class="legend-dot" style="background:#8b5cf6"></div>
-        <span style="color:#8b5cf6">低血糖 &lt;80</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-dot" style="background:#22c55e"></div>
-        <span style="color:#22c55e">正常 85–180</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-dot" style="background:#f59e0b"></div>
-        <span style="color:#f59e0b">警戒 180–250</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-dot" style="background:#ef4444"></div>
-        <span style="color:#ef4444">高血糖 &gt;250</span>
-      </div>
+      <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div><span style="color:#8b5cf6">低 &lt;80</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div><span style="color:#22c55e">正常 85–180</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div><span style="color:#f59e0b">警戒 180–250</span></div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div><span style="color:#ef4444">高 &gt;250</span></div>
     </div>
   </div>
 
@@ -1827,10 +1823,20 @@
 <div id="page-history" class="page">
   <div class="history-filter">
     <label>月份</label>
-    <input type="month" id="historyMonth" onchange="renderHistory()" />
+    <input type="month" id="historyMonth" onchange="historyPage=0;renderHistory()" />
     <button class="export-btn" onclick="exportCSV()">匯出 CSV</button>
   </div>
+  <div id="historyPagerTop" style="display:none;display:flex;justify-content:space-between;align-items:center;padding:6px 0 2px;gap:8px;">
+    <button id="histPrevBtn" onclick="changeHistPage(-1)" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:white;font-size:0.82rem;cursor:pointer;">‹ 較舊</button>
+    <span id="histPageLabel" style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap;"></span>
+    <button id="histNextBtn" onclick="changeHistPage(1)" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:white;font-size:0.82rem;cursor:pointer;">較新 ›</button>
+  </div>
   <div id="historyList"></div>
+  <div id="historyPagerBot" style="display:none;display:flex;justify-content:space-between;align-items:center;padding:2px 0 8px;gap:8px;">
+    <button onclick="changeHistPage(-1)" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:white;font-size:0.82rem;cursor:pointer;">‹ 較舊</button>
+    <span style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap;" id="histPageLabel2"></span>
+    <button onclick="changeHistPage(1)" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:white;font-size:0.82rem;cursor:pointer;">較新 ›</button>
+  </div>
 </div>
 
 <!-- ══════════════ STATISTICS PAGE ══════════════ -->
@@ -2922,15 +2928,34 @@ async function renderCGMDayChart(dateStr) {
   });
 }
 let miniCgmChart = null;
+let miniChartMode = '5h'; // '5h' | 'today'
+function switchMiniCgmMode(dir) {
+  // toggle between 5h and today
+  miniChartMode = miniChartMode === '5h' ? 'today' : '5h';
+  renderMiniCGMChart();
+}
 async function renderMiniCGMChart() {
   const card = document.getElementById('mini-cgm-card');
   const canvas = document.getElementById('miniCgmChart');
   if (!settings.nsUrl || !card || !canvas) return;
 
-  const entries = await fetchNSEntries(todayStr());
-  if (!entries || !entries.length) { card.style.display = 'none'; return; }
+  const allEntries = await fetchNSEntries(todayStr());
+  if (!allEntries || !allEntries.length) { card.style.display = 'none'; return; }
 
-  entries.sort((a, b) => (a.date || 0) - (b.date || 0));
+  allEntries.sort((a, b) => (a.date || 0) - (b.date || 0));
+
+  // Filter by mode
+  const titleEl = document.getElementById('miniCgmTitle');
+  let entries = allEntries;
+  if (miniChartMode === '5h') {
+    const cutoff = Date.now() - 5 * 60 * 60 * 1000;
+    entries = allEntries.filter(e => (e.date || 0) >= cutoff);
+    if (!entries.length) entries = allEntries; // fallback
+    if (titleEl) titleEl.textContent = '📈 近5小時血糖';
+  } else {
+    if (titleEl) titleEl.textContent = '📈 今日血糖曲線';
+  }
+
   const labels = entries.map(e => {
     const d = new Date(e.date || e.dateString);
     return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
@@ -3245,21 +3270,62 @@ function changeDate(delta) {
 // ══════════════════════════════════════════
 //  HISTORY PAGE
 // ══════════════════════════════════════════
+var historyPage = 0;
+const HIST_PAGE_SIZE = 7;
+function changeHistPage(dir) {
+  const month = document.getElementById('historyMonth').value;
+  const all = getAllData();
+  const total = Object.keys(all).filter(d => d.startsWith(month)).length;
+  const maxPage = Math.max(0, Math.ceil(total / HIST_PAGE_SIZE) - 1);
+  historyPage = Math.max(0, Math.min(maxPage, historyPage + dir));
+  renderHistory();
+}
 function renderHistory() {
   const month = document.getElementById('historyMonth').value;
   const all = getAllData();
   const list = document.getElementById('historyList');
 
-  // Filter dates for this month
-  const dates = Object.keys(all)
+  // Filter dates for this month, sorted newest first
+  const allDates = Object.keys(all)
     .filter(d => d.startsWith(month))
     .sort()
     .reverse();
 
-  if (dates.length === 0) {
+  const pagerTop = document.getElementById('historyPagerTop');
+  const pagerBot = document.getElementById('historyPagerBot');
+  const pageLabel  = document.getElementById('histPageLabel');
+  const pageLabel2 = document.getElementById('histPageLabel2');
+
+  if (allDates.length === 0) {
     list.innerHTML = `<div class="history-empty">📭 本月尚無紀錄</div>`;
+    if (pagerTop) pagerTop.style.display = 'none';
+    if (pagerBot) pagerBot.style.display = 'none';
     return;
   }
+
+  const totalPages = Math.ceil(allDates.length / HIST_PAGE_SIZE);
+  // historyPage 0 = newest; clamp
+  historyPage = Math.max(0, Math.min(totalPages - 1, historyPage));
+  // Newest page = page 0 = index 0..6; older = higher index
+  const dates = allDates.slice(historyPage * HIST_PAGE_SIZE, (historyPage + 1) * HIST_PAGE_SIZE);
+
+  // Show pager if more than one page
+  const showPager = totalPages > 1;
+  const labelTxt = `第 ${historyPage + 1} / ${totalPages} 頁`;
+  if (pagerTop) { pagerTop.style.display = showPager ? 'flex' : 'none'; }
+  if (pagerBot) { pagerBot.style.display = showPager ? 'flex' : 'none'; }
+  if (pageLabel)  pageLabel.textContent  = labelTxt;
+  if (pageLabel2) pageLabel2.textContent = labelTxt;
+
+  // disable buttons at boundaries
+  ['histPrevBtn'].forEach(id => {
+    var b = document.getElementById(id);
+    if (b) b.disabled = historyPage >= totalPages - 1;
+  });
+  ['histNextBtn'].forEach(id => {
+    var b = document.getElementById(id);
+    if (b) b.disabled = historyPage <= 0;
+  });
 
   list.innerHTML = dates.map(date => {
     const dayData = all[date];
@@ -5137,6 +5203,12 @@ const SUPPLY_DEFS = [
 ];
 
 
+function getCustomSupplyDefs() {
+  try { return JSON.parse(localStorage.getItem('insulin_custom_supply_defs') || '[]'); } catch(e) { return []; }
+}
+function setCustomSupplyDefs(arr) { localStorage.setItem('insulin_custom_supply_defs', JSON.stringify(arr)); }
+function getAllSupplyDefs() { return SUPPLY_DEFS.concat(getCustomSupplyDefs()); }
+
 // 設定初始處方資料（只在第一次或強制時執行）
 function initRxDefaults(force) {
   var meds = getMedications();
@@ -5202,7 +5274,7 @@ function setMedications(d) { localStorage.setItem('insulin_medications', JSON.st
 function saveSupplies() {
   const d = getSupplies();
   d.autoDeduct = document.getElementById('supply-auto-deduct').checked;
-  SUPPLY_DEFS.forEach(function(def) {
+  getAllSupplyDefs().forEach(function(def) {
     var inp = document.getElementById('supply-qty-' + def.key);
     if (inp) d[def.key] = Math.max(0, parseFloat(inp.value) || 0);
   });
@@ -5221,7 +5293,7 @@ function adjustQty(key, delta) {
 }
 
 function renderSupplyDays(key) {
-  var def = SUPPLY_DEFS.find(function(d){ return d.key === key; });
+  var def = getAllSupplyDefs().find(function(d){ return d.key === key; });
   if (!def) return;
   var inp = document.getElementById('supply-qty-' + key);
   var daysEl = document.getElementById('supply-days-' + key);
@@ -5237,7 +5309,7 @@ function renderSupplyDays(key) {
 function renderSupplyBanner() {
   var d = getSupplies();
   var low = [];
-  SUPPLY_DEFS.forEach(function(def) {
+  getAllSupplyDefs().forEach(function(def) {
     var qty = d[def.key] || 0;
     var days = def.ratePerDay > 0 ? qty / def.ratePerDay : Infinity;
     if (days < def.warnDays) low.push(def.name + '（剩約 ' + Math.floor(days) + ' 天）');
@@ -5299,7 +5371,7 @@ async function checkAndNotifyLowSupplies() {
   // 找出所有偏低耗材
   var d = getSupplies();
   var low = [];
-  SUPPLY_DEFS.forEach(function(def) {
+  getAllSupplyDefs().forEach(function(def) {
     var qty = d[def.key] || 0;
     var days = def.ratePerDay > 0 ? qty / def.ratePerDay : Infinity;
     if (isFinite(days) && days < def.warnDays) {
@@ -5330,18 +5402,22 @@ function renderSupplyList() {
   var el = document.getElementById('supply-auto-deduct');
   if (el) el.checked = d.autoDeduct !== false;
 
-  var html = '';
-  SUPPLY_DEFS.forEach(function(def) {
+  function makeSupplyItem(def, isCustom) {
     var qty = d[def.key] || 0;
     var days = def.ratePerDay > 0 ? qty / def.ratePerDay : Infinity;
     var cls = days >= def.warnDays * 2 ? 'ok' : days >= def.warnDays ? 'warn' : 'low';
     var txt = days === Infinity ? '—' : (days < 1 ? '不足 1 天' : '剩約 ' + Math.floor(days) + ' 天');
     var qtyDisplay = Number.isInteger(qty) ? qty : qty.toFixed(1);
-    html += '<div class="supply-item">'
+    var rateLabel = def.rateLabel || ('每日消耗 ' + def.ratePerDay + ' ' + def.unit);
+    var customBtns = isCustom
+      ? ' <span onclick="editCustomSupply(\'' + def.key + '\')" style="font-size:0.7rem;cursor:pointer;opacity:0.55;" title="編輯">✏️</span>'
+        + '<span onclick="deleteCustomSupply(\'' + def.key + '\')" style="font-size:0.7rem;cursor:pointer;opacity:0.55;" title="刪除">🗑️</span>'
+      : '';
+    return '<div class="supply-item" id="supply-item-' + def.key + '">'
       + '<div class="supply-icon">' + def.icon + '</div>'
       + '<div class="supply-info">'
-        + '<div class="supply-name">' + def.name + '</div>'
-        + '<div class="supply-rate">' + def.rateLabel + '</div>'
+        + '<div class="supply-name">' + def.name + customBtns + '</div>'
+        + '<div class="supply-rate">' + rateLabel + '</div>'
         + '<div class="supply-days ' + cls + '" id="supply-days-' + def.key + '">' + txt + '</div>'
       + '</div>'
       + '<div class="supply-qty-ctrl">'
@@ -5354,10 +5430,113 @@ function renderSupplyList() {
         + '<button class="qty-btn" onclick="adjustQty(\'' + def.key + '\',1)">＋</button>'
       + '</div>'
     + '</div>';
-  });
+  }
+
+  var html = '';
+  SUPPLY_DEFS.forEach(function(def) { html += makeSupplyItem(def, false); });
+
+  var customs = getCustomSupplyDefs();
+  if (customs.length) {
+    html += '<div style="font-size:0.72rem;color:var(--text-muted);font-weight:700;padding:10px 4px 4px;border-top:1px solid var(--border);margin-top:8px;">自訂耗材</div>';
+    customs.forEach(function(def) { html += makeSupplyItem(def, true); });
+  }
+
+  html += '<button onclick="openAddCustomSupply()" style="width:100%;margin-top:10px;padding:8px;border:1.5px dashed var(--border);border-radius:8px;background:transparent;color:var(--primary);font-size:0.82rem;cursor:pointer;font-weight:600;">＋ 新增自訂耗材</button>';
+
+  html += '<div id="custom-supply-form" style="display:none;margin-top:10px;background:var(--bg);border-radius:10px;padding:14px;border:1px solid var(--border);">'
+    + '<div style="font-size:0.85rem;font-weight:700;margin-bottom:10px;" id="custom-supply-form-title">新增耗材</div>'
+    + '<input type="hidden" id="cus-key-edit" />'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;">'
+      + '<div><div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:3px;">名稱</div>'
+        + '<input id="cus-name" type="text" placeholder="酒精棉片" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;box-sizing:border-box;"></div>'
+      + '<div><div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:3px;">單位</div>'
+        + '<input id="cus-unit" type="text" placeholder="張" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;box-sizing:border-box;"></div>'
+      + '<div><div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:3px;">Emoji 圖示</div>'
+        + '<input id="cus-icon" type="text" placeholder="🧴" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;box-sizing:border-box;"></div>'
+      + '<div><div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:3px;">每日消耗量</div>'
+        + '<input id="cus-rate" type="number" min="0.01" step="0.01" placeholder="1" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;box-sizing:border-box;"></div>'
+    + '</div>'
+    + '<div style="margin-bottom:12px;"><div style="font-size:0.72rem;color:var(--text-muted);margin-bottom:3px;">警示閾值（低於幾天時提醒）</div>'
+      + '<input id="cus-warn" type="number" min="1" step="1" placeholder="14" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.82rem;box-sizing:border-box;"></div>'
+    + '<div style="display:flex;gap:8px;">'
+      + '<button onclick="saveCustomSupply()" style="flex:1;padding:8px;background:var(--primary);color:white;border:none;border-radius:8px;font-size:0.82rem;cursor:pointer;font-weight:600;">💾 儲存</button>'
+      + '<button onclick="closeCustomSupplyForm()" style="flex:1;padding:8px;background:white;color:var(--text-muted);border:1px solid var(--border);border-radius:8px;font-size:0.82rem;cursor:pointer;">取消</button>'
+    + '</div>'
+  + '</div>';
+
   var listEl = document.getElementById('supply-list');
   if (listEl) listEl.innerHTML = html;
   renderSupplyBanner();
+}
+
+function openAddCustomSupply() {
+  var f = document.getElementById('custom-supply-form');
+  if (!f) return;
+  document.getElementById('cus-key-edit').value = '';
+  document.getElementById('cus-name').value = '';
+  document.getElementById('cus-unit').value = '';
+  document.getElementById('cus-icon').value = '';
+  document.getElementById('cus-rate').value = '';
+  document.getElementById('cus-warn').value = '14';
+  var t = document.getElementById('custom-supply-form-title');
+  if (t) t.textContent = '新增自訂耗材';
+  f.style.display = 'block';
+  setTimeout(function(){ f.scrollIntoView({ behavior:'smooth', block:'nearest' }); }, 50);
+}
+
+function editCustomSupply(key) {
+  var def = getCustomSupplyDefs().find(function(d){ return d.key === key; });
+  if (!def) return;
+  var f = document.getElementById('custom-supply-form');
+  if (!f) return;
+  document.getElementById('cus-key-edit').value = key;
+  document.getElementById('cus-name').value = def.name || '';
+  document.getElementById('cus-unit').value = def.unit || '';
+  document.getElementById('cus-icon').value = def.icon || '';
+  document.getElementById('cus-rate').value = def.ratePerDay || '';
+  document.getElementById('cus-warn').value = def.warnDays || 14;
+  var t = document.getElementById('custom-supply-form-title');
+  if (t) t.textContent = '編輯耗材：' + def.name;
+  f.style.display = 'block';
+  setTimeout(function(){ f.scrollIntoView({ behavior:'smooth', block:'nearest' }); }, 50);
+}
+
+function deleteCustomSupply(key) {
+  var def = getCustomSupplyDefs().find(function(d){ return d.key === key; });
+  var name = def ? def.name : key;
+  if (!confirm('確定要刪除「' + name + '」嗎？')) return;
+  setCustomSupplyDefs(getCustomSupplyDefs().filter(function(d){ return d.key !== key; }));
+  var sup = getSupplies(); delete sup[key]; setSupplies(sup);
+  renderSupplyList();
+  showToast('🗑️ 已刪除「' + name + '」');
+}
+
+function closeCustomSupplyForm() {
+  var f = document.getElementById('custom-supply-form');
+  if (f) f.style.display = 'none';
+}
+
+function saveCustomSupply() {
+  var name = (document.getElementById('cus-name').value || '').trim();
+  var unit = (document.getElementById('cus-unit').value || '').trim();
+  var icon = (document.getElementById('cus-icon').value || '').trim() || '📦';
+  var rate = parseFloat(document.getElementById('cus-rate').value);
+  var warn = parseInt(document.getElementById('cus-warn').value) || 14;
+  var editKey = (document.getElementById('cus-key-edit').value || '').trim();
+  if (!name) { alert('請輸入耗材名稱'); return; }
+  if (!unit) { alert('請輸入單位'); return; }
+  if (!rate || rate <= 0) { alert('請輸入有效的每日消耗量'); return; }
+  var customs = getCustomSupplyDefs();
+  if (editKey) {
+    var idx = customs.findIndex(function(d){ return d.key === editKey; });
+    if (idx >= 0) customs[idx] = { key: editKey, name: name, unit: unit, icon: icon, ratePerDay: rate, warnDays: warn };
+  } else {
+    customs.push({ key: 'custom_' + Date.now(), name: name, unit: unit, icon: icon, ratePerDay: rate, warnDays: warn });
+  }
+  setCustomSupplyDefs(customs);
+  closeCustomSupplyForm();
+  renderSupplyList();
+  showToast('✅ 耗材「' + name + '」已儲存');
 }
 
 // ── Auto-deduct (called from saveDayData) ─────────────────────────────────
