@@ -5301,6 +5301,7 @@ function init() {
   if (window.location.search.includes('code=')) handleGCalCallback();
   setTimeout(checkTodoAlerts, 3000);
   setTimeout(function() {
+    migrateNewSupplyKeys();           // one-time: add fast_glucose / muscle_patch for existing users
     migrateCustomSuppliesToBuiltin(); // one-time: move 肌力貼 to built-in
     initSupplyDefaults();       // ensure supply data exists
     renderSupplyBanner();       // populate supply alert in carousel
@@ -5802,6 +5803,20 @@ function initRxDefaults(force) {
 
 // 設定初始庫存數量（只在第一次或強制時執行）
 // ── Migrate custom supplies → built-in (one-time) ──────────────────────────
+// ── Migrate new built-in supply keys for existing users ──────────────────────
+function migrateNewSupplyKeys() {
+  var d = getSupplies();
+  var changed = false;
+  // fast_glucose: 預設 314 顆，僅在 key 完全不存在時補入
+  if (d.fast_glucose === undefined) { d.fast_glucose = 314; changed = true; }
+  // muscle_patch: 預設 0，僅在 key 完全不存在時補入
+  if (d.muscle_patch === undefined) { d.muscle_patch = 0;   changed = true; }
+  if (changed) {
+    setSupplies(d);
+    console.log('[migrate] 新耗材 key 已補入', { fast_glucose: d.fast_glucose, muscle_patch: d.muscle_patch });
+  }
+}
+
 function migrateCustomSuppliesToBuiltin() {
   var customs = getCustomSupplyDefs();
   var sup = getSupplies();
