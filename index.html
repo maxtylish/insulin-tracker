@@ -1092,6 +1092,52 @@
       pointer-events: none;
     }
 
+
+    /* ── Todo Page ── */
+    .todo-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 11px 2px;
+      border-bottom: 1px solid var(--border);
+    }
+    .todo-item:last-child { border-bottom: none; }
+    .todo-item.todo-done .todo-title { text-decoration: line-through; opacity: 0.45; }
+    .todo-check {
+      width: 18px; height: 18px;
+      margin-top: 2px; flex-shrink: 0; cursor: pointer;
+      accent-color: var(--primary);
+    }
+    .todo-body { flex: 1; min-width: 0; }
+    .todo-title-row { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+    .todo-title { font-size: 0.88rem; font-weight: 600; color: var(--text); }
+    .todo-due { font-size: 0.75rem; color: var(--text-muted); margin-top: 3px; display: block; }
+    .todo-due.overdue { color: #ef4444; font-weight: 700; }
+    .todo-due.today   { color: #f59e0b; font-weight: 700; }
+    .todo-note-txt    { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+    .todo-type-badge  {
+      font-size: 0.68rem; padding: 1px 7px;
+      background: #ede9fe; color: #7c3aed;
+      border-radius: 12px; white-space: nowrap;
+    }
+    .todo-gcal-badge  { font-size: 0.82rem; }
+    .todo-actions     { display: flex; gap: 2px; flex-shrink: 0; margin-top: 1px; }
+    .todo-edit-btn, .todo-del-btn {
+      background: none; border: none; cursor: pointer;
+      font-size: 0.9rem; padding: 4px 5px;
+      border-radius: 6px; transition: background 0.15s;
+    }
+    .todo-edit-btn:hover { background: #f1f5f9; }
+    .todo-del-btn:hover  { background: #fee2e2; }
+    .todo-cat-btn {
+      padding: 6px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: 20px; background: white;
+      cursor: pointer; font-size: 0.83rem; font-weight: 600;
+      transition: all 0.15s;
+    }
+    .todo-cat-btn.active { background: var(--primary); color: white; border-color: var(--primary); }
+
     /* ── Changelog ── */
     .cl-item {
       position: relative;
@@ -1797,6 +1843,7 @@
   <button onclick="switchTab('history')">📅 歷史紀錄</button>
   <button onclick="switchTab('chart')">📊 統計分析</button>
   <button onclick="switchTab('manage')">📦 管理</button>
+  <button onclick="switchTab('todo')">📝 待辦</button>
   <button onclick="switchTab('settings')">⚙️ 設定</button>
 </nav>
 
@@ -2065,6 +2112,30 @@
 </div>
 
 <!-- ══════════════ SETTINGS PAGE ══════════════ -->
+
+<!-- ══════════════ TODO PAGE ══════════════ -->
+<div id="page-todo" class="page">
+
+  <!-- 健康待辦 -->
+  <div class="chart-card" style="margin-bottom:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h3 style="margin:0;">🏥 健康待辦</h3>
+      <button class="suppl-add-btn" onclick="openTodoForm('health')">＋ 新增</button>
+    </div>
+    <div id="todo-health-list"><div class="suppl-empty">尚無健康待辦事項</div></div>
+  </div>
+
+  <!-- 一般待辦 -->
+  <div class="chart-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h3 style="margin:0;">📝 一般待辦</h3>
+      <button class="suppl-add-btn" onclick="openTodoForm('general')">＋ 新增</button>
+    </div>
+    <div id="todo-general-list"><div class="suppl-empty">尚無一般待辦事項</div></div>
+  </div>
+
+</div>
+
 <div id="page-settings" class="page">
 
   <!-- Cloud Sync -->
@@ -2190,6 +2261,16 @@
   </div>
 
   <div class="settings-section">
+    <h3>📅 Google 行事曆</h3>
+    <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:12px;">
+      連結後，待辦事項含到期日時可自動同步至 Google 行事曆，並支援雙向更新。
+    </p>
+    <div id="gcal-connect-status" style="margin-bottom:10px;font-size:.85rem;font-weight:600;color:var(--text-muted);">未連結</div>
+    <button class="settings-save-btn" id="gcal-auth-btn" style="width:100%;margin-bottom:8px;" onclick="startGCalAuth()">🔗 連結 Google 行事曆</button>
+    <button class="danger-btn" id="gcal-disconnect-btn" style="display:none;" onclick="disconnectGCal()">中斷 Google 行事曆連結</button>
+  </div>
+
+  <div class="settings-section">
     <h3>資料管理</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px;">
       資料同步儲存於本機與雲端。建議定期匯出 CSV 備份。
@@ -2202,11 +2283,26 @@
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.7.1</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.8.0</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.8.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.8.0</span>
+          <span class="cl-date">2026-05-15</span>
+          <span class="cl-tag">待辦 &amp; Google 行事曆</span>
+        </div>
+        <ul class="cl-list">
+          <li>新增「📝 待辦」分頁：健康待辦（回診 / 領藥 / 換感應器等）+ 一般待辦</li>
+          <li>待辦支援到期日、時間、備註，逾期或當日到期自動顯示 carousel 提醒</li>
+          <li>Google 行事曆雙向同步（OAuth2 PKCE），含到期日的待辦可一鍵同步</li>
+          <li>設定頁新增「📅 Google 行事曆」連結 / 中斷入口</li>
+        </ul>
+      </div>
 
       <!-- v2.7.1 -->
       <div class="cl-item">
@@ -2434,6 +2530,78 @@
   </div>
   <div class="app-footer-copy">Powered by Lukuarts Studio &nbsp;·&nbsp; 2026</div>
 </footer>
+
+<!-- Todo Add/Edit Modal -->
+<div id="todo-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;overflow-y:auto;padding:16px;box-sizing:border-box;">
+  <div style="background:var(--bg);margin:0 auto;max-width:460px;border-radius:16px;padding:20px;box-shadow:0 8px 40px rgba(0,0,0,.2);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h3 style="margin:0;font-size:1rem;" id="todo-form-title">新增待辦</h3>
+      <button onclick="closeTodoForm()" style="background:none;border:none;font-size:1.3rem;cursor:pointer;color:var(--text-muted);line-height:1;">✕</button>
+    </div>
+    <input type="hidden" id="todo-edit-id" />
+
+    <!-- 分類切換 -->
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <button id="todo-cat-health" class="todo-cat-btn active" onclick="setTodoCat('health')">🏥 健康</button>
+      <button id="todo-cat-general" class="todo-cat-btn" onclick="setTodoCat('general')">📝 一般</button>
+    </div>
+
+    <!-- 健康類型 -->
+    <div id="todo-health-type-row" style="margin-bottom:12px;">
+      <label style="font-size:.78rem;color:var(--text-muted);display:block;margin-bottom:4px;">健康類型</label>
+      <select id="todo-health-type" style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.88rem;background:white;">
+        <option>回診</option>
+        <option>領藥</option>
+        <option>換感應器</option>
+        <option>抽血檢驗</option>
+        <option>疫苗接種</option>
+        <option>其他健康事項</option>
+      </select>
+    </div>
+
+    <!-- 標題 -->
+    <div style="margin-bottom:12px;">
+      <label style="font-size:.78rem;color:var(--text-muted);display:block;margin-bottom:4px;">標題 *</label>
+      <input id="todo-title" type="text" placeholder="輸入標題"
+        style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.88rem;box-sizing:border-box;outline:none;"
+        onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" />
+    </div>
+
+    <!-- 到期日 + 時間 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+      <div>
+        <label style="font-size:.78rem;color:var(--text-muted);display:block;margin-bottom:4px;">到期日（選填）</label>
+        <input id="todo-due-date" type="date"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;box-sizing:border-box;" />
+      </div>
+      <div>
+        <label style="font-size:.78rem;color:var(--text-muted);display:block;margin-bottom:4px;">時間（選填）</label>
+        <input id="todo-due-time" type="time"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;box-sizing:border-box;" />
+      </div>
+    </div>
+
+    <!-- 備註 -->
+    <div style="margin-bottom:12px;">
+      <label style="font-size:.78rem;color:var(--text-muted);display:block;margin-bottom:4px;">備註（選填）</label>
+      <textarea id="todo-note" rows="2" placeholder="備註"
+        style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.85rem;box-sizing:border-box;resize:none;outline:none;"
+        onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+    </div>
+
+    <!-- Google 行事曆同步 -->
+    <div id="todo-gcal-row" style="margin-bottom:14px;display:none;align-items:center;gap:8px;background:#f0fdf4;padding:8px 12px;border-radius:8px;">
+      <input type="checkbox" id="todo-gcal-sync" style="width:16px;height:16px;accent-color:var(--primary);" />
+      <label for="todo-gcal-sync" style="font-size:.85rem;color:#166534;cursor:pointer;">📅 同步到 Google 行事曆</label>
+    </div>
+
+    <!-- 按鈕 -->
+    <div style="display:flex;gap:8px;">
+      <button onclick="saveTodoForm()" style="flex:1;padding:10px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:.88rem;font-weight:700;cursor:pointer;">💾 儲存</button>
+      <button onclick="closeTodoForm()" style="flex:1;padding:10px;background:#f1f5f9;color:var(--text);border:none;border-radius:10px;font-size:.88rem;cursor:pointer;">取消</button>
+    </div>
+  </div>
+</div>
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
@@ -3379,7 +3547,8 @@ function switchTab(tab) {
 
   if (tab === 'history')  renderHistory();
   if (tab === 'chart')    renderCharts();
-  if (tab === 'settings') { loadSettingsUI(); loadCloudConfigUI(); }
+  if (tab === 'todo')     renderTodoPage();
+  if (tab === 'settings') { loadSettingsUI(); loadCloudConfigUI(); updateGCalUI(); }
 }
 
 // ══════════════════════════════════════════
@@ -5128,6 +5297,9 @@ function init() {
   startCGMPolling();   // start real-time CGM widget
   setTimeout(checkAndNotifyLowSupplies, 4000); // delayed supply check on load
   setTimeout(checkAndNotifyAppt, 4500);         // delayed appt reminder check
+  // Handle Google Calendar OAuth2 callback
+  if (window.location.search.includes('code=')) handleGCalCallback();
+  setTimeout(checkTodoAlerts, 3000);
   setTimeout(function() {
     migrateCustomSuppliesToBuiltin(); // one-time: move 肌力貼 to built-in
     initSupplyDefaults();       // ensure supply data exists
@@ -6318,6 +6490,380 @@ function saveRxModal() {
   renderPrescriptionList();
   refreshCarouselAlerts();
   showToast('✅ 處方已儲存！');
+}
+
+
+// ══════════════════════════════════════════════════════════════
+//  GOOGLE CALENDAR  OAuth2 PKCE + CALENDAR API
+// ══════════════════════════════════════════════════════════════
+const GCAL_CLIENT_ID   = '1015693868400-14kci11e7s7mqqr95t3nt0t1g77ur9b1.apps.googleusercontent.com';
+const GCAL_REDIRECT    = 'https://maxtylish.github.io/insulin-tracker/';
+const GCAL_SCOPE       = 'https://www.googleapis.com/auth/calendar.events';
+const GCAL_TOKEN_KEY   = 'insulin_gcal_tokens';
+const GCAL_VERIFIER_KEY= 'gcal_pkce_verifier';
+
+// ── Token storage ──
+function getGCalTokens() { try { return JSON.parse(localStorage.getItem(GCAL_TOKEN_KEY)||'null'); } catch(e){ return null; } }
+function setGCalTokens(t){ localStorage.setItem(GCAL_TOKEN_KEY, JSON.stringify(t)); }
+function isGCalConnected(){ return !!getGCalTokens(); }
+
+// ── PKCE helpers ──
+function _b64url(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'');
+}
+async function _genVerifier() {
+  const a = new Uint8Array(32); crypto.getRandomValues(a); return _b64url(a);
+}
+async function _genChallenge(v) {
+  const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(v));
+  return _b64url(h);
+}
+
+// ── Start OAuth flow ──
+async function startGCalAuth() {
+  const verifier   = await _genVerifier();
+  const challenge  = await _genChallenge(verifier);
+  localStorage.setItem(GCAL_VERIFIER_KEY, verifier);
+  const p = new URLSearchParams({
+    client_id: GCAL_CLIENT_ID,
+    redirect_uri: GCAL_REDIRECT,
+    response_type: 'code',
+    scope: GCAL_SCOPE,
+    code_challenge: challenge,
+    code_challenge_method: 'S256',
+    access_type: 'offline',
+    prompt: 'consent'
+  });
+  window.location = 'https://accounts.google.com/o/oauth2/v2/auth?' + p;
+}
+
+// ── Handle OAuth callback (called by init if ?code= in URL) ──
+async function handleGCalCallback() {
+  const params   = new URLSearchParams(window.location.search);
+  const code     = params.get('code');
+  const errParam = params.get('error');
+  if (errParam) {
+    window.history.replaceState({}, '', window.location.pathname);
+    showToast('⚠️ Google 行事曆授權被拒絕');
+    return;
+  }
+  if (!code) return;
+  const verifier = localStorage.getItem(GCAL_VERIFIER_KEY);
+  if (!verifier) return;
+  try {
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id:     GCAL_CLIENT_ID,
+        code_verifier: verifier,
+        code:          code,
+        grant_type:    'authorization_code',
+        redirect_uri:  GCAL_REDIRECT
+      })
+    });
+    const data = await res.json();
+    if (data.access_token) {
+      setGCalTokens({
+        access_token:  data.access_token,
+        refresh_token: data.refresh_token || null,
+        expires_at:    Date.now() + (data.expires_in - 60) * 1000
+      });
+      localStorage.removeItem(GCAL_VERIFIER_KEY);
+      window.history.replaceState({}, '', window.location.pathname);
+      showToast('✅ Google 行事曆連結成功！');
+      updateGCalUI();
+    } else {
+      showToast('❌ 連結失敗：' + (data.error_description || data.error || '未知錯誤'));
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  } catch(e) {
+    console.error('GCal callback error:', e);
+    showToast('❌ Google 連線失敗，請稍後重試');
+  }
+}
+
+// ── Disconnect ──
+function disconnectGCal() {
+  if (!confirm('確定中斷 Google 行事曆連結？\n已同步的待辦事項將保留在 Google 行事曆，但不再自動更新。')) return;
+  localStorage.removeItem(GCAL_TOKEN_KEY);
+  localStorage.removeItem(GCAL_VERIFIER_KEY);
+  updateGCalUI();
+  showToast('🔌 已中斷 Google 行事曆連結');
+}
+
+// ── Get valid token (auto-refresh) ──
+async function getValidGCalToken() {
+  const t = getGCalTokens();
+  if (!t) return null;
+  if (Date.now() < t.expires_at) return t.access_token;
+  if (!t.refresh_token) { localStorage.removeItem(GCAL_TOKEN_KEY); updateGCalUI(); return null; }
+  try {
+    const res = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        client_id:     GCAL_CLIENT_ID,
+        refresh_token: t.refresh_token,
+        grant_type:    'refresh_token'
+      })
+    });
+    const data = await res.json();
+    if (data.access_token) {
+      t.access_token = data.access_token;
+      t.expires_at   = Date.now() + (data.expires_in - 60) * 1000;
+      setGCalTokens(t);
+      return data.access_token;
+    }
+  } catch(e) { console.error('GCal refresh error:', e); }
+  localStorage.removeItem(GCAL_TOKEN_KEY);
+  updateGCalUI();
+  return null;
+}
+
+// ── Update GCal UI (settings + todo form) ──
+function updateGCalUI() {
+  var connected = isGCalConnected();
+  var statusEl  = document.getElementById('gcal-connect-status');
+  var authBtn   = document.getElementById('gcal-auth-btn');
+  var discBtn   = document.getElementById('gcal-disconnect-btn');
+  var gcalRow   = document.getElementById('todo-gcal-row');
+  if (statusEl) {
+    statusEl.textContent = connected ? '✅ 已連結 Google 行事曆' : '未連結';
+    statusEl.style.color = connected ? '#10b981' : 'var(--text-muted)';
+  }
+  if (authBtn) authBtn.style.display = connected ? 'none' : 'block';
+  if (discBtn) discBtn.style.display = connected ? 'block' : 'none';
+  if (gcalRow) gcalRow.style.display = connected ? 'flex' : 'none';
+}
+
+// ── Calendar event builder ──
+function _todoToCalEvent(todo) {
+  if (!todo.dueDate) return null;
+  var start, end;
+  if (todo.dueTime) {
+    start = { dateTime: todo.dueDate + 'T' + todo.dueTime + ':00', timeZone: 'Asia/Taipei' };
+    end   = { dateTime: todo.dueDate + 'T' + todo.dueTime + ':00', timeZone: 'Asia/Taipei' };
+  } else {
+    var next = new Date(todo.dueDate + 'T00:00:00');
+    next.setDate(next.getDate() + 1);
+    start = { date: todo.dueDate };
+    end   = { date: next.toISOString().slice(0,10) };
+  }
+  var prefix = todo.category === 'health' ? '🏥 ' : '📝 ';
+  var desc   = [todo.healthType, todo.note].filter(Boolean).join('\n');
+  if (todo.completed) prefix = '✅ ' + prefix;
+  return {
+    summary:     prefix + todo.title,
+    description: desc,
+    start, end,
+    reminders:   { useDefault: true }
+  };
+}
+
+async function _gcalRequest(method, path, body, token) {
+  var opts = {
+    method,
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events' + path, opts);
+  return res.status === 204 ? null : res.json();
+}
+
+async function gcalCreate(todo) {
+  var token = await getValidGCalToken(); if (!token) return null;
+  var ev = _todoToCalEvent(todo); if (!ev) return null;
+  try { var d = await _gcalRequest('POST','',ev,token); return d && d.id ? d.id : null; }
+  catch(e){ console.error('gcalCreate',e); return null; }
+}
+async function gcalUpdate(eid, todo) {
+  var token = await getValidGCalToken(); if (!token||!eid) return;
+  var ev = _todoToCalEvent(todo); if (!ev) return;
+  try { await _gcalRequest('PUT','/'+eid,ev,token); } catch(e){ console.error('gcalUpdate',e); }
+}
+async function gcalDelete(eid) {
+  var token = await getValidGCalToken(); if (!token||!eid) return;
+  try { await _gcalRequest('DELETE','/'+eid,null,token); } catch(e){ console.error('gcalDelete',e); }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  TODO — DATA
+// ══════════════════════════════════════════════════════════════
+function getTodos(){ try{ return JSON.parse(localStorage.getItem('insulin_todos')||'[]'); }catch(e){ return []; } }
+function setTodos(a){ localStorage.setItem('insulin_todos', JSON.stringify(a)); }
+
+// ── Form state ──
+var _todoCat = 'health';
+
+function openTodoForm(category, editId) {
+  _todoCat = category || 'health';
+  document.getElementById('todo-edit-id').value    = editId || '';
+  document.getElementById('todo-title').value      = '';
+  document.getElementById('todo-due-date').value   = '';
+  document.getElementById('todo-due-time').value   = '';
+  document.getElementById('todo-note').value       = '';
+  document.getElementById('todo-gcal-sync').checked = isGCalConnected();
+  document.getElementById('todo-health-type').value = '回診';
+  document.getElementById('todo-form-title').textContent =
+    editId ? '編輯待辦' : (_todoCat === 'health' ? '新增健康待辦' : '新增一般待辦');
+
+  if (editId) {
+    var t = getTodos().find(function(x){ return x.id === editId; });
+    if (t) {
+      _todoCat = t.category;
+      document.getElementById('todo-title').value    = t.title    || '';
+      document.getElementById('todo-due-date').value = t.dueDate  || '';
+      document.getElementById('todo-due-time').value = t.dueTime  || '';
+      document.getElementById('todo-note').value     = t.note     || '';
+      document.getElementById('todo-gcal-sync').checked = !!t.gcalEventId;
+      if (t.healthType) document.getElementById('todo-health-type').value = t.healthType;
+    }
+  }
+  setTodoCat(_todoCat);
+  updateGCalUI();
+  document.getElementById('todo-modal-overlay').style.display = 'block';
+  setTimeout(function(){ document.getElementById('todo-title').focus(); }, 80);
+}
+
+function closeTodoForm() {
+  document.getElementById('todo-modal-overlay').style.display = 'none';
+}
+
+function setTodoCat(cat) {
+  _todoCat = cat;
+  document.getElementById('todo-cat-health').classList.toggle('active', cat==='health');
+  document.getElementById('todo-cat-general').classList.toggle('active', cat==='general');
+  document.getElementById('todo-health-type-row').style.display = cat==='health' ? 'block' : 'none';
+}
+
+async function saveTodoForm() {
+  var title = (document.getElementById('todo-title').value||'').trim();
+  if (!title) { alert('請輸入標題'); return; }
+
+  var editId    = document.getElementById('todo-edit-id').value;
+  var dueDate   = document.getElementById('todo-due-date').value;
+  var dueTime   = document.getElementById('todo-due-time').value;
+  var note      = document.getElementById('todo-note').value.trim();
+  var gcalSync  = document.getElementById('todo-gcal-sync').checked;
+  var healthType= _todoCat==='health' ? document.getElementById('todo-health-type').value : '';
+  var todos     = getTodos();
+
+  if (editId) {
+    var idx = todos.findIndex(function(t){ return t.id===editId; });
+    if (idx >= 0) {
+      var old = todos[idx];
+      Object.assign(todos[idx], { title, category:_todoCat, healthType, dueDate, dueTime, note });
+      if (gcalSync && dueDate) {
+        if (old.gcalEventId) await gcalUpdate(old.gcalEventId, todos[idx]);
+        else { todos[idx].gcalEventId = await gcalCreate(todos[idx]); }
+      } else if (!gcalSync && old.gcalEventId) {
+        await gcalDelete(old.gcalEventId);
+        todos[idx].gcalEventId = null;
+      }
+    }
+  } else {
+    var todo = {
+      id: 'todo_' + Date.now(), title, category: _todoCat, healthType,
+      dueDate, dueTime, note, completed: false,
+      gcalEventId: null, createdAt: new Date().toISOString()
+    };
+    if (gcalSync && dueDate) todo.gcalEventId = await gcalCreate(todo);
+    todos.push(todo);
+  }
+
+  setTodos(todos);
+  closeTodoForm();
+  renderTodoPage();
+  checkTodoAlerts();
+  showToast(editId ? '✅ 待辦已更新' : '✅ 待辦已新增');
+}
+
+async function toggleTodoComplete(id) {
+  var todos = getTodos();
+  var t = todos.find(function(x){ return x.id===id; });
+  if (!t) return;
+  t.completed = !t.completed;
+  if (t.gcalEventId) await gcalUpdate(t.gcalEventId, t);
+  setTodos(todos);
+  renderTodoPage();
+  checkTodoAlerts();
+}
+
+async function deleteTodo(id) {
+  if (!confirm('確定刪除這筆待辦事項？')) return;
+  var todos = getTodos();
+  var t = todos.find(function(x){ return x.id===id; });
+  if (t && t.gcalEventId) await gcalDelete(t.gcalEventId);
+  setTodos(todos.filter(function(x){ return x.id!==id; }));
+  renderTodoPage();
+  checkTodoAlerts();
+  showToast('🗑️ 待辦已刪除');
+}
+
+// ── Render ──
+function escapeHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function renderTodoPage() {
+  var todos   = getTodos();
+  var health  = todos.filter(function(t){ return t.category==='health'; });
+  var general = todos.filter(function(t){ return t.category==='general'; });
+  _renderTodoList('todo-health-list',  health);
+  _renderTodoList('todo-general-list', general);
+  updateGCalUI();
+}
+
+function _renderTodoList(elId, todos) {
+  var el = document.getElementById(elId);
+  if (!el) return;
+  if (!todos.length) { el.innerHTML = '<div class="suppl-empty">尚無待辦事項</div>'; return; }
+  var today = todayStr();
+  el.innerHTML = todos.map(function(t) {
+    var overdue  = t.dueDate && !t.completed && t.dueDate < today;
+    var dueToday = t.dueDate && !t.completed && t.dueDate === today;
+    var dueTxt   = '';
+    if (t.dueDate) {
+      var prefix = overdue ? '⚠️ ' : dueToday ? '📅 今天 ' : '🗓 ';
+      var cls    = overdue ? ' overdue' : dueToday ? ' today' : '';
+      dueTxt = '<span class="todo-due' + cls + '">' + prefix + t.dueDate
+             + (t.dueTime ? ' ' + t.dueTime : '') + '</span>';
+    }
+    var gcalBadge  = t.gcalEventId ? '<span class="todo-gcal-badge" title="已同步 Google 行事曆">📅</span>' : '';
+    var typeBadge  = t.healthType  ? '<span class="todo-type-badge">' + escapeHtml(t.healthType) + '</span>' : '';
+    var noteTxt    = t.note ? '<div class="todo-note-txt">' + escapeHtml(t.note) + '</div>' : '';
+    return '<div class="todo-item' + (t.completed ? ' todo-done' : '') + '">'
+      + '<input type="checkbox" class="todo-check"' + (t.completed ? ' checked' : '')
+        + ' onchange="toggleTodoComplete(\'' + t.id + '\')">'
+      + '<div class="todo-body">'
+        + '<div class="todo-title-row">'
+          + '<span class="todo-title">' + escapeHtml(t.title) + '</span>'
+          + gcalBadge + typeBadge
+        + '</div>'
+        + dueTxt + noteTxt
+      + '</div>'
+      + '<div class="todo-actions">'
+        + '<button class="todo-edit-btn" onclick="openTodoForm(\'' + t.category + '\',\'' + t.id + '\')" title="編輯">✏️</button>'
+        + '<button class="todo-del-btn"  onclick="deleteTodo(\'' + t.id + '\')" title="刪除">🗑️</button>'
+      + '</div>'
+    + '</div>';
+  }).join('');
+}
+
+// ── Carousel integration ──
+function checkTodoAlerts() {
+  var todos  = getTodos();
+  var today  = todayStr();
+  var urgent = todos.filter(function(t){ return !t.completed && t.dueDate && t.dueDate <= today; });
+  if (urgent.length) {
+    var msg = urgent.map(function(t){ return (t.healthType || t.title); }).join('、');
+    setAlertItem('todo-urgent', 7, '📝 待辦提醒', msg + ' — 待處理');
+  } else {
+    setAlertItem('todo-urgent', 7, '', '');
+  }
+  refreshCarouselAlerts();
 }
 
 </script>
