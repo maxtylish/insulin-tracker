@@ -2202,11 +2202,23 @@
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.7.0</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.7.1</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.7.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.7.1</span>
+          <span class="cl-date">2026-05-14</span>
+          <span class="cl-tag">安全防護</span>
+        </div>
+        <ul class="cl-list">
+          <li>補打、補糖、點心記錄的刪除按鈕（✕）點擊後需二次確認，防止誤觸</li>
+        </ul>
+      </div>
 
       <!-- v2.7.0 -->
       <div class="cl-item">
@@ -4408,6 +4420,7 @@ function addSnackRow(sectionId) {
 }
 
 function removeSnackRow(sectionId, idx) {
+  if (!confirm('確定刪除這筆點心記錄？')) return;
   var current = collectSnackRows(sectionId);
   current.splice(idx, 1);
   renderSnackSection(sectionId, current);
@@ -4862,6 +4875,8 @@ function addSupplRow(type) {
 }
 
 function removeSupplRow(type, idx) {
+  var label = type === 'corrections' ? '這筆補打記錄' : '這筆補糖記錄';
+  if (!confirm('確定刪除' + label + '？')) return;
   const current = collectSupplRows(type);
   current.splice(idx, 1);
   renderSupplList(type, current);
