@@ -1,0 +1,5 @@
+# MyApp
+Stack: Next.js 14, TypeScript, PostgreSQL
+Auth: JWT in httpOnly cookies (security team requirement)
+Current focus: Auth refactor
+Known issues: Stripe webhook fires twice — check idempotency key
