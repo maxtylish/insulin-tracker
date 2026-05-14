@@ -1353,6 +1353,24 @@
       font-size: .72rem; font-weight: 600; cursor: pointer; white-space: nowrap;
     }
 
+    /* ── Carb supplement single row ── */
+    .carb-main-row {
+      display: flex; align-items: center; gap: 4px;
+      margin-bottom: 8px; flex-wrap: nowrap;
+    }
+    .carb-main-row input {
+      height: 34px; border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 0 5px; font-size: .85rem; background: var(--surface);
+      color: var(--text); flex-shrink: 0; min-width: 0;
+    }
+    .carb-main-row input:focus { border-color: var(--primary); outline: none; }
+    .carb-sep { font-size: .72rem; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+    .carb-total-tag {
+      font-size: .75rem; font-weight: 700; color: #059669;
+      background: #d1fae5; border-radius: 6px; padding: 2px 5px;
+      white-space: nowrap; flex-shrink: 0;
+    }
+
     /* ── Hypo / Hyper Prediction Banners ── */
     .bg-warning {
       display: none;
@@ -4326,45 +4344,28 @@ function renderSupplList(type, items) {
     }
 
     return '<div class="suppl-row" id="carbs-row-' + idx + '" data-rowid="' + rowId + '">'
-      // ── Row 1: BG + Time + delete ──
-      + '<div class="carb-top-row">'
-        + '<div class="suppl-field">'
-          + '<label>當前血糖 <button class="corr-cgm-btn" type="button" onclick="autoFillCarbBG(\'' + rowId + '\')">CGM 帶入</button></label>'
-          + '<div class="field-input-wrap">'
-            + '<input type="number" data-idx="' + idx + '" data-field="bg" class="suppl-val"'
-            + ' value="' + (item.bg || '') + '" min="20" max="600" step="1" placeholder="--"'
-            + ' onfocus="autoFillCarbBG(\'' + rowId + '\')" />'
-            + '<span class="field-unit">mg/dL</span>'
-          + '</div>'
-        + '</div>'
-        + '<div class="suppl-field">'
-          + '<label>時間</label>'
-          + '<input type="text" data-idx="' + idx + '" data-field="time"'
-          + ' class="suppl-val time-input" value="' + (item.time || '') + '"'
-          + ' inputmode="numeric" maxlength="5" placeholder="--:--"'
-          + ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />'
-        + '</div>'
-        + '<button class="suppl-del-btn" onclick="removeSupplRow(\'carbs\',' + idx + ')" title="刪除" style="margin-bottom:2px">✕</button>'
-      + '</div>'
-      // ── Row 2: per-unit carb × qty = total ──
-      + '<div class="carb-qty-row">'
-        + '<span class="carb-qty-label">🍬 每顆</span>'
-        + '<div class="field-input-wrap" style="width:72px">'
-          + '<input type="number" data-idx="' + idx + '" data-field="carb" class="suppl-val"'
-          + ' value="' + carbVal + '" min="0" max="100" step="0.5" placeholder="2.5"'
-          + ' oninput="updateCarbTotal(\'' + rowId + '\',this)" />'
-          + '<span class="field-unit">克</span>'
-        + '</div>'
-        + '<span class="carb-qty-label">×</span>'
-        + '<div class="field-input-wrap" style="width:60px">'
-          + '<input type="number" data-idx="' + idx + '" data-field="qty" class="suppl-val"'
-          + ' value="' + qtyVal + '" min="1" max="30" step="1" placeholder="1"'
-          + ' oninput="updateCarbTotal(\'' + rowId + '\',this)" />'
-          + '<span class="field-unit">顆</span>'
-        + '</div>'
-        + '<span class="carb-total-tag" id="carb-total-' + rowId + '">'
-          + '= ' + totalStr
-        + '</span>'
+      // ── 單列：血糖 | 時間 | 每顆×數量=合計 | CGM | 刪除 ──
+      + '<div class="carb-main-row">'
+        + '<input type="number" data-idx="' + idx + '" data-field="bg" class="suppl-val"'
+        + ' style="width:60px" value="' + (item.bg || '') + '"'
+        + ' min="20" max="600" step="1" placeholder="血糖"'
+        + ' onfocus="autoFillCarbBG(\'' + rowId + '\')" />'
+        + '<span class="carb-sep">mg</span>'
+        + '<input type="text" data-idx="' + idx + '" data-field="time" class="suppl-val"'
+        + ' style="width:52px" value="' + (item.time || '') + '"'
+        + ' inputmode="numeric" maxlength="5" placeholder="時間"'
+        + ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />'
+        + '<span class="carb-sep">|每顆</span>'
+        + '<input type="number" data-idx="' + idx + '" data-field="carb" class="suppl-val"'
+        + ' style="width:46px" value="' + carbVal + '" min="0" max="100" step="0.5"'
+        + ' oninput="updateCarbTotal(\'' + rowId + '\',this)" />'
+        + '<span class="carb-sep">克×</span>'
+        + '<input type="number" data-idx="' + idx + '" data-field="qty" class="suppl-val"'
+        + ' style="width:36px" value="' + qtyVal + '" min="1" max="30" step="1"'
+        + ' oninput="updateCarbTotal(\'' + rowId + '\',this)" />'
+        + '<span class="carb-total-tag" id="carb-total-' + rowId + '">=' + totalStr + '</span>'
+        + '<button class="corr-cgm-btn" type="button" onclick="autoFillCarbBG(\'' + rowId + '\')" style="flex-shrink:0;padding:3px 7px">CGM</button>'
+        + '<button class="suppl-del-btn" onclick="removeSupplRow(\'carbs\',' + idx + ')" title="刪除">✕</button>'
       + '</div>'
       // ── Hidden rowId ──
       + '<input type="hidden" data-field="rowId" class="suppl-val" value="' + rowId + '" />'
