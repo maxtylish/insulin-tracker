@@ -2651,20 +2651,21 @@ function loadNotifSettingsUI() {
 
 // 用餐鬧鐘專用：繞過 notifEnabled 設定，直接響鈴 + 通知
 function fireMealAlarm(periodId, audioCtx) {
-  // 響鈴：優先用已解鎖的 AudioContext 播振盪器（繞過 autoplay 限制）
+  // 響鈴：square 波雙頻交替，音色刺耳不同於系統通知音
   try {
     var ctx = audioCtx && audioCtx.state !== 'closed' ? audioCtx
               : new (window.AudioContext || window.webkitAudioContext)();
     if (ctx.state === 'suspended') ctx.resume();
-    var freqs = [880, 1046, 880, 1046];
+    // 高低交替 × 8 拍，總時長約 1.5 秒
+    var freqs = [880, 440, 880, 440, 880, 440, 880, 440];
     freqs.forEach(function(freq, i) {
       var osc = ctx.createOscillator(), g = ctx.createGain();
       osc.connect(g); g.connect(ctx.destination);
-      osc.type = 'sine'; osc.frequency.value = freq;
-      var t = ctx.currentTime + i * 0.25;
-      g.gain.setValueAtTime(0.6, t);
-      g.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
-      osc.start(t); osc.stop(t + 0.23);
+      osc.type = 'square'; osc.frequency.value = freq;
+      var t = ctx.currentTime + i * 0.18;
+      g.gain.setValueAtTime(0.45, t);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+      osc.start(t); osc.stop(t + 0.17);
     });
   } catch(e) { console.warn('meal alarm oscillator error', e); }
   // 同時嘗試 <audio> element（已在 startMealAlarm 解鎖過）
@@ -4986,6 +4987,7 @@ if ('serviceWorker' in navigator) {
 
 // ── Meal Alarm ────────────────────────────────────────────────────────────────
 const mealAlarmTimers = {}; // periodId -> { intervalId, endTime } | null
+var   carbTimers       = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 
 function alarmSelectNo(periodId) {
   var btns  = document.getElementById(periodId + '-alarm-btns');
@@ -5081,8 +5083,11 @@ function startMealAlarm(periodId) {
         dispEl.classList.toggle('alarm-urgent', remaining < 60000);
       }
     } else {
-      // 正數
+      // 正數（已到），每 60 秒再響一次直到手動停止
       var elapsed = Math.floor((now - t.doneAt) / 1000);
+      if (elapsed > 0 && elapsed % 60 === 0) {
+        fireMealAlarm(periodId, t.audioCtx);
+      }
       var em = Math.floor(elapsed / 60).toString().padStart(2, '0');
       var es = (elapsed % 60).toString().padStart(2, '0');
       dispEl.textContent = '+' + em + ':' + es;
