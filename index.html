@@ -1081,6 +1081,12 @@
     }
     .period-save-btn:hover  { background: var(--primary-dark); }
     .period-save-btn:active { opacity: 0.8; }
+    .period-save-btn:disabled {
+      background: #cbd5e1;
+      color: #94a3b8;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
     .period-save-btn.saved  {
       background: #10b981;
       pointer-events: none;
@@ -2196,11 +2202,27 @@
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.6.0</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.7.0</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.7.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.7.0</span>
+          <span class="cl-date">2026-05-14</span>
+          <span class="cl-tag">操作體驗</span>
+        </div>
+        <ul class="cl-list">
+          <li>各餐儲存按鈕文字個別化（儲存早餐 / 午餐 / 晚餐 / 睡前紀錄）</li>
+          <li>注射時間未填入時，儲存按鈕呈灰色且不可點擊；填入後自動恢復</li>
+          <li>睡前胰島素欄位預設帶入 3 單位（長效固定劑量）</li>
+          <li>計算劑量：早餐新增套餐「熱壓全麥吐司＋牛奶120ml（碳水 17.8g）」</li>
+          <li>計算劑量：晚餐新增套餐「夜市油麵組合（油麵140g＋牛奶120ml，碳水 51g）」</li>
+        </ul>
+      </div>
 
       <!-- v2.6.0 -->
       <div class="cl-item">
@@ -2602,6 +2624,9 @@ function onTimeInput(el) {
   el.value = raw;
   // Restore cursor (account for inserted colon)
   try { el.setSelectionRange(pos <= 2 ? pos : pos + 1, pos <= 2 ? pos : pos + 1); } catch(e) {}
+  // Update save-btn state (only for period time inputs)
+  var pid = el.id ? el.id.replace('-time', '') : '';
+  if (pid) updatePeriodSaveBtnState(pid);
 }
 function onTimeBlur(el) {
   const m = el.value.match(/^(\d{1,2}):?(\d{0,2})$/);
@@ -2611,12 +2636,22 @@ function onTimeBlur(el) {
   if (isNaN(h) || h > 23) { el.value = ''; return; }
   if (isNaN(min) || min > 59) min = 0;
   el.value = h.toString().padStart(2, '0') + ':' + min.toString().padStart(2, '0');
+  var pid = el.id ? el.id.replace('-time', '') : '';
+  if (pid) updatePeriodSaveBtnState(pid);
 }
 // Auto-fill time with NOW only when user first focuses BG or insulin field
 // and the time field for that period is still empty.
 function autoFillTime(periodId) {
   const timeEl = document.getElementById(periodId + '-time');
   if (timeEl && timeEl.value === '') timeEl.value = getNowTime();
+  updatePeriodSaveBtnState(periodId);
+}
+
+function updatePeriodSaveBtnState(periodId) {
+  var btn    = document.getElementById('save-btn-' + periodId);
+  var timeEl = document.getElementById(periodId + '-time');
+  if (!btn || !timeEl) return;
+  btn.disabled = timeEl.value.trim().length < 4;
 }
 
 // ══════════════════════════════════════════
@@ -3432,8 +3467,12 @@ function buildPeriodCards() {
             + '</div>'
             + alarmRow;
         })()
-      + '<button class="period-save-btn" id="save-btn-' + p.id + '"'
-        + ' onclick="savePeriod(\'' + p.id + '\')">💾 儲存此餐</button>'
+      + (function(){
+          var lbl = { morning:'儲存早餐', noon:'儲存午餐', evening:'儲存晚餐', bedtime:'儲存睡前紀錄' }[p.id] || '儲存此餐';
+          return '<button class="period-save-btn" id="save-btn-' + p.id + '"'
+            + ' disabled'
+            + ' onclick="savePeriod(\'' + p.id + '\')">💾 ' + lbl + '</button>';
+        })()
     + '</div>';
 
     const snack = snackMap[p.id];
@@ -3496,11 +3535,13 @@ function loadDayData() {
     // Time is auto-filled by autoFillTime() only when user focuses BG/insulin.
     document.getElementById(p.id + '-time').value    = rec.time    || '';
     document.getElementById(p.id + '-bg').value      = rec.bg      || '';
-    document.getElementById(p.id + '-insulin').value = rec.insulin || '';
+    var defaultInsulin = (p.id === 'bedtime' && !rec.insulin) ? '3' : (rec.insulin || '');
+    document.getElementById(p.id + '-insulin').value = defaultInsulin;
     document.getElementById(p.id + '-note').value    = rec.note    || '';
     var siteEl = document.getElementById(p.id + '-site');
     if (siteEl) { siteEl.value = rec.site || SITE_DEFAULTS[p.id] || ''; onSiteChange(p.id); }
     onBGInput(p.id);
+    updatePeriodSaveBtnState(p.id);
   });
 
   // Load supplemental records
@@ -3541,7 +3582,8 @@ function savePeriod(periodId) {
   }
 
   const p = PERIODS.find(function(x) { return x.id === periodId; });
-  showToast('✅ ' + (p ? p.label + '餐' : periodId) + ' 已儲存！');
+  var mealName = { morning:'早餐', noon:'午餐', evening:'晚餐', bedtime:'睡前紀錄' }[periodId] || (p ? p.label : periodId);
+  showToast('✅ ' + mealName + ' 已儲存！');
 }
 
 function saveDayData() {
@@ -5108,6 +5150,7 @@ const CALC_MEAL_PRESETS = {
 };
 
 const CALC_CARB_FOODS = {
+  night_market_noodle_combo: 51, wheat_toast_milk_combo: 17.8,
   white_rice: 30, udon: 24.6, yangchun_noodle: 27.8, oil_noodle: 25.5,
   spaghetti: 27.4, penne: 29, potato_skin: 12.9,
   wheat_toast: 12, white_toast: 12, strawberry_toast: 15.25,
@@ -5121,6 +5164,7 @@ const CALC_CARB_FOODS = {
 
 const CALC_MAIN_OPTIONS = {
   breakfast: [
+    { value: 'wheat_toast_milk_combo', label: '🥛 熱壓全麥吐司＋牛奶120ml 碳水 17.8g' },
     { value: 'white_rice',         label: '白飯 100g (碳水30g)' },
     { value: 'udon',               label: '烏龍麵 100g (碳水24.6g)' },
     { value: 'yangchun_noodle',    label: '陽春麵 100g (碳水27.8g)' },
@@ -5151,6 +5195,7 @@ const CALC_MAIN_OPTIONS = {
     { value: 'mcd_combo_2',     label: '麥當勞組合2（鱈魚堡＋玉米杯＋水果袋）(碳水55.2g)' },
   ],
   dinner: [
+    { value: 'night_market_noodle_combo', label: '🏮 夜市油麵組合（油麵140g＋牛奶120ml）碳水 51g' },
     { value: 'white_rice',      label: '白飯 100g (碳水30g)' },
     { value: 'udon',            label: '烏龍麵 100g (碳水24.6g)' },
     { value: 'yangchun_noodle', label: '陽春麵 100g (碳水27.8g)' },
