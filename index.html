@@ -2116,6 +2116,13 @@
 <!-- ══════════════ TODO PAGE ══════════════ -->
 <div id="page-todo" class="page">
 
+  <!-- GCal 連結提示（未連結時顯示） -->
+  <div id="todo-gcal-hint" style="display:none;margin-bottom:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+    <span style="font-size:.83rem;color:#1d4ed8;">📅 連結 Google 行事曆後，待辦事項可自動同步</span>
+    <button onclick="switchTab('settings');setTimeout(function(){document.getElementById('gcal-auth-btn').scrollIntoView({behavior:'smooth',block:'center'});},300)"
+      style="flex-shrink:0;padding:5px 12px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer;">前往設定 →</button>
+  </div>
+
   <!-- 健康待辦 -->
   <div class="chart-card" style="margin-bottom:14px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
@@ -2283,11 +2290,24 @@
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.8.0</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.8.1</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.8.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.8.1</span>
+          <span class="cl-date">2026-05-15</span>
+          <span class="cl-tag">系統穩定性</span>
+        </div>
+        <ul class="cl-list">
+          <li>新增版本升級自動庫存盤點（auditSupplyKeys）：每次版本號更新時自動掃描所有耗材定義，補入新增 key 的預設數量，現有庫存不受影響</li>
+          <li>修正：快速葡萄糖 2.5C 在已初始化裝置上未正確顯示初始 314 顆</li>
+        </ul>
+      </div>
 
       <!-- v2.8.0 -->
       <div class="cl-item">
@@ -5301,7 +5321,7 @@ function init() {
   if (window.location.search.includes('code=')) handleGCalCallback();
   setTimeout(checkTodoAlerts, 3000);
   setTimeout(function() {
-    migrateNewSupplyKeys();           // one-time: add fast_glucose / muscle_patch for existing users
+    auditSupplyKeys();                // 版本升級時自動盤點耗材，補齊新 key
     migrateCustomSuppliesToBuiltin(); // one-time: move 肌力貼 to built-in
     initSupplyDefaults();       // ensure supply data exists
     renderSupplyBanner();       // populate supply alert in carousel
@@ -5753,7 +5773,7 @@ const SUPPLY_DEFS = [
   { key: 'muscle_patch',     name: '肌力貼',     unit: '片', icon: '🏋️',
     rateLabel: '不定期使用',                   ratePerDay: 0 },
   { key: 'fast_glucose',     name: '快速葡萄糖 2.5C', unit: '顆', icon: '🍬',
-    rateLabel: '補糖時自動扣除',               ratePerDay: 0,    minStock: 20 },
+    rateLabel: '補糖時自動扣除',               ratePerDay: 0,    minStock: 20,  defaultQty: 314 },
 ];
 
 
@@ -5803,7 +5823,36 @@ function initRxDefaults(force) {
 
 // 設定初始庫存數量（只在第一次或強制時執行）
 // ── Migrate custom supplies → built-in (one-time) ──────────────────────────
-// ── Migrate new built-in supply keys for existing users ──────────────────────
+// ── App version (used by auditSupplyKeys to detect upgrades) ──────────────────
+const APP_VERSION = 'v2.8.1';
+
+// ── Supply audit: runs once per version, fills missing keys with defaultQty ───
+function auditSupplyKeys() {
+  var audited = localStorage.getItem('insulin_supply_audit_ver');
+  if (audited === APP_VERSION) return;              // 已針對此版本盤點過
+
+  var d    = getSupplies();
+  var added = [];
+
+  getAllSupplyDefs().forEach(function(def) {
+    if (d[def.key] === undefined) {
+      var qty = (def.defaultQty !== undefined) ? def.defaultQty : 0;
+      d[def.key] = qty;
+      added.push(def.icon + ' ' + def.name + ' × ' + qty + ' ' + def.unit);
+    }
+  });
+
+  if (added.length) {
+    setSupplies(d);
+    console.log('[supply audit ' + APP_VERSION + '] 補入新耗材：', added.join('、'));
+  } else {
+    console.log('[supply audit ' + APP_VERSION + '] 所有耗材 key 均已存在，無需補入');
+  }
+
+  localStorage.setItem('insulin_supply_audit_ver', APP_VERSION);
+}
+
+// ── Legacy: kept for safety, superseded by auditSupplyKeys() ──────────────────
 function migrateNewSupplyKeys() {
   var d = getSupplies();
   var changed = false;
@@ -6829,6 +6878,9 @@ function renderTodoPage() {
   _renderTodoList('todo-health-list',  health);
   _renderTodoList('todo-general-list', general);
   updateGCalUI();
+  // 顯示 / 隱藏 GCal 未連結提示
+  var hint = document.getElementById('todo-gcal-hint');
+  if (hint) hint.style.display = isGCalConnected() ? 'none' : 'flex';
 }
 
 function _renderTodoList(elId, todos) {
