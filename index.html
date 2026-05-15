@@ -1554,6 +1554,12 @@
     .corr-sugg-dose  { font-size: 1.35rem; font-weight: 800; color: #1d4ed8; font-variant-numeric: tabular-nums; }
     .corr-sugg-unit  { font-size: .72rem; color: #3b82f6; font-weight: 500; }
     .corr-sugg-meta  { font-size: .7rem; color: #64748b; margin-top: 2px; }
+    .corr-timer-row {
+      font-size: .68rem; margin-top: 5px; padding: 2px 7px;
+      border-radius: 5px; font-weight: 600; display: none;
+    }
+    .corr-timer-row.timer-waiting { background: #fef3c7; color: #92400e; }
+    .corr-timer-row.timer-ready   { background: #dcfce7; color: #166534; }
     .corr-fill-btn {
       background: #3b82f6; color: white; border: none;
       border-radius: 7px; padding: 4px 10px;
@@ -2485,11 +2491,56 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.8.8</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.9.1</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.9.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.9.1</span>
+          <span class="cl-date">2026-05-16</span>
+          <span class="cl-tag">補打部位</span>
+        </div>
+        <ul class="cl-list">
+          <li>補打記錄新增「施打部位」下拉選單（肚子／手臂／左大腿／右大腿／其他）</li>
+          <li>選擇部位後自動顯示對應速效胰島素作用時間提示</li>
+          <li>部位資料隨補打記錄一起儲存</li>
+        </ul>
+      </div>
+
+      <!-- v2.9.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.9.0</span>
+          <span class="cl-date">2026-05-16</span>
+          <span class="cl-tag">補打計時器</span>
+        </div>
+        <ul class="cl-list">
+          <li>補打建議框新增倒數計時器：點「帶入」後自動記錄施打時間</li>
+          <li>顯示距上次補打已過多少分鐘，並提示建議再等待時間（預設 2 小時）</li>
+          <li>超過 2 小時後顯示綠色「✅ 可再補打」提示</li>
+          <li>計時器每分鐘自動更新，重新整理頁面後仍保留</li>
+        </ul>
+      </div>
+
+      <!-- v2.8.9 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.8.9</span>
+          <span class="cl-date">2026-05-16</span>
+          <span class="cl-tag">計算機對齊</span>
+        </div>
+        <ul class="cl-list">
+          <li>主計算機警示補齊：新增「目標血糖 &gt; 當前血糖」提示（校正劑量為負值）</li>
+          <li>低血糖 / 高血糖 / 零劑量警示文字更詳細，與獨立計算機版一致</li>
+          <li>午餐備注補上「打手臂後，」說明</li>
+          <li>食物標籤單位由縮寫（g）改為中文（公克 / 克），與獨立計算機版一致</li>
+          <li>麥當勞選項補上「1組」說明</li>
+        </ul>
+      </div>
 
       <!-- v2.8.8 -->
       <div class="cl-item">
@@ -2640,8 +2691,8 @@ alter table user_todos enable row level security;
           <li>各餐儲存按鈕文字個別化（儲存早餐 / 午餐 / 晚餐 / 睡前紀錄）</li>
           <li>注射時間未填入時，儲存按鈕呈灰色且不可點擊；填入後自動恢復</li>
           <li>睡前胰島素欄位預設帶入 3 單位（長效固定劑量）</li>
-          <li>計算劑量：早餐新增套餐「熱壓全麥吐司＋牛奶120ml（碳水 17.8g）」</li>
-          <li>計算劑量：晚餐新增套餐「夜市油麵組合（油麵140g＋牛奶120ml，碳水 51g）」</li>
+          <li>計算劑量：早餐新增套餐「熱壓全麥吐司＋牛奶120ml（碳水 17.8克）」</li>
+          <li>計算劑量：晚餐新增套餐「夜市油麵組合（油麵140g＋牛奶120ml，碳水 51克）」</li>
         </ul>
       </div>
 
@@ -2957,6 +3008,15 @@ const SITE_ALARM_MAP = {
   '手臂':   { def: 20, opts: [10, 15, 20, 30] },
   '左大腿': { def: 30, opts: [15, 30, 45] },
   '右大腿': { def: 30, opts: [15, 30, 45] },
+};
+
+// Correction injection site → action time hints
+const CORR_SITE_HINTS = {
+  '肚子':   '⚡ 作用最快，約 10~15 分後開始生效',
+  '手臂':   '⏱ 約 15~20 分後開始生效',
+  '左大腿': '🐢 約 20~30 分後開始生效',
+  '右大腿': '🐢 約 20~30 分後開始生效',
+  '其他':   '',
 };
 
 const SNACK_SECTIONS = [
@@ -4112,6 +4172,13 @@ function onSiteChange(periodId) {
       return '<option value="'+m+'"'+(m===am.def?' selected':'')+'>'+m+'</option>';
     }).join('');
   }
+}
+
+function onCorrSiteChange(idx) {
+  var sel    = document.querySelector('#corrections-row-' + idx + ' [data-field="site"]');
+  var noteEl = document.getElementById('corr-site-note-' + idx);
+  if (!sel || !noteEl) return;
+  noteEl.textContent = CORR_SITE_HINTS[sel.value] || '';
 }
 
 // ══════════════════════════════════════════
@@ -5288,7 +5355,38 @@ function fillCorrDose(idx) {
   var sugEl  = document.getElementById('corr-sugg-dose-' + idx);
   if (doseEl && sugEl && sugEl.textContent !== '--') {
     doseEl.value = sugEl.textContent;
+    // Record injection timestamp for countdown timer
+    localStorage.setItem('insulin_last_corr_inject', new Date().toISOString());
+    updateAllCorrTimers();
   }
+}
+
+// ── Correction countdown timer ────────────────────────────────────────────
+var _corrTimerInterval = null;
+var CORR_INJECT_KEY    = 'insulin_last_corr_inject';
+var CORR_WAIT_MINS     = 120; // recommended wait between corrections
+
+function _corrTimerInfo() {
+  var ts = localStorage.getItem(CORR_INJECT_KEY);
+  if (!ts) return null;
+  var elapsed = Math.floor((Date.now() - new Date(ts).getTime()) / 60000);
+  if (elapsed < 0) elapsed = 0;
+  if (elapsed >= CORR_WAIT_MINS) {
+    var h = Math.floor(elapsed / 60), m = elapsed % 60;
+    return { text: '✅ 距上次補打已 ' + h + ' 小時' + (m ? ' ' + m + ' 分' : ''), cls: 'timer-ready' };
+  }
+  var wait = CORR_WAIT_MINS - elapsed;
+  return { text: '⏱ 上次補打 ' + elapsed + ' 分鐘前　建議再等 ' + wait + ' 分鐘', cls: 'timer-waiting' };
+}
+
+function updateAllCorrTimers() {
+  var info = _corrTimerInfo();
+  document.querySelectorAll('[id^="corr-timer-"]').forEach(function(el) {
+    if (!info) { el.style.display = 'none'; el.className = 'corr-timer-row'; return; }
+    el.textContent   = info.text;
+    el.className     = 'corr-timer-row ' + info.cls;
+    el.style.display = 'block';
+  });
 }
 
 async function autoFillCorrBG(idx) {
@@ -5357,6 +5455,7 @@ function renderSupplList(type, items) {
               + '<span class="corr-sugg-unit">單位【速效】</span>'
             + '</div>'
             + '<div class="corr-sugg-meta" id="corr-sugg-meta-' + idx + '">' + meta + '</div>'
+            + '<div class="corr-timer-row" id="corr-timer-' + idx + '"></div>'
           + '</div>'
           + '<button class="corr-fill-btn" type="button" onclick="fillCorrDose(' + idx + ')">帶入</button>'
         + '</div>'
@@ -5372,6 +5471,20 @@ function renderSupplList(type, items) {
           + '</div>'
           + '<button class="suppl-del-btn" onclick="removeSupplRow(\'corrections\', ' + idx + ')" title="刪除">✕</button>'
         + '</div>'
+        // Site selector
+        + (function(){
+            var sites = ['肚子','手臂','左大腿','右大腿','其他'];
+            var opts = '<option value="">— 未記錄 —</option>' + sites.map(function(s){
+              return '<option value="' + s + '"' + (item.site === s ? ' selected' : '') + '>' + s + '</option>';
+            }).join('');
+            var hint = CORR_SITE_HINTS[item.site] || '';
+            return '<div class="site-row" style="border-radius:0;">'
+              + '<span class="site-label">📍 施打部位</span>'
+              + '<select class="site-select suppl-val" data-idx="' + idx + '" data-field="site"'
+              + ' onchange="onCorrSiteChange(' + idx + ')">' + opts + '</select>'
+              + '<span class="site-note" id="corr-site-note-' + idx + '">' + hint + '</span>'
+              + '</div>';
+          })()
         // Note
         + '<div class="suppl-note">'
           + '<textarea rows="1" data-idx="' + idx + '" data-field="note"'
@@ -5769,6 +5882,8 @@ function init() {
   // Handle Google Calendar OAuth2 callback
   if (window.location.search.includes('code=')) handleGCalCallback();
   setTimeout(checkTodoAlerts, 3000);
+  updateAllCorrTimers();
+  _corrTimerInterval = setInterval(updateAllCorrTimers, 60000); // update every minute
   setTimeout(function() {
     auditSupplyKeys();                // 版本升級時自動盤點耗材，補齊新 key
     migrateCustomSuppliesToBuiltin(); // one-time: move 肌力貼 to built-in
@@ -5793,7 +5908,7 @@ const CALC_MEAL_PRESETS = {
       '施打部位 >> 手臂',
       '施打完 20 分鐘後進食',
       '因為 11:30 開始吃，若當下血糖低於 130，打完胰島素後先補 1 顆葡萄糖片',
-      '週四體育課 >>> 低於 150 時先補充 2 顆糖；低於 170 時先補充 1 顆糖，預防性課間低血糖',
+      '週四體育課 >>> 打手臂後，低於 150 時先補充 2 顆糖，預防性課間低血糖；低於 170 時先補充 1 顆糖，預防性課間低血糖',
     ],
   },
   dinner: {
@@ -5821,49 +5936,49 @@ const CALC_CARB_FOODS = {
 
 const CALC_MAIN_OPTIONS = {
   breakfast: [
-    { value: 'wheat_toast_milk_combo', label: '🥛 熱壓全麥吐司＋牛奶120ml 碳水 17.8g' },
-    { value: 'white_rice',         label: '白飯 100g (碳水30g)' },
-    { value: 'udon',               label: '烏龍麵 100g (碳水24.6g)' },
-    { value: 'yangchun_noodle',    label: '陽春麵 100g (碳水27.8g)' },
-    { value: 'oil_noodle',         label: '油麵 100g (碳水25.5g)' },
-    { value: 'spaghetti',          label: '義大利麵 100g (碳水27.4g)' },
-    { value: 'penne',              label: '筆管麵 100g (碳水29g)' },
-    { value: 'potato_skin',        label: '馬鈴薯帶皮 100g (碳水12.9g)' },
-    { value: 'wheat_toast',        label: '全麥吐司 1片 (碳水12g)' },
-    { value: 'white_toast',        label: '白吐司 1片 (碳水12g)' },
-    { value: 'strawberry_toast',   label: '草莓吐司 1片 (碳水15.25g)' },
-    { value: 'berry_party',        label: '莓果派對 1份 (碳水3.5g)' },
-    { value: 'bacon_egg_pancake',  label: '培根蛋餅 1份 (碳水30g)' },
-    { value: 'pan_fried_dumpling', label: '小煎餃 55g (碳水15g)' },
-    { value: 'dumpling',           label: '水餃 1顆 (碳水4g)' },
-    { value: 'soup_dumpling',      label: '湯包 1顆 (碳水4.3g)' },
+    { value: 'wheat_toast_milk_combo', label: '🥛 熱壓全麥吐司＋牛奶120ml 碳水 17.8克' },
+    { value: 'white_rice',         label: '白飯 100公克 (碳水30克)' },
+    { value: 'udon',               label: '烏龍麵 100公克 (碳水24.6克)' },
+    { value: 'yangchun_noodle',    label: '陽春麵 100公克 (碳水27.8克)' },
+    { value: 'oil_noodle',         label: '油麵 100公克 (碳水25.5克)' },
+    { value: 'spaghetti',          label: '義大利麵 100公克 (碳水27.4克)' },
+    { value: 'penne',              label: '筆管麵 100公克 (碳水29克)' },
+    { value: 'potato_skin',        label: '馬鈴薯帶皮 100公克 (碳水12.9克)' },
+    { value: 'wheat_toast',        label: '全麥吐司 1片 (碳水12克)' },
+    { value: 'white_toast',        label: '白吐司 1片 (碳水12克)' },
+    { value: 'strawberry_toast',   label: '草莓吐司 1片 (碳水15.25克)' },
+    { value: 'berry_party',        label: '莓果派對 1份 (碳水3.5克)' },
+    { value: 'bacon_egg_pancake',  label: '培根蛋餅 1份 (碳水30克)' },
+    { value: 'pan_fried_dumpling', label: '小煎餃 55公克 (碳水15克)' },
+    { value: 'dumpling',           label: '水餃 1顆 (碳水4克)' },
+    { value: 'soup_dumpling',      label: '湯包 1顆 (碳水4.3克)' },
   ],
   lunch: [
-    { value: 'white_rice',      label: '白飯 100g (碳水30g)' },
-    { value: 'udon',            label: '烏龍麵 100g (碳水24.6g)' },
-    { value: 'yangchun_noodle', label: '陽春麵 100g (碳水27.8g)' },
-    { value: 'oil_noodle',      label: '油麵 100g (碳水25.5g)' },
-    { value: 'spaghetti',       label: '義大利麵 100g (碳水27.4g)' },
-    { value: 'penne',           label: '筆管麵 100g (碳水29g)' },
-    { value: 'potato_skin',     label: '馬鈴薯帶皮 100g (碳水12.9g)' },
-    { value: 'dumpling',        label: '水餃 1顆 (碳水4g)' },
-    { value: 'soup_dumpling',   label: '湯包 1顆 (碳水4.3g)' },
-    { value: 'mcd_combo_1',     label: '麥當勞組合1（鱈魚堡＋玉米杯＋牛奶）(碳水66g)' },
-    { value: 'mcd_combo_2',     label: '麥當勞組合2（鱈魚堡＋玉米杯＋水果袋）(碳水55.2g)' },
+    { value: 'white_rice',      label: '白飯 100公克 (碳水30克)' },
+    { value: 'udon',            label: '烏龍麵 100公克 (碳水24.6克)' },
+    { value: 'yangchun_noodle', label: '陽春麵 100公克 (碳水27.8克)' },
+    { value: 'oil_noodle',      label: '油麵 100公克 (碳水25.5克)' },
+    { value: 'spaghetti',       label: '義大利麵 100公克 (碳水27.4克)' },
+    { value: 'penne',           label: '筆管麵 100公克 (碳水29克)' },
+    { value: 'potato_skin',     label: '馬鈴薯帶皮 100公克 (碳水12.9克)' },
+    { value: 'dumpling',        label: '水餃 1顆 (碳水4克)' },
+    { value: 'soup_dumpling',   label: '湯包 1顆 (碳水4.3克)' },
+    { value: 'mcd_combo_1',     label: '麥當勞組合1（鱈魚堡＋玉米杯＋牛奶）1組 (碳水66克)' },
+    { value: 'mcd_combo_2',     label: '麥當勞組合2（鱈魚堡＋玉米杯＋水果袋）1組 (碳水55.2克)' },
   ],
   dinner: [
-    { value: 'night_market_noodle_combo', label: '🏮 夜市油麵組合（油麵140g＋牛奶120ml）碳水 51g' },
-    { value: 'white_rice',      label: '白飯 100g (碳水30g)' },
-    { value: 'udon',            label: '烏龍麵 100g (碳水24.6g)' },
-    { value: 'yangchun_noodle', label: '陽春麵 100g (碳水27.8g)' },
-    { value: 'oil_noodle',      label: '油麵 100g (碳水25.5g)' },
-    { value: 'spaghetti',       label: '義大利麵 100g (碳水27.4g)' },
-    { value: 'penne',           label: '筆管麵 100g (碳水29g)' },
-    { value: 'potato_skin',     label: '馬鈴薯帶皮 100g (碳水12.9g)' },
-    { value: 'dumpling',        label: '水餃 1顆 (碳水4g)' },
-    { value: 'soup_dumpling',   label: '湯包 1顆 (碳水4.3g)' },
-    { value: 'mcd_combo_1',     label: '麥當勞組合1（鱈魚堡＋玉米杯＋牛奶）(碳水66g)' },
-    { value: 'mcd_combo_2',     label: '麥當勞組合2（鱈魚堡＋玉米杯＋水果袋）(碳水55.2g)' },
+    { value: 'night_market_noodle_combo', label: '🏮 夜市油麵組合（油麵140g＋牛奶120ml）碳水 51克' },
+    { value: 'white_rice',      label: '白飯 100公克 (碳水30克)' },
+    { value: 'udon',            label: '烏龍麵 100公克 (碳水24.6克)' },
+    { value: 'yangchun_noodle', label: '陽春麵 100公克 (碳水27.8克)' },
+    { value: 'oil_noodle',      label: '油麵 100公克 (碳水25.5克)' },
+    { value: 'spaghetti',       label: '義大利麵 100公克 (碳水27.4克)' },
+    { value: 'penne',           label: '筆管麵 100公克 (碳水29克)' },
+    { value: 'potato_skin',     label: '馬鈴薯帶皮 100公克 (碳水12.9克)' },
+    { value: 'dumpling',        label: '水餃 1顆 (碳水4克)' },
+    { value: 'soup_dumpling',   label: '湯包 1顆 (碳水4.3克)' },
+    { value: 'mcd_combo_1',     label: '麥當勞組合1（鱈魚堡＋玉米杯＋牛奶）1組 (碳水66克)' },
+    { value: 'mcd_combo_2',     label: '麥當勞組合2（鱈魚堡＋玉米杯＋水果袋）1組 (碳水55.2克)' },
   ],
 };
 
@@ -6093,10 +6208,11 @@ function calcRecalc() {
 
   // Warnings
   const warns = [];
-  if (bg > 0 && bg < 70)  warns.push('目前血糖偏低，建議先處理低血糖再評估是否施打。');
-  if (bg >= 250)           warns.push('目前血糖偏高，請依照醫療團隊的高血糖處置流程。');
+  if (bg > 0 && bg < 70)  warns.push('目前血糖偏低。通常應先處理低血糖，不建議只依計算結果施打餐前胰島素。');
+  if (bg >= 250)           warns.push('目前血糖偏高。若有酮體、嘔吐、腹痛或不適，請依照醫療團隊的高血糖處置流程。');
+  if (bg > 0 && preset.target > bg) warns.push('目標血糖高於目前血糖，校正劑量會是負值，結果主要來自碳水劑量。');
   if (rawDose === 0 && (carbs > 0 || bg > preset.target))
-    warns.push('估算結果為 0，請確認 CIR、ISF 與 IOB 設定值是否正確。');
+    warns.push('估算結果為 0 單位。請確認輸入值與個人醫囑，尤其是 CIR 醣類係數、ISF 敏感係數與有效胰島素。');
   document.getElementById('calc-warnings').innerHTML =
     warns.map(w => '<div class="calc-warning">⚠️ ' + w + '</div>').join('');
 }
@@ -7626,14 +7742,14 @@ function checkTodoAlerts() {
           <span class="calc-food-badge badge-fruit">甜點</span>
           <select id="calc-food-3" onchange="calcRecalc()">
             <option value="">不選擇</option>
-            <option value="guava">芭樂 100g (碳水10.6g)</option>
-            <option value="apple">蘋果 100g (碳水11.9g)</option>
-            <option value="cherry">櫻桃 100g (碳水19.12g)</option>
-            <option value="banana_peel">香蕉帶皮 100g (碳水10.6g)</option>
-            <option value="banana">香蕉去皮 100g (碳水22.1g)</option>
-            <option value="pineapple">鳳梨 100g (碳水13.6g)</option>
-            <option value="dragon_fruit">火龍果 100g (碳水12.36g)</option>
-            <option value="strawberry">草莓去蒂 100g (碳水9.3g)</option>
+            <option value="guava">芭樂 100公克 (碳水10.6克)</option>
+            <option value="apple">蘋果 100公克 (碳水11.9克)</option>
+            <option value="cherry">櫻桃 100公克 (碳水19.12克)</option>
+            <option value="banana_peel">香蕉帶皮 100公克 (碳水10.6克)</option>
+            <option value="banana">香蕉去皮 100公克 (碳水22.1克)</option>
+            <option value="pineapple">鳳梨 100公克 (碳水13.6克)</option>
+            <option value="dragon_fruit">火龍果 100公克 (碳水12.36克)</option>
+            <option value="strawberry">草莓去蒂 100公克 (碳水9.3克)</option>
           </select>
           <input type="number" id="calc-qty-3" min="0" step="0.1" value="1" oninput="calcRecalc()" />
         </div>
@@ -7641,11 +7757,11 @@ function checkTodoAlerts() {
           <span class="calc-food-badge badge-drink">飲品</span>
           <select id="calc-food-4" onchange="calcRecalc()">
             <option value="">不選擇</option>
-            <option value="milk_100">牛奶 100g (碳水4.8g)</option>
-            <option value="milk_150">牛奶 150g (碳水7g)</option>
-            <option value="milk_200">牛奶 200g (碳水10g)</option>
-            <option value="yogurt_100">優酪乳 100g (碳水12g)</option>
-            <option value="yakult">養樂多 90ML (碳水14.7g)</option>
+            <option value="milk_100">牛奶 100公克 (碳水4.8克)</option>
+            <option value="milk_150">牛奶 150公克 (碳水7克)</option>
+            <option value="milk_200">牛奶 200公克 (碳水10克)</option>
+            <option value="yogurt_100">優酪乳 100公克 (碳水12克)</option>
+            <option value="yakult">養樂多 90ML (碳水14.7克)</option>
           </select>
           <input type="number" id="calc-qty-4" min="0" step="0.1" value="1" oninput="calcRecalc()" />
         </div>
