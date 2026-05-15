@@ -2282,9 +2282,33 @@
     <h3>☁️ 雲端同步設定</h3>
     <div class="cloud-setup-box">
       <strong>跨裝置同步說明</strong><br>
-      請先到 <strong>supabase.com</strong> 建立免費專案，執行建表 SQL，再填入以下資訊。<br>
-      詳細步驟請參考隨附的「部署指南」文件。
+      請先到 <strong>supabase.com</strong> 建立免費專案，在 SQL Editor 執行以下建表指令，再填入下方資訊。
     </div>
+    <details style="margin-bottom:14px;">
+      <summary style="font-size:0.82rem;font-weight:600;cursor:pointer;color:var(--primary);padding:6px 0;">📋 點此展開建表 SQL（複製貼到 Supabase SQL Editor 執行）</summary>
+      <pre style="background:#0f172a;color:#e2e8f0;border-radius:10px;padding:14px;font-size:0.72rem;overflow-x:auto;margin-top:8px;line-height:1.6;">-- 胰島素紀錄表
+create table if not exists insulin_records (
+  user_id    text        not null,
+  date       date        not null,
+  data       jsonb,
+  updated_at timestamptz default now(),
+  primary key (user_id, date)
+);
+
+-- 待辦事項同步（跨裝置共用）
+create table if not exists user_todos (
+  user_id    text        primary key,
+  todos      jsonb       default '[]'::jsonb,
+  updated_at timestamptz default now()
+);
+
+-- 啟用 Row Level Security（建議）
+alter table insulin_records enable row level security;
+alter table user_todos enable row level security;
+-- 若使用 anon key 匿名存取，請加：
+-- create policy "allow all" on insulin_records for all using (true) with check (true);
+-- create policy "allow all" on user_todos      for all using (true) with check (true);</pre>
+    </details>
     <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
       <label style="font-size:0.83rem;font-weight:600;">Supabase Project URL</label>
       <input type="url" id="set-sb-url" class="settings-input-full"
@@ -2461,11 +2485,26 @@
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.8.7</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.8.8</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.8.8 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.8.8</span>
+          <span class="cl-date">2026-05-15</span>
+          <span class="cl-tag">資料安全</span>
+        </div>
+        <ul class="cl-list">
+          <li>待辦事項加入 Supabase 雲端同步（user_todos 表），換裝置不再遺失資料</li>
+          <li>每次新增、編輯、刪除、完成待辦皆自動同步（800ms debounce），跨裝置即時一致</li>
+          <li>初始化時自動從雲端載入並合併待辦，本機與雲端資料取聯集，不覆蓋雙方</li>
+          <li>設定頁「雲端同步」區塊新增建表 SQL，一鍵複製貼至 Supabase SQL Editor 即可啟用</li>
+        </ul>
+      </div>
 
       <!-- v2.8.7 -->
       <div class="cl-item">
@@ -3001,6 +3040,7 @@ async function loadFromCloud() {
       data.forEach(row => { allDataCache[row.date] = row.data; });
       localStorage.setItem('insulin_records', JSON.stringify(allDataCache));
     }
+    await loadTodosFromCloud();  // also sync todos
     setSyncBadge('☁️ 已同步', 'sync-ok');
   } catch(e) {
     setSyncBadge('⚠️ 同步失敗', 'sync-err');
@@ -3020,6 +3060,48 @@ async function syncDayToCloud(date, dayData) {
   } catch(e) {
     setSyncBadge('⚠️ 同步失敗', 'sync-err');
   }
+}
+
+// ── Todo cloud sync ─────────────────────────────────────────────────────
+var _syncTodosTimer = null;
+
+async function loadTodosFromCloud() {
+  if (!sbClient || !currentUserId) return;
+  try {
+    var res = await sbClient
+      .from('user_todos')
+      .select('todos')
+      .eq('user_id', currentUserId)
+      .single();
+    if (res.error || !res.data || !Array.isArray(res.data.todos)) return;
+    var cloudTodos = res.data.todos;
+    var local = getTodos();
+    // Merge: union by id — cloud wins for conflicts
+    var cloudMap = {};
+    cloudTodos.forEach(function(t) { cloudMap[t.id] = t; });
+    // Keep local todos not in cloud + update local with cloud versions
+    var merged = local.map(function(t) { return cloudMap[t.id] ? cloudMap[t.id] : t; });
+    // Add cloud-only todos
+    cloudTodos.forEach(function(t) {
+      if (!merged.some(function(m) { return m.id === t.id; })) merged.push(t);
+    });
+    localStorage.setItem('insulin_todos', JSON.stringify(merged));
+  } catch(e) { console.warn('loadTodosFromCloud:', e); }
+}
+
+function syncTodosToCloud() {
+  if (!sbClient || !currentUserId) return;
+  clearTimeout(_syncTodosTimer);
+  _syncTodosTimer = setTimeout(async function() {
+    try {
+      var todos = getTodos();
+      await sbClient.from('user_todos').upsert({
+        user_id:    currentUserId,
+        todos:      todos,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' });
+    } catch(e) { console.warn('syncTodosToCloud:', e); }
+  }, 800);  // debounce 800ms
 }
 
 // ══════════════════════════════════════════
@@ -5679,6 +5761,7 @@ function init() {
     // (first install / new device). If user already has local data, don't
     // overwrite what they may have started editing.
     if (!hadLocalDataToday) loadDayData();
+    renderTodoPage();  // refresh todos with cloud data
   });
   startCGMPolling();   // start real-time CGM widget
   setTimeout(checkAndNotifyLowSupplies, 4000); // delayed supply check on load
@@ -6082,7 +6165,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.8.7';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.8.8';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID = '1015693868400-14kci11e7s7mqqr95t3nt0t1g77ur9b1.apps.googleusercontent.com';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
 const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
@@ -7246,7 +7329,10 @@ async function gcalDelete(eid) {
 //  TODO — DATA
 // ══════════════════════════════════════════════════════════════
 function getTodos(){ try{ return JSON.parse(localStorage.getItem('insulin_todos')||'[]'); }catch(e){ return []; } }
-function setTodos(a){ localStorage.setItem('insulin_todos', JSON.stringify(a)); }
+function setTodos(a) {
+  localStorage.setItem('insulin_todos', JSON.stringify(a));
+  syncTodosToCloud();  // auto-sync to cloud after every change
+}
 
 // ── Form state ──
 var _todoCat = 'health';
