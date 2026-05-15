@@ -1069,6 +1069,48 @@
     }
     .settings-save-btn:hover { background: var(--primary-dark); }
 
+    /* ── meal params table ── */
+    .meal-params-table { width: 100%; }
+    .mpt-header, .mpt-row {
+      display: grid;
+      grid-template-columns: 5rem 1fr 1fr 1fr;
+      gap: 8px;
+      align-items: center;
+      padding: 6px 0;
+    }
+    .mpt-header {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 4px;
+    }
+    .mpt-label { font-size: 0.88rem; font-weight: 500; }
+    .mpt-row input {
+      width: 100%;
+      padding: 6px 4px;
+      text-align: center;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.9rem;
+      background: var(--card);
+      color: var(--text);
+    }
+    .mp-confirm-btn {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 9px 22px;
+      border-radius: 999px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: filter 0.15s;
+    }
+    .mp-confirm-btn:hover { filter: brightness(1.1); }
+    /* ── carb-calc overlay (reuses calc-overlay styles) ── */
+    #carbCalcOverlay .calc-modal { max-width: 340px; }
+
     .danger-btn {
       width: 100%;
       background: white;
@@ -2016,7 +2058,10 @@
         🍬 補糖記錄
         <span class="suppl-tag tag-carb">低血糖補充</span>
       </div>
-      <button class="suppl-add-btn" onclick="addSupplRow('carbs')">＋ 新增補糖</button>
+      <div style="display:flex;gap:6px;">
+        <button class="suppl-add-btn" style="background:var(--primary);color:white;border-color:var(--primary);" onclick="openCarbCalc()">🍬 估算補糖量</button>
+        <button class="suppl-add-btn" onclick="addSupplRow('carbs')">＋ 新增補糖</button>
+      </div>
     </div>
     <div id="carbs-list"></div>
   </div>
@@ -2313,6 +2358,45 @@
     <button class="settings-save-btn" onclick="saveSettings()">儲存設定</button>
   </div>
 
+  <!-- 餐前計算參數 -->
+  <div class="settings-section">
+    <h3>💊 餐前計算參數</h3>
+    <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px;">
+      修改後點「預覽變更」確認，再按「確認儲存」才會生效，防止誤觸。
+    </p>
+    <div class="meal-params-table">
+      <div class="mpt-header">
+        <span></span><span style="text-align:center;">CIR（g/U）</span>
+        <span style="text-align:center;">ISF（mg/dL/U）</span>
+        <span style="text-align:center;">目標血糖</span>
+      </div>
+      <div class="mpt-row">
+        <span class="mpt-label">🌅 早餐</span>
+        <input type="number" id="mp-cir-breakfast"    min="1" max="30"  step="0.5" oninput="">
+        <input type="number" id="mp-isf-breakfast"    min="10" max="300" step="1"  oninput="">
+        <input type="number" id="mp-target-breakfast" min="80" max="250" step="1"  oninput="">
+      </div>
+      <div class="mpt-row">
+        <span class="mpt-label">☀️ 午餐</span>
+        <input type="number" id="mp-cir-lunch"    min="1" max="30"  step="0.5" oninput="">
+        <input type="number" id="mp-isf-lunch"    min="10" max="300" step="1"  oninput="">
+        <input type="number" id="mp-target-lunch" min="80" max="250" step="1"  oninput="">
+      </div>
+      <div class="mpt-row">
+        <span class="mpt-label">🌙 晚餐</span>
+        <input type="number" id="mp-cir-dinner"    min="1" max="30"  step="0.5" oninput="">
+        <input type="number" id="mp-isf-dinner"    min="10" max="300" step="1"  oninput="">
+        <input type="number" id="mp-target-dinner" min="80" max="250" step="1"  oninput="">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap;">
+      <button class="settings-save-btn" onclick="saveMealParams()">預覽變更</button>
+      <div id="mp-confirm-row" style="display:none;">
+        <button class="mp-confirm-btn" onclick="confirmSaveMealParams()">✅ 確認儲存</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Nightscout / CGM settings -->
   <div class="settings-section">
     <h3>📡 CGM 連動設定（Nightscout）</h3>
@@ -2377,11 +2461,26 @@
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.8.6</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.8.7</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.8.7 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.8.7</span>
+          <span class="cl-date">2026-05-15</span>
+          <span class="cl-tag">計算功能擴充</span>
+        </div>
+        <ul class="cl-list">
+          <li>設定頁新增「餐前計算參數」區塊，可調整早/午/晚餐的 CIR、ISF、目標血糖，並需二次確認防止誤觸</li>
+          <li>補糖記錄區新增「🍬 估算補糖量」按鈕，自動帶入 CGM 血糖與目前時段參數，即時計算建議補糖克數</li>
+          <li>各點心區塊新增「💊 計算」按鈕，可開啟劑量計算機後自動帶入對應餐段參數，計算結果直接新增點心行</li>
+          <li>CGM 時間顯示改為人性化格式：60 分鐘以上顯示「X 小時前」，24 小時以上顯示「X 天前」</li>
+        </ul>
+      </div>
 
       <!-- v2.8.6 -->
       <div class="cl-item">
@@ -2836,6 +2935,7 @@ const DEFAULT_SETTINGS = {
   nsUrl: 'https://0977771916.t1ns.tw',
   nsToken: '',
   nsAutoFill: true,
+  mealParams: null,  // { breakfast:{cir,isf,target}, lunch:{...}, dinner:{...} }
 };
 
 let settings = loadSettings();
@@ -3111,14 +3211,14 @@ function updateCGMWidget(entry) {
     ? (rawDelta >= 0 ? '+' : '') + Math.round(rawDelta * 10) / 10 + ' mg/dL' : '';
   var ms   = entry.date || (entry.dateString ? new Date(entry.dateString).getTime() : Date.now());
   var mins = Math.round((Date.now() - ms) / 60000);
-  var timeAgo = mins < 2 ? '剛剛' : mins + ' 分鐘前';
+  var timeAgo = _fmtTimeAgo(mins);
 
   // CGM disconnect / stale data check
   if (mins > 20) {
     setAlertItem('cgm-disc', 2, '📡 CGM 資料過舊',
-      '最後資料 ' + mins + ' 分鐘前 (' + sgv + ' mg/dL)，請確認感應器連線');
+      '最後資料 ' + _fmtTimeAgo(mins) + ' (' + sgv + ' mg/dL)，請確認感應器連線');
     sendPushNotif('cgm-disc', '📡 CGM 訊號警告',
-      '已 ' + mins + ' 分鐘未收到新血糖資料（最後：' + sgv + ' mg/dL），請確認感應器', false);
+      '已 ' + _fmtTimeAgo(mins) + ' 未收到新血糖資料（最後：' + sgv + ' mg/dL），請確認感應器', false);
   } else {
     clearAlertItem('cgm-disc');
   }
@@ -3356,6 +3456,7 @@ async function requestPushPermission() {
     showToast('❌ 通知權限被拒絕，請至系統設定手動開啟');
   }
   loadNotifSettingsUI();
+  loadMealParamsUI();
 }
 
 function saveNotifSettings() {
@@ -3887,7 +3988,10 @@ function buildPeriodCards() {
       html += '<div class="snack-divider" id="' + snack.id + '-section">'
         + '<div class="snack-divider-header" id="' + snack.id + '-header">'
           + '<span class="snack-divider-label">' + snack.icon + ' ' + snack.label + '</span>'
-          + '<button class="suppl-add-btn" onclick="addSnackRow(\'' + snack.id + '\')">＋ 新增點心</button>'
+          + '<div style="display:flex;gap:6px;">'
+            + '<button class="suppl-add-btn" style="background:var(--primary);color:white;border-color:var(--primary);" onclick="openSnackCalcModal(\'' + snack.id + '\')">💊 計算</button>'
+            + '<button class="suppl-add-btn" onclick="addSnackRow(\'' + snack.id + '\')">＋ 新增點心</button>'
+          + '</div>'
         + '</div>'
         + '<div id="' + snack.id + '-list"></div>'
       + '</div>';
@@ -4713,7 +4817,11 @@ function renderSnackSection(sectionId, items) {
   if (items.length === 0) { listEl.innerHTML = ''; return; }
 
   // Find CIR/ISF/target for this section
-  var sec = SNACK_SECTIONS.filter(function(s){ return s.id === sectionId; })[0] || { cir:10, isf:110, target:140, cirLabel:'' };
+  var sec = SNACK_SECTIONS.filter(function(s){ return s.id === sectionId; })[0] || { cir:10, isf:110, target:140, cirLabel:'', after:'noon' };
+  // Override with user settings
+  var _mealKey5 = { morning:'breakfast', noon:'lunch', evening:'dinner' }[sec.after] || 'lunch';
+  var _mp5 = getMealPreset(_mealKey5);
+  sec = Object.assign({}, sec, { cir: _mp5.cir, isf: _mp5.isf, target: _mp5.target });
 
   listEl.innerHTML = items.map(function(item, idx) {
     var typeOptions = SNACK_TYPES.map(function(t) {
@@ -4853,6 +4961,10 @@ function onSnackTypeChange(sectionId, idx, selectEl) {
 function calcSnackDose(sectionId, idx) {
   var sec = SNACK_SECTIONS.filter(function(s){ return s.id === sectionId; })[0];
   if (!sec) return;
+  // Override with user settings
+  var _mealKey6 = { morning:'breakfast', noon:'lunch', evening:'dinner' }[sec.after] || 'lunch';
+  var _mp6 = getMealPreset(_mealKey6);
+  sec = Object.assign({}, sec, { cir: _mp6.cir, isf: _mp6.isf, target: _mp6.target });
 
   var rowEl  = document.getElementById(sectionId + '-row-' + idx);
   if (!rowEl) return;
@@ -4903,6 +5015,46 @@ function calcSnackDose(sectionId, idx) {
 // ════════════════════════════════
 //  SETTINGS
 // ════════════════════════════════
+// ── Meal params settings UI ──────────────────────────────────────────────
+function loadMealParamsUI() {
+  var meals = ['breakfast', 'lunch', 'dinner'];
+  meals.forEach(function(m) {
+    var p = getMealPreset(m);
+    var cirEl    = document.getElementById('mp-cir-'    + m);
+    var isfEl    = document.getElementById('mp-isf-'    + m);
+    var targetEl = document.getElementById('mp-target-' + m);
+    if (cirEl)    cirEl.value    = p.cir;
+    if (isfEl)    isfEl.value    = p.isf;
+    if (targetEl) targetEl.value = p.target;
+  });
+  var confirmRow = document.getElementById('mp-confirm-row');
+  if (confirmRow) confirmRow.style.display = 'none';
+}
+
+function saveMealParams() {
+  // Show confirm button as 2nd-step protection
+  var confirmRow = document.getElementById('mp-confirm-row');
+  if (confirmRow) confirmRow.style.display = 'flex';
+  showToast('⚠️ 請確認數值後點「確認儲存」');
+}
+
+function confirmSaveMealParams() {
+  var meals = ['breakfast', 'lunch', 'dinner'];
+  var mp = {};
+  meals.forEach(function(m) {
+    mp[m] = {
+      cir:    parseFloat(document.getElementById('mp-cir-'    + m).value) || null,
+      isf:    parseFloat(document.getElementById('mp-isf-'    + m).value) || null,
+      target: parseFloat(document.getElementById('mp-target-' + m).value) || null,
+    };
+  });
+  settings.mealParams = mp;
+  saveSettingsToStorage();
+  var confirmRow = document.getElementById('mp-confirm-row');
+  if (confirmRow) confirmRow.style.display = 'none';
+  showToast('✅ 餐前參數已儲存！');
+}
+
 function loadSettingsUI() {
   document.getElementById('set-low').value        = settings.low;
   document.getElementById('set-normalLow').value  = settings.normalLow;
@@ -5632,12 +5784,98 @@ const CALC_MAIN_OPTIONS = {
   ],
 };
 
+// ── CGM time formatter ──────────────────────────────────────────────────
+function _fmtTimeAgo(mins) {
+  if (mins < 2)    return '剛剛';
+  if (mins < 60)   return mins + ' 分鐘前';
+  if (mins < 1440) return Math.floor(mins / 60) + ' 小時前';
+  return Math.floor(mins / 1440) + ' 天前';
+}
+
+// ── Dynamic meal preset (reads settings.mealParams with fallback) ───────
+function getMealPreset(meal) {
+  var base = CALC_MEAL_PRESETS[meal] || CALC_MEAL_PRESETS.breakfast;
+  var mp   = settings.mealParams && settings.mealParams[meal];
+  if (!mp) return base;
+  return Object.assign({}, base, {
+    cir:    (mp.cir    != null && !isNaN(mp.cir))    ? mp.cir    : base.cir,
+    isf:    (mp.isf    != null && !isNaN(mp.isf))    ? mp.isf    : base.isf,
+    target: (mp.target != null && !isNaN(mp.target)) ? mp.target : base.target,
+  });
+}
+
+// ── Snack calc mode vars ─────────────────────────────────────────────────
+var calcIsSnackMode    = false;
+var calcSnackSectionId = null;
+var SNACK_MEAL_MAP = {
+  'snack-morning-noon':    'breakfast',
+  'snack-noon-evening':    'lunch',
+  'snack-evening-bedtime': 'dinner',
+};
+
+// ── Snack calc modal ─────────────────────────────────────────────────────
+function openSnackCalcModal(sectionId) {
+  calcIsSnackMode    = true;
+  calcSnackSectionId = sectionId;
+  var mealKey = SNACK_MEAL_MAP[sectionId] || 'lunch';
+  var titleEl = document.getElementById('calc-modal-title');
+  if (titleEl) titleEl.textContent = '🍎 點心劑量計算';
+  document.getElementById('calc-meal-period').value = mealKey;
+  if (lastCGMEntry && lastCGMEntry.sgv) {
+    document.getElementById('calc-bg').value = Math.round(lastCGMEntry.sgv);
+  }
+  [1,2,3,4].forEach(function(i) {
+    document.getElementById('calc-food-' + i).value = '';
+    document.getElementById('calc-qty-' + i).value  = 1;
+  });
+  document.getElementById('calc-other-carbs').value = '';
+  document.getElementById('calc-iob').value = '';
+  calcUpdateMeal();
+  calcRecalc();
+  document.getElementById('calcOverlay').classList.add('open');
+}
+
+// ── Carb supplement calculator ───────────────────────────────────────────
+function openCarbCalc() {
+  if (lastCGMEntry && lastCGMEntry.sgv) {
+    document.getElementById('cc-bg').value = Math.round(lastCGMEntry.sgv);
+  }
+  var h = new Date().getHours();
+  var mealKey = (h >= 6 && h < 11) ? 'breakfast' : (h >= 11 && h < 15) ? 'lunch' : 'dinner';
+  var preset = getMealPreset(mealKey);
+  document.getElementById('cc-isf').value    = preset.isf;
+  document.getElementById('cc-target').value = preset.target;
+  document.getElementById('cc-cir').value    = preset.cir;
+  carbCalcRecalc();
+  document.getElementById('carbCalcOverlay').classList.add('open');
+}
+function closeCarbCalc() {
+  document.getElementById('carbCalcOverlay').classList.remove('open');
+}
+function carbCalcRecalc() {
+  var bg     = parseFloat(document.getElementById('cc-bg').value)     || 0;
+  var isf    = parseFloat(document.getElementById('cc-isf').value)    || 110;
+  var target = parseFloat(document.getElementById('cc-target').value) || 140;
+  var cir    = parseFloat(document.getElementById('cc-cir').value)    || 10;
+  var resEl  = document.getElementById('cc-result');
+  if (bg <= 0) { resEl.textContent = '—'; return; }
+  if (bg >= target) { resEl.textContent = '無需補糖'; return; }
+  // grams needed = (target - bg) / (isf / cir)
+  var bgRaisePerGram = isf / cir;
+  var grams = Math.ceil((target - bg) / bgRaisePerGram);
+  resEl.textContent = grams;
+}
+
 // ── period → meal mapping ──
 const PERIOD_TO_MEAL = { morning: 'breakfast', noon: 'lunch', evening: 'dinner' };
 let calcTargetPeriod = 'morning';
 
 // ── Open / Close ──
 function openCalcModal(periodId) {
+  calcIsSnackMode    = false;
+  calcSnackSectionId = null;
+  var titleEl = document.getElementById('calc-modal-title');
+  if (titleEl) titleEl.textContent = '💊 餐前劑量計算';
   try {
     calcTargetPeriod = periodId;
     const meal = PERIOD_TO_MEAL[periodId] || 'breakfast';
@@ -5681,6 +5919,10 @@ function openCalcModal(periodId) {
 }
 
 function closeCalcModal() {
+  calcIsSnackMode    = false;
+  calcSnackSectionId = null;
+  var titleEl = document.getElementById('calc-modal-title');
+  if (titleEl) titleEl.textContent = '💊 餐前劑量計算';
   document.getElementById('calcOverlay').classList.remove('open');
 }
 
@@ -5717,7 +5959,7 @@ function calcFmt(v) {
 
 function calcRecalc() {
   const meal   = document.getElementById('calc-meal-period').value;
-  const preset = CALC_MEAL_PRESETS[meal];
+  const preset = getMealPreset(meal);
 
   // Show preset values
   document.getElementById('calc-cir-display').textContent    = preset.cir;
@@ -5778,6 +6020,20 @@ function calcRecalc() {
 
 // ── Apply result to tracker ──
 function calcApply() {
+  // Snack mode: add new snack row with computed dose
+  if (calcIsSnackMode && calcSnackSectionId) {
+    var _dose = document.getElementById('calc-result-dose').textContent;
+    addSnackRow(calcSnackSectionId);
+    setTimeout(function() {
+      var _listEl = document.getElementById(calcSnackSectionId + '-list');
+      if (_listEl) {
+        var _doseInputs = _listEl.querySelectorAll('[data-field="dose"]');
+        if (_doseInputs.length) _doseInputs[_doseInputs.length - 1].value = _dose;
+      }
+      closeCalcModal();
+    }, 60);
+    return;
+  }
   const meal   = document.getElementById('calc-meal-period').value;
   const dose   = document.getElementById('calc-result-dose').textContent;
   const carbs  = document.getElementById('calc-carbs').value;
@@ -5807,7 +6063,7 @@ function calcApply() {
   const otherName  = document.getElementById('calc-other-name').value.trim();
   if (otherCarbs) foodLines.push((otherName || '其他') + ' ' + otherCarbs + 'g');
 
-  const preset = CALC_MEAL_PRESETS[meal];
+  const preset = getMealPreset(meal);
   const noteLines = [];
   if (foodLines.length) noteLines.push('飲食：' + foodLines.join('、'));
   noteLines.push('碳水：' + carbs + 'g｜建議劑量：' + dose + '單位');
@@ -5826,7 +6082,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.8.6';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.8.7';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID = '1015693868400-14kci11e7s7mqqr95t3nt0t1g77ur9b1.apps.googleusercontent.com';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
 const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
@@ -7202,10 +7458,48 @@ function checkTodoAlerts() {
 </script>
 
 <!-- ══════════════ CALCULATOR MODAL ══════════════ -->
+<div id="carbCalcOverlay" class="calc-overlay" onclick="if(event.target.id==='carbCalcOverlay')closeCarbCalc()">
+  <div class="calc-modal" style="max-width:340px;">
+    <div class="calc-modal-header">
+      <h2>🍬 估算補糖量</h2>
+      <button class="calc-close-btn" type="button" onclick="closeCarbCalc()">✕</button>
+    </div>
+    <div class="calc-body">
+      <div class="calc-section">
+        <div class="calc-row">
+          <label class="calc-label">目前血糖</label>
+          <input type="number" id="cc-bg" class="calc-input" min="40" max="500" step="1" oninput="carbCalcRecalc()">
+          <span class="calc-unit">mg/dL</span>
+        </div>
+        <div class="calc-row">
+          <label class="calc-label">ISF</label>
+          <input type="number" id="cc-isf" class="calc-input" min="10" max="300" step="1" value="110" oninput="carbCalcRecalc()">
+          <span class="calc-unit">mg/dL/U</span>
+        </div>
+        <div class="calc-row">
+          <label class="calc-label">目標血糖</label>
+          <input type="number" id="cc-target" class="calc-input" min="80" max="250" step="1" value="140" oninput="carbCalcRecalc()">
+          <span class="calc-unit">mg/dL</span>
+        </div>
+        <div class="calc-row">
+          <label class="calc-label">CIR（目前餐段）</label>
+          <input type="number" id="cc-cir" class="calc-input" min="1" max="30" step="0.5" value="10" oninput="carbCalcRecalc()">
+          <span class="calc-unit">g/U</span>
+        </div>
+      </div>
+      <div class="calc-result-box">
+        <div class="calc-result-label">建議補糖量</div>
+        <div class="calc-result-value"><span id="cc-result">—</span> <span class="calc-result-unit">克</span></div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;">公式：(目標血糖 − 目前血糖) ÷ (ISF ÷ CIR)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="calcOverlay" class="calc-overlay" onclick="calcOverlayClick(event)">
   <div class="calc-modal">
     <div class="calc-modal-header">
-      <h2>💊 餐前劑量計算</h2>
+      <h2 id="calc-modal-title">💊 餐前劑量計算</h2>
       <button class="calc-close-btn" type="button" onclick="closeCalcModal()">✕</button>
     </div>
     <div class="calc-body">
