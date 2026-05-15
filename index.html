@@ -1846,6 +1846,25 @@
       flex:none; padding:0; margin-left:4px; align-self:flex-start; margin-top:1px;
     }
     .alert-close-x:active { background:rgba(113,63,18,.2); }
+    .back-home-wrap {
+      display: flex; justify-content: center;
+      padding: 28px 0 12px;
+    }
+    .back-home-btn {
+      background: none;
+      border: 1.5px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 28px;
+      border-radius: 999px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .back-home-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
     /* carousel clickable link */
     .alert-slide-link {
       flex: 1; background: none; border: none; padding: 0;
@@ -2022,6 +2041,10 @@
     <button onclick="changeHistPage(-1)" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:white;font-size:0.82rem;cursor:pointer;">‹ 較舊</button>
     <span style="font-size:0.78rem;color:var(--text-muted);white-space:nowrap;" id="histPageLabel2"></span>
     <button onclick="changeHistPage(1)" style="flex:1;padding:6px;border:1px solid var(--border);border-radius:8px;background:white;font-size:0.82rem;cursor:pointer;">較新 ›</button>
+
+  <!-- 返回首頁按鈕 -->
+  <div class="back-home-wrap">
+    <button class="back-home-btn" onclick="goHome()">⬆ 返回首頁</button>
   </div>
 </div>
 
@@ -2133,6 +2156,10 @@
     <canvas id="iobChart" height="220"></canvas>
   </div>
 
+  <!-- 返回首頁按鈕 -->
+  <div class="back-home-wrap">
+    <button class="back-home-btn" onclick="goHome()">⬆ 返回首頁</button>
+  </div>
 </div>
 
 <!-- ══════════════ MANAGE PAGE ══════════════ -->
@@ -2158,6 +2185,11 @@
       <button class="suppl-add-btn" onclick="addPrescription()">＋ 新增處方</button>
     </div>
     <div id="prescription-list"></div>
+  </div>
+
+  <!-- 返回首頁按鈕 -->
+  <div class="back-home-wrap">
+    <button class="back-home-btn" onclick="goHome()">⬆ 返回首頁</button>
   </div>
 </div>
 
@@ -2191,6 +2223,10 @@
     <div id="todo-general-list"><div class="suppl-empty">尚無一般待辦事項</div></div>
   </div>
 
+  <!-- 返回首頁按鈕 -->
+  <div class="back-home-wrap">
+    <button class="back-home-btn" onclick="goHome()">⬆ 返回首頁</button>
+  </div>
 </div>
 
 <div id="page-settings" class="page">
@@ -2340,11 +2376,23 @@
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.8.5</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.8.6</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.8.6 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.8.6</span>
+          <span class="cl-date">2026-05-15</span>
+          <span class="cl-tag">體驗優化</span>
+        </div>
+        <ul class="cl-list">
+          <li>各分頁（歷史、統計、管理、待辦、設定）底部新增「⬆ 返回首頁」按鈕，一鍵回到今日記錄</li>
+        </ul>
+      </div>
 
       <!-- v2.8.5 -->
       <div class="cl-item">
@@ -2726,6 +2774,11 @@
       <button onclick="saveTodoForm()" style="flex:1;padding:10px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:.88rem;font-weight:700;cursor:pointer;">💾 儲存</button>
       <button onclick="closeTodoForm()" style="flex:1;padding:10px;background:#f1f5f9;color:var(--text);border:none;border-radius:10px;font-size:.88rem;cursor:pointer;">取消</button>
     </div>
+  </div>
+
+  <!-- 返回首頁按鈕 -->
+  <div class="back-home-wrap">
+    <button class="back-home-btn" onclick="goHome()">⬆ 返回首頁</button>
   </div>
 </div>
 
@@ -3704,6 +3757,11 @@ function formatDateDisplay(dateStr) {
 // ══════════════════════════════════════════
 //  TAB NAVIGATION
 // ══════════════════════════════════════════
+function goHome() {
+  var btn = document.querySelector('nav button[onclick*="\'today\'"]');
+  if (btn) btn.click();
+}
+
 function switchTab(tab) {
   if (tab === 'manage') renderManagePage();
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -5766,7 +5824,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.8.5';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.8.6';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID = '1015693868400-14kci11e7s7mqqr95t3nt0t1g77ur9b1.apps.googleusercontent.com';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
 const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
