@@ -2591,6 +2591,108 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.10.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.10.2</span>
+          <span class="cl-date">2026-05-16</span>
+          <span class="cl-tag">收合 / 捲軸</span>
+        </div>
+        <ul class="cl-list">
+          <li>早／午／晚／睡前卡片標題可點擊收合，箭頭 ▾/▸ 切換，狀態存 localStorage</li>
+          <li>右側新增紫色細捲軸指示條，隨滾動位置移動，頁面過短時自動隱藏</li>
+        </ul>
+      </div>
+
+      <!-- v2.10.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.10.1</span>
+          <span class="cl-date">2026-05-16</span>
+          <span class="cl-tag">補糖單位</span>
+        </div>
+        <ul class="cl-list">
+          <li>補糖用品加入 name / unit 欄位：快糖「每顆」、可爾必思「每瓶」、葡萄糖片「每片」</li>
+          <li>歷史紀錄正確顯示用品名稱與單位（舊資料 fallback 為「每顆」）</li>
+        </ul>
+      </div>
+
+      <!-- v2.10.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.10.0</span>
+          <span class="cl-date">2026-05-16</span>
+          <span class="cl-tag">緊急修復</span>
+        </div>
+        <ul class="cl-list">
+          <li>修正：補打區塊消失 + syncBadge 卡在「初始化」——根因為 hint 變數宣告在 IIFE 內、使用在外層，造成 ReferenceError 中斷 init()</li>
+        </ul>
+      </div>
+
+      <!-- v2.9.9 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.9.9</span>
+          <span class="cl-date">2026-05-16</span>
+          <span class="cl-tag">歷史紀錄</span>
+        </div>
+        <ul class="cl-list">
+          <li>修正：歷史頁「編輯」按鈕無作用——switchTab() 依賴 event.currentTarget，改用 querySelector</li>
+          <li>補打歷史顯示：時間、當下血糖、劑量單位、速效 badge、施打部位</li>
+          <li>補糖歷史顯示：時間、當下血糖、每顆克數 × 數量 = 總克數</li>
+        </ul>
+      </div>
+
+      <!-- v2.9.8 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.9.8</span>
+          <span class="cl-date">2026-05-16</span>
+          <span class="cl-tag">跨夜偵測</span>
+        </div>
+        <ul class="cl-list">
+          <li>睡前胰島素時間 00:00～03:59 自動歸入前一天，Toast 顯示歸入日期</li>
+        </ul>
+      </div>
+
+      <!-- v2.9.7 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.9.7</span>
+          <span class="cl-date">2026-05-16</span>
+          <span class="cl-tag">部位提示</span>
+        </div>
+        <ul class="cl-list">
+          <li>施打部位生效時間提示改為備註欄 placeholder（灰色預填，鍵入後消失）</li>
+          <li>主餐與補打記錄均套用，移除原本顯示在下拉旁的彩色文字</li>
+        </ul>
+      </div>
+
+      <!-- v2.9.6 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.9.6</span>
+          <span class="cl-date">2026-05-16</span>
+          <span class="cl-tag">補糖 UI</span>
+        </div>
+        <ul class="cl-list">
+          <li>補糖每列新增淡黃色外框與「補糖 #N」橘色編號 badge</li>
+          <li>頂端新增「✕ 刪除」紅底白字按鈕，邏輯與補打一致</li>
+        </ul>
+      </div>
+
+      <!-- v2.9.5 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.9.5</span>
+          <span class="cl-date">2026-05-16</span>
+          <span class="cl-tag">版面</span>
+        </div>
+        <ul class="cl-list">
+          <li>補糖區標題列改 flex-wrap: nowrap，縮小字體與 padding，標題、標籤、兩個按鈕一列顯示完畢</li>
+        </ul>
+      </div>
+
       <!-- v2.9.4 -->
       <div class="cl-item">
         <div class="cl-header">
