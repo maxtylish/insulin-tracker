@@ -1571,6 +1571,13 @@
     .corr-sugg-label { font-size: .75rem; color: #1d4ed8; font-weight: 600; }
     .corr-sugg-dose  { font-size: 1.35rem; font-weight: 800; color: #1d4ed8; font-variant-numeric: tabular-nums; }
     .corr-sugg-unit  { font-size: .72rem; color: #3b82f6; font-weight: 500; }
+    .backup-calc-link {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 0.72rem; color: var(--text-muted); text-decoration: none;
+      margin-top: 5px; padding: 2px 0;
+      opacity: 0.75; transition: opacity 0.15s;
+    }
+    .backup-calc-link:hover { opacity: 1; color: var(--primary); }
     .corr-sugg-meta  { font-size: .7rem; color: #64748b; margin-top: 2px; }
     .corr-timer-row {
       font-size: .68rem; margin-top: 5px; padding: 2px 7px;
@@ -2581,11 +2588,28 @@ alter table user_todos enable row level security;
     <button class="danger-btn" onclick="clearAllData()">🗑️ 清除所有資料</button>
   </div>
 
+  <!-- ─── 外部工具 ─── -->
+  <div class="settings-section">
+    <h3>🔧 外部工具</h3>
+    <a href="https://maxtylish.github.io/insulin_calculator/"
+       target="_blank" rel="noopener"
+       style="display:flex;align-items:center;justify-content:space-between;
+              padding:12px 14px;background:#eff6ff;border:1.5px solid #bfdbfe;
+              border-radius:10px;text-decoration:none;color:var(--text);
+              font-size:0.88rem;font-weight:600;transition:background 0.15s;">
+      <span>📐 胰島素劑量計算機（備用）</span>
+      <span style="font-size:0.78rem;color:var(--primary);">開啟 ↗</span>
+    </a>
+    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:8px;margin-bottom:0;">
+      當主計算機無法使用時的備用選項
+    </p>
+  </div>
+
   <!-- ─── 更新日誌 ─── -->
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.10.2</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.10.3</strong>
     </p>
 
     <!-- 版本列表 -->
@@ -5776,6 +5800,7 @@ function renderSupplList(type, items) {
             + '</div>'
             + '<div class="corr-sugg-meta" id="corr-sugg-meta-' + idx + '">' + meta + '</div>'
             + '<div class="corr-timer-row" id="corr-timer-' + idx + '"></div>'
+            + '<a class="backup-calc-link" href="https://maxtylish.github.io/insulin_calculator/" target="_blank" rel="noopener">📐 備用計算機 ↗</a>'
           + '</div>'
           + '<button class="corr-fill-btn" type="button" onclick="fillCorrDose(' + idx + ')">帶入</button>'
         + '</div>'
@@ -6694,7 +6719,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.10.2';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.10.3';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID = '1015693868400-14kci11e7s7mqqr95t3nt0t1g77ur9b1.apps.googleusercontent.com';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
 const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
