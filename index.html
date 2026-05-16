@@ -322,6 +322,7 @@
       font-weight: 600;
       color: var(--text-muted);
       cursor: pointer;
+      white-space: nowrap;
       transition: all 0.2s;
     }
     .suppl-add-btn:hover { border-color: var(--primary); color: var(--primary); background: #eff6ff; }
@@ -419,10 +420,11 @@
       margin-bottom: 10px;
     }
     .snack-divider-label {
-      font-size: 0.9rem;
-      font-weight: 700;
-      color: #065f46;
+      font-size: 0.9rem; font-weight: 700; color: #065f46;
+      flex: 1; min-width: 0; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
     }
+    .snack-divider-header > div { flex-shrink: 0; }
     .snack-row {
       background: #f0fdf4;
       border-radius: 10px;
@@ -1597,8 +1599,7 @@
     .suppl-calc-btn  { background: var(--primary) !important; color: white !important; border-color: var(--primary) !important; }
     @media (max-width: 400px) {
       .suppl-header { flex-wrap: wrap; row-gap: 8px; }
-      .suppl-btn-group { width: 100%; }
-      .suppl-btn-group .suppl-add-btn { flex: 1; justify-content: center; }
+      .suppl-btn-group { flex-shrink: 0; }
     }
     .carb-sep { font-size: .72rem; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
     .carb-total-tag {
@@ -1656,7 +1657,7 @@
       background-repeat: no-repeat;
       background-position: right 8px center;
     }
-    .site-note { font-size: 0.7rem; color: #6366f1; font-weight: 500; flex-shrink: 0; }
+    .site-note { font-size: 0.7rem; color: #6366f1; font-weight: 500; flex-shrink: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
     /* ── Meal Alarm ── */
     .meal-alarm-row {
@@ -2511,11 +2512,26 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.9.2</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.9.3</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.9.3 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.9.3</span>
+          <span class="cl-date">2026-05-16</span>
+          <span class="cl-tag">版面細修</span>
+        </div>
+        <ul class="cl-list">
+          <li>補打部位提示文字精簡（避免溢出行尾）</li>
+          <li>點心區段標題防換行，按鈕文字防換行</li>
+          <li>補糖 header 手機版兩按鈕等寬且不各自佔全行</li>
+          <li>suppl-add-btn 統一加 white-space: nowrap</li>
+        </ul>
+      </div>
 
       <!-- v2.9.2 -->
       <div class="cl-item">
@@ -3047,10 +3063,10 @@ const SITE_ALARM_MAP = {
 
 // Correction injection site → action time hints
 const CORR_SITE_HINTS = {
-  '肚子':   '⚡ 作用最快，約 10~15 分後開始生效',
-  '手臂':   '⏱ 約 15~20 分後開始生效',
-  '左大腿': '🐢 約 20~30 分後開始生效',
-  '右大腿': '🐢 約 20~30 分後開始生效',
+  '肚子':   '⚡ ~10~15 分生效（最快）',
+  '手臂':   '⏱ ~15~20 分生效',
+  '左大腿': '🐢 ~20~30 分生效',
+  '右大腿': '🐢 ~20~30 分生效',
   '其他':   '',
 };
 
@@ -6355,7 +6371,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.9.2';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.9.3';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID = '1015693868400-14kci11e7s7mqqr95t3nt0t1g77ur9b1.apps.googleusercontent.com';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
 const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
