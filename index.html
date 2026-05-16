@@ -1573,8 +1573,11 @@
 
     /* ── Carb supplement single row ── */
     .carb-main-row {
-      display: flex; align-items: center; gap: 4px;
-      margin-bottom: 8px; flex-wrap: nowrap;
+      display: flex; flex-direction: column; gap: 6px;
+      margin-bottom: 8px;
+    }
+    .carb-row-top, .carb-row-bottom {
+      display: flex; align-items: center; gap: 4px; flex-wrap: nowrap;
     }
     .carb-main-row input {
       height: 34px; border: 1.5px solid var(--border); border-radius: 8px;
@@ -1582,6 +1585,21 @@
       color: var(--text); flex-shrink: 0; min-width: 0;
     }
     .carb-main-row input:focus { border-color: var(--primary); outline: none; }
+    .carb-preset-sel {
+      height: 30px; font-size: 0.74rem; flex-shrink: 0;
+      border: 1.5px solid var(--border); border-radius: 7px;
+      padding: 0 18px 0 6px; background: var(--surface); color: var(--text-muted);
+      appearance: none; cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 5px center;
+    }
+    .suppl-btn-group { display: flex; gap: 6px; flex-shrink: 0; }
+    .suppl-calc-btn  { background: var(--primary) !important; color: white !important; border-color: var(--primary) !important; }
+    @media (max-width: 400px) {
+      .suppl-header { flex-wrap: wrap; row-gap: 8px; }
+      .suppl-btn-group { width: 100%; }
+      .suppl-btn-group .suppl-add-btn { flex: 1; justify-content: center; }
+    }
     .carb-sep { font-size: .72rem; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
     .carb-total-tag {
       font-size: .75rem; font-weight: 700; color: #059669;
@@ -2052,7 +2070,9 @@
         💉 補打記錄
         <span class="suppl-tag tag-correction">修正劑量</span>
       </div>
-      <button class="suppl-add-btn" onclick="addSupplRow('corrections')">＋ 新增補打</button>
+      <div class="suppl-btn-group">
+        <button class="suppl-add-btn" onclick="addSupplRow('corrections')">＋ 新增補打</button>
+      </div>
     </div>
     <div id="corrections-list"></div>
   </div>
@@ -2064,8 +2084,8 @@
         🍬 補糖記錄
         <span class="suppl-tag tag-carb">低血糖補充</span>
       </div>
-      <div style="display:flex;gap:6px;">
-        <button class="suppl-add-btn" style="background:var(--primary);color:white;border-color:var(--primary);" onclick="openCarbCalc()">🍬 估算補糖量</button>
+      <div class="suppl-btn-group">
+        <button class="suppl-add-btn suppl-calc-btn" onclick="openCarbCalc()">🍬 估算</button>
         <button class="suppl-add-btn" onclick="addSupplRow('carbs')">＋ 新增補糖</button>
       </div>
     </div>
@@ -2491,11 +2511,26 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.9.1</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.9.2</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.9.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.9.2</span>
+          <span class="cl-date">2026-05-16</span>
+          <span class="cl-tag">手機版面</span>
+        </div>
+        <ul class="cl-list">
+          <li>補糖記錄列拆成兩行：上排（血糖／時間／CGM／刪除）、下排（常用快填／每顆克數／數量／合計）</li>
+          <li>新增常用補糖快填下拉：快糖 2.5克、可爾必思 19克、葡萄糖片 4克</li>
+          <li>補糖區 header 按鈕精簡為「🍬 估算」＋「＋ 新增補糖」，手機不再擠行</li>
+          <li>補打區 header 同步加上「💉 補打建議」說明 tag</li>
+        </ul>
+      </div>
 
       <!-- v2.9.1 -->
       <div class="cl-item">
@@ -5525,26 +5560,40 @@ function renderSupplList(type, items) {
     return '<div class="suppl-row" id="carbs-row-' + idx + '" data-rowid="' + rowId + '">'
       // ── 單列：血糖 | 時間 | 每顆×數量=合計 | CGM | 刪除 ──
       + '<div class="carb-main-row">'
-        + '<input type="number" data-idx="' + idx + '" data-field="bg" class="suppl-val"'
-        + ' style="width:60px" value="' + (item.bg || '') + '"'
-        + ' min="20" max="600" step="1" placeholder="血糖"'
-        + ' onfocus="autoFillCarbBG(\'' + rowId + '\')" />'
-        + '<span class="carb-sep">mg</span>'
-        + '<input type="text" data-idx="' + idx + '" data-field="time" class="suppl-val"'
-        + ' style="width:52px" value="' + (item.time || '') + '"'
-        + ' inputmode="numeric" maxlength="5" placeholder="時間"'
-        + ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />'
-        + '<span class="carb-sep">|每顆</span>'
-        + '<input type="number" data-idx="' + idx + '" data-field="carb" class="suppl-val"'
-        + ' style="width:46px" value="' + carbVal + '" min="0" max="100" step="0.5"'
-        + ' oninput="updateCarbTotal(\'' + rowId + '\',this)" />'
-        + '<span class="carb-sep">克×</span>'
-        + '<input type="number" data-idx="' + idx + '" data-field="qty" class="suppl-val"'
-        + ' style="width:36px" value="' + qtyVal + '" min="1" max="30" step="1"'
-        + ' oninput="updateCarbTotal(\'' + rowId + '\',this)" />'
-        + '<span class="carb-total-tag" id="carb-total-' + rowId + '">=' + totalStr + '</span>'
-        + '<button class="corr-cgm-btn" type="button" onclick="autoFillCarbBG(\'' + rowId + '\')" style="flex-shrink:0;padding:3px 7px">CGM</button>'
-        + '<button class="suppl-del-btn" onclick="removeSupplRow(\'carbs\',' + idx + ')" title="刪除">✕</button>'
+        // ── 上排：血糖 | 時間 | CGM | 刪除 ──
+        + '<div class="carb-row-top">'
+          + '<input type="number" data-idx="' + idx + '" data-field="bg" class="suppl-val"'
+          + ' style="width:60px" value="' + (item.bg || '') + '"'
+          + ' min="20" max="600" step="1" placeholder="血糖"'
+          + ' onfocus="autoFillCarbBG(\'' + rowId + '\')" />'
+          + '<span class="carb-sep">mg</span>'
+          + '<input type="text" data-idx="' + idx + '" data-field="time" class="suppl-val"'
+          + ' style="width:52px" value="' + (item.time || '') + '"'
+          + ' inputmode="numeric" maxlength="5" placeholder="時間"'
+          + ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />'
+          + '<div style="flex:1"></div>'
+          + '<button class="corr-cgm-btn" type="button" onclick="autoFillCarbBG(\'' + rowId + '\')" style="flex-shrink:0;padding:3px 7px">CGM</button>'
+          + '<button class="suppl-del-btn" onclick="removeSupplRow(\'carbs\',' + idx + ')" title="刪除">✕</button>'
+        + '</div>'
+        // ── 下排：常用快填 | 每顆 X 克 × 數量 = 合計 ──
+        + '<div class="carb-row-bottom">'
+          + '<select class="carb-preset-sel" onchange="onCarbPreset(\'' + rowId + '\',this)" title="常用快填">'
+            + '<option value="">常用▾</option>'
+            + '<option value="fast_glucose">快糖 2.5克/顆</option>'
+            + '<option value="calpico">可爾必思 19克</option>'
+            + '<option value="glucose_tab">葡萄糖片 4克/顆</option>'
+          + '</select>'
+          + '<span class="carb-sep">每顆</span>'
+          + '<input type="number" data-idx="' + idx + '" data-field="carb" class="suppl-val"'
+          + ' style="width:46px" value="' + carbVal + '" min="0" max="100" step="0.5"'
+          + ' oninput="updateCarbTotal(\'' + rowId + '\',this)" />'
+          + '<span class="carb-sep">克×</span>'
+          + '<input type="number" data-idx="' + idx + '" data-field="qty" class="suppl-val"'
+          + ' style="width:36px" value="' + qtyVal + '" min="1" max="30" step="1"'
+          + ' oninput="updateCarbTotal(\'' + rowId + '\',this)" />'
+          + '<span class="carb-total-tag" id="carb-total-' + rowId + '">=' + totalStr + '</span>'
+        + '</div>'
+      + '</div>'
       + '</div>'
       // ── Hidden rowId ──
       + '<input type="hidden" data-field="rowId" class="suppl-val" value="' + rowId + '" />'
@@ -5579,6 +5628,31 @@ function renderSupplList(type, items) {
       + '</div>'
     + '</div>';
   }).join('');
+}
+
+// ── 常用補糖快填 ──────────────────────────────────────────────────────────────
+var CARB_PRESETS = {
+  fast_glucose: { carb: 2.5, qty: 2 },
+  calpico:      { carb: 19,  qty: 1 },
+  glucose_tab:  { carb: 4,   qty: 1 },
+};
+
+function onCarbPreset(rowId, sel) {
+  var p = CARB_PRESETS[sel.value];
+  sel.value = '';           // reset selector immediately
+  if (!p) return;
+  var row = document.querySelector('[data-rowid="' + rowId + '"]');
+  if (!row) return;
+  var carbEl = row.querySelector('[data-field="carb"]');
+  var qtyEl  = row.querySelector('[data-field="qty"]');
+  if (carbEl) { carbEl.value = p.carb; }
+  if (qtyEl)  { qtyEl.value  = p.qty;  }
+  // Refresh total tag
+  var totalEl = document.getElementById('carb-total-' + rowId);
+  if (totalEl) {
+    var t = p.carb * p.qty;
+    totalEl.textContent = '=' + (t % 1 === 0 ? t : t.toFixed(1)) + ' 克';
+  }
 }
 
 function collectSupplRows(type) {
@@ -6281,7 +6355,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.9.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.9.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID = '1015693868400-14kci11e7s7mqqr95t3nt0t1g77ur9b1.apps.googleusercontent.com';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
 const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
