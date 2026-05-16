@@ -2568,7 +2568,7 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.9.7</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.9.8</strong>
     </p>
 
     <!-- 版本列表 -->
@@ -4335,9 +4335,8 @@ function loadDayData() {
 }
 
 function savePeriod(periodId) {
-  const date    = document.getElementById('todayDate').value;
-  const all     = getAllData();
-  all[date]     = all[date] || {};
+  var date = document.getElementById('todayDate').value;
+  const all = getAllData();
 
   const bg      = document.getElementById(periodId + '-bg').value;
   const insulin = document.getElementById(periodId + '-insulin').value;
@@ -4346,6 +4345,16 @@ function savePeriod(periodId) {
   const siteSel = document.getElementById(periodId + '-site');
   const site    = siteSel ? siteSel.value : (SITE_DEFAULTS[periodId] || '');
 
+  // ── 跨夜偵測：睡前 00:00~03:59 自動歸入前一天 ──────────────────────────
+  var crossNight = false;
+  if (periodId === 'bedtime' && /^0[0-3]:\d{2}$/.test(time)) {
+    var d = new Date(date + 'T00:00:00');
+    d.setDate(d.getDate() - 1);
+    date = d.toISOString().slice(0, 10);
+    crossNight = true;
+  }
+
+  all[date]           = all[date] || {};
   all[date][periodId] = { time: (bg || insulin) ? time : '', bg, insulin, note, site };
 
   setAllData(all);
@@ -4366,7 +4375,11 @@ function savePeriod(periodId) {
 
   const p = PERIODS.find(function(x) { return x.id === periodId; });
   var mealName = { morning:'早餐', noon:'午餐', evening:'晚餐', bedtime:'睡前紀錄' }[periodId] || (p ? p.label : periodId);
-  showToast('✅ ' + mealName + ' 已儲存！');
+  if (crossNight) {
+    showToast('✅ ' + mealName + ' 已儲存（跨夜 → 歸入 ' + date + '）');
+  } else {
+    showToast('✅ ' + mealName + ' 已儲存！');
+  }
 }
 
 function saveDayData() {
@@ -6488,7 +6501,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.9.7';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.9.8';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID = '1015693868400-14kci11e7s7mqqr95t3nt0t1g77ur9b1.apps.googleusercontent.com';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
 const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
