@@ -1616,9 +1616,12 @@
     }
     .suppl-btn-group { display: flex; gap: 6px; flex-shrink: 0; }
     .suppl-calc-btn  { background: var(--primary) !important; color: white !important; border-color: var(--primary) !important; }
-    @media (max-width: 400px) {
-      .suppl-header { flex-wrap: wrap; row-gap: 8px; }
-      .suppl-btn-group { flex-shrink: 0; }
+    @media (max-width: 480px) {
+      .suppl-header   { flex-wrap: nowrap; align-items: center; gap: 4px; }
+      .suppl-title    { font-size: 0.78rem; gap: 4px; }
+      .suppl-tag      { font-size: 0.60rem; padding: 1px 5px; white-space: nowrap; }
+      .suppl-btn-group{ flex-shrink: 0; gap: 4px; }
+      .suppl-add-btn  { font-size: 0.73rem; padding: 4px 7px; }
     }
     .carb-sep { font-size: .72rem; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
     .carb-total-tag {
@@ -1627,6 +1630,40 @@
       white-space: nowrap; flex-shrink: 0;
     }
 
+    /* ── Carb entry frame & header ── */
+    .carb-entry {
+      border: 1.5px solid #fde68a !important;
+      background: #fffdf0 !important;
+    }
+    .carb-entry-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 7px;
+      padding-bottom: 5px;
+      border-bottom: 1px dashed #fde68a;
+    }
+    .carb-entry-num {
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #92400e;
+      background: #fef3c7;
+      border-radius: 20px;
+      padding: 2px 10px;
+      letter-spacing: 0.04em;
+    }
+    .carb-entry-del {
+      background: #ef4444;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 4px 12px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .carb-entry-del:hover { background: #dc2626; }
     /* ── Hypo / Hyper Prediction Banners ── */
     .bg-warning {
       display: none;
@@ -2531,7 +2568,7 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.9.4</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.9.6</strong>
     </p>
 
     <!-- 版本列表 -->
@@ -5607,10 +5644,14 @@ function renderSupplList(type, items) {
       }
     }
 
-    return '<div class="suppl-row" id="carbs-row-' + idx + '" data-rowid="' + rowId + '">'
-      // ── 單列：血糖 | 時間 | 每顆×數量=合計 | CGM | 刪除 ──
+    return '<div class="suppl-row carb-entry" id="carbs-row-' + idx + '" data-rowid="' + rowId + '">'
+      // ── 單列：血糖 | 時間 | 每顆×數量=合計 | CGM ──
+      + '<div class="carb-entry-header">'
+        + '<span class="carb-entry-num">補糖 #' + (idx + 1) + '</span>'
+        + '<button class="carb-entry-del" type="button" onclick="removeSupplRow(\'carbs\',' + idx + ')">✕ 刪除</button>'
+      + '</div>'
       + '<div class="carb-main-row">'
-        // ── 上排：血糖 | 時間 | CGM | 刪除 ──
+        // ── 上排：血糖 | 時間 | CGM ──
         + '<div class="carb-row-top">'
           + '<span class="carb-bg-label">血糖</span>'
           + '<input type="number" data-idx="' + idx + '" data-field="bg" class="suppl-val"'
@@ -5624,7 +5665,6 @@ function renderSupplList(type, items) {
           + ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />'
           + '<div style="flex:1"></div>'
           + '<button class="corr-cgm-btn" type="button" onclick="autoFillCarbBG(\'' + rowId + '\')" style="flex-shrink:0;padding:3px 7px">CGM</button>'
-          + '<button class="suppl-del-btn" onclick="removeSupplRow(\'carbs\',' + idx + ')" title="刪除">✕</button>'
         + '</div>'
         // ── 下排：常用快填 | 每顆 X 克 × 數量 = 合計 ──
         + '<div class="carb-row-bottom">'
@@ -6447,7 +6487,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.9.4';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.9.6';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID = '1015693868400-14kci11e7s7mqqr95t3nt0t1g77ur9b1.apps.googleusercontent.com';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
 const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
