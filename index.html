@@ -2568,7 +2568,7 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.9.6</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.9.7</strong>
     </p>
 
     <!-- 版本列表 -->
@@ -4235,7 +4235,6 @@ function buildPeriodCards() {
             + '<span class="site-label">📍 施打部位</span>'
             + '<select class="site-select" id="' + p.id + '-site"'
             + ' onchange="onSiteChange(\'' + p.id + '\')">' + opts + '</select>'
-            + '<span class="site-note" id="' + p.id + '-site-note">' + defNote + '</span>'
             + '</div>'
             + alarmRow;
         })()
@@ -4281,11 +4280,12 @@ function onBGInput(periodId) {
 }
 
 function onSiteChange(periodId) {
-  var sel    = document.getElementById(periodId + '-site');
-  var noteEl = document.getElementById(periodId + '-site-note');
-  if (!sel || !noteEl) return;
+  var sel = document.getElementById(periodId + '-site');
+  if (!sel) return;
   var opt = SITE_OPTIONS.find(function(o){ return o.value === sel.value; }) || {};
-  noteEl.textContent = periodId === 'bedtime' ? '' : (opt.note || '');
+  var hint = periodId === 'bedtime' ? '' : (opt.note || '');
+  var noteTA = document.getElementById(periodId + '-note');
+  if (noteTA) noteTA.placeholder = hint || '備註（症狀、飲食、活動…）';
   // 同步更新用餐倒計時的時間選項
   var minSel = document.getElementById(periodId + '-alarm-min');
   if (minSel) {
@@ -4297,10 +4297,11 @@ function onSiteChange(periodId) {
 }
 
 function onCorrSiteChange(idx) {
-  var sel    = document.querySelector('#corrections-row-' + idx + ' [data-field="site"]');
-  var noteEl = document.getElementById('corr-site-note-' + idx);
-  if (!sel || !noteEl) return;
-  noteEl.textContent = CORR_SITE_HINTS[sel.value] || '';
+  var sel = document.querySelector('#corrections-row-' + idx + ' [data-field="site"]');
+  if (!sel) return;
+  var hint = CORR_SITE_HINTS[sel.value] || '';
+  var noteTA = document.getElementById('corr-note-' + idx);
+  if (noteTA) noteTA.placeholder = hint || '備註（症狀、原因…）';
 }
 
 // ══════════════════════════════════════════
@@ -5604,13 +5605,13 @@ function renderSupplList(type, items) {
               + '<span class="site-label">📍 施打部位</span>'
               + '<select class="site-select suppl-val" data-idx="' + idx + '" data-field="site"'
               + ' onchange="onCorrSiteChange(' + idx + ')">' + opts + '</select>'
-              + '<span class="site-note" id="corr-site-note-' + idx + '">' + hint + '</span>'
               + '</div>';
           })()
         // Note
         + '<div class="suppl-note">'
           + '<textarea rows="1" data-idx="' + idx + '" data-field="note"'
-          + ' class="suppl-val" placeholder="備註（症狀、原因…）">' + (item.note || '') + '</textarea>'
+          + ' id="corr-note-' + idx + '"'
+          + ' class="suppl-val" placeholder="' + (hint ? hint.replace(/"/g, '&quot;') : '備註（症狀、原因…）') + '">' + (item.note || '') + '</textarea>'
         + '</div>'
       + '</div>';
     }
@@ -6487,7 +6488,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.9.6';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.9.7';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID = '1015693868400-14kci11e7s7mqqr95t3nt0t1g77ur9b1.apps.googleusercontent.com';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
 const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
