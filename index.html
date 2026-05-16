@@ -6721,6 +6721,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 const APP_VERSION    = 'v2.10.4';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-ngh0upt4r7aqpp9at2gvuip1o8duseoj.apps.googleusercontent.com';
+const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
 const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
 const GCAL_TOKEN_KEY = 'insulin_gcal_tokens';
@@ -7724,7 +7725,7 @@ async function handleGCalCallback() {
   const verifier = localStorage.getItem(GCAL_VERIFIER_KEY);
   if (!verifier) return;
   try {
-    const res = await fetch('https://oauth2.googleapis.com/token', {
+    const res = await fetch(GCAL_TOKEN_PROXY, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
@@ -7777,7 +7778,7 @@ async function getValidGCalToken() {
   if (Date.now() < t.expires_at) return t.access_token;
   if (!t.refresh_token) { localStorage.removeItem(GCAL_TOKEN_KEY); updateGCalUI(); return null; }
   try {
-    const res = await fetch('https://oauth2.googleapis.com/token', {
+    const res = await fetch(GCAL_TOKEN_PROXY, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
