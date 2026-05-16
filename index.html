@@ -1587,6 +1587,25 @@
       color: var(--text); flex-shrink: 0; min-width: 0;
     }
     .carb-main-row input:focus { border-color: var(--primary); outline: none; }
+    .carb-confirm-btn {
+      width: 100%; margin-top: 8px;
+      background: #10b981; color: white; border: none;
+      border-radius: 8px; padding: 8px 0;
+      font-size: 0.84rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      transition: background 0.2s;
+    }
+    .carb-confirmed > .carb-confirm-btn {
+      background: #d1fae5; color: #065f46; cursor: default;
+    }
+    .carb-confirmed { border: 1.5px solid #10b981 !important; }
+    .carb-bg-label  { font-size: 0.75rem; font-weight: 700; color: var(--text); white-space: nowrap; flex-shrink: 0; }
+    .input-error    { border-color: #ef4444 !important; animation: shake 0.3s ease; }
+    @keyframes shake {
+      0%,100%{ transform:translateX(0); }
+      25%    { transform:translateX(-4px); }
+      75%    { transform:translateX(4px); }
+    }
     .carb-preset-sel {
       height: 30px; font-size: 0.74rem; flex-shrink: 0;
       border: 1.5px solid var(--border); border-radius: 7px;
@@ -2512,11 +2531,26 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.9.3</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.9.4</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.9.4 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.9.4</span>
+          <span class="cl-date">2026-05-16</span>
+          <span class="cl-tag">補糖確認</span>
+        </div>
+        <ul class="cl-list">
+          <li>每筆補糖記錄新增「✓ 確認」按鍵，驗證血糖與時間皆填寫後才標記</li>
+          <li>儲存時自動拒絕血糖或時間為空的補糖列</li>
+          <li>新增補糖自動帶入當下時間與 CGM 血糖</li>
+          <li>上排血糖欄位改顯示「血糖 OO mg」，更直覺</li>
+        </ul>
+      </div>
 
       <!-- v2.9.3 -->
       <div class="cl-item">
@@ -5578,9 +5612,10 @@ function renderSupplList(type, items) {
       + '<div class="carb-main-row">'
         // ── 上排：血糖 | 時間 | CGM | 刪除 ──
         + '<div class="carb-row-top">'
+          + '<span class="carb-bg-label">血糖</span>'
           + '<input type="number" data-idx="' + idx + '" data-field="bg" class="suppl-val"'
           + ' style="width:60px" value="' + (item.bg || '') + '"'
-          + ' min="20" max="600" step="1" placeholder="血糖"'
+          + ' min="20" max="600" step="1" placeholder="--"'
           + ' onfocus="autoFillCarbBG(\'' + rowId + '\')" />'
           + '<span class="carb-sep">mg</span>'
           + '<input type="text" data-idx="' + idx + '" data-field="time" class="suppl-val"'
@@ -5642,6 +5677,16 @@ function renderSupplList(type, items) {
         + '<textarea rows="1" data-idx="' + idx + '" data-field="note"'
         + ' class="suppl-val" placeholder="備註（症狀、原因…）">' + (item.note || '') + '</textarea>'
       + '</div>'
+      // ── Confirm button ──
+      + (function(){
+          var isConfirmed = !!(item.bg && item.time);
+          return '<button class="carb-confirm-btn" id="carb-confirm-btn-' + rowId + '"'
+            + ' type="button"'
+            + (isConfirmed ? ' disabled' : ' onclick="confirmCarbRow(\'' + rowId + '\')"')
+            + '>'
+            + (isConfirmed ? '✓ 已記錄' : '✓ 確認此筆補糖')
+            + '</button>';
+        })()
     + '</div>';
   }).join('');
 }
@@ -5671,6 +5716,32 @@ function onCarbPreset(rowId, sel) {
   }
 }
 
+// ── 補糖確認 ────────────────────────────────────────────────────────────────
+function confirmCarbRow(rowId) {
+  var row = document.querySelector('[data-rowid="' + rowId + '"]');
+  if (!row) return;
+  var bgEl   = row.querySelector('[data-field="bg"]');
+  var timeEl = row.querySelector('[data-field="time"]');
+  var bgVal  = bgEl   ? bgEl.value.trim()   : '';
+  var timeVal = timeEl ? timeEl.value.trim() : '';
+  var ok = true;
+  if (!timeVal) {
+    if (timeEl) { timeEl.classList.add('input-error'); setTimeout(function(){ timeEl.classList.remove('input-error'); }, 1500); }
+    showToast('⚠️ 請填入補糖時間');
+    ok = false;
+  }
+  if (!bgVal) {
+    if (bgEl) { bgEl.classList.add('input-error'); setTimeout(function(){ bgEl.classList.remove('input-error'); }, 1500); }
+    showToast('⚠️ 請填入當前血糖');
+    ok = false;
+  }
+  if (!ok) return;
+  row.classList.add('carb-confirmed');
+  var btn = document.getElementById('carb-confirm-btn-' + rowId);
+  if (btn) { btn.textContent = '✓ 已記錄'; btn.disabled = true; btn.onclick = null; }
+  showToast('✅ 補糖記錄已確認');
+}
+
 function collectSupplRows(type) {
   const listEl = document.getElementById(type + '-list');
   if (!listEl) return [];
@@ -5681,7 +5752,12 @@ function collectSupplRows(type) {
     row.querySelectorAll('.suppl-val').forEach(el => {
       obj[el.dataset.field] = el.value.trim();
     });
-    if (Object.values(obj).some(v => v !== '')) result.push(obj);
+    // Carbs: require both bg and time to be filled
+    if (type === 'carbs') {
+      if (obj.bg && obj.time) result.push(obj);
+    } else {
+      if (Object.values(obj).some(v => v !== '')) result.push(obj);
+    }
   });
   return result;
 }
@@ -6371,7 +6447,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.9.3';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.9.4';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID = '1015693868400-14kci11e7s7mqqr95t3nt0t1g77ur9b1.apps.googleusercontent.com';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
 const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
