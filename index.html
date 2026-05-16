@@ -289,7 +289,19 @@
     .bg-badge.high    { background: var(--danger-bg); color: var(--danger); }
     .bg-badge.low     { background: var(--low-bg);    color: var(--low);    }
 
-    /* Blood sugar color on input */
+    .cgm-fill-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0 4px;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+  line-height: 1;
+}
+.cgm-fill-btn:hover { opacity: 1; }
+
+/* Blood sugar color on input */
     .field-input-wrap input.bg-normal { border-color: var(--normal); }
     .field-input-wrap input.bg-warn   { border-color: var(--warn);   }
     .field-input-wrap input.bg-high   { border-color: var(--danger); }
@@ -4042,13 +4054,14 @@ function startCGMPolling() {
 }
 
 // Called when user focuses a BG input — auto-fill from CGM if empty
-async function autoFillBGFromCGM(periodId) {
+async function autoFillBGFromCGM(periodId, force) {
   autoFillTime(periodId);
-  if (!settings.nsAutoFill || !settings.nsUrl) return;
+  if (!settings.nsUrl) return;
   const bgEl = document.getElementById(periodId + '-bg');
-  if (!bgEl || bgEl.value) return;   // already has a value
+  if (!bgEl) return;
+  if (!force && bgEl.value) return;   // already has a value, skip unless forced
   const entry = await fetchNSCurrent();
-  if (entry && entry.sgv && !bgEl.value) {
+  if (entry && entry.sgv) {
     bgEl.value = Math.round(entry.sgv);
     onBGInput(periodId);
   }
@@ -4300,6 +4313,8 @@ function togglePeriodCard(periodId) {
   try { states = JSON.parse(localStorage.getItem('insulin_card_collapsed') || '{}'); } catch(e) {}
   states[periodId] = collapsed;
   localStorage.setItem('insulin_card_collapsed', JSON.stringify(states));
+  // 展開時自動帶入 CGM 血糖（不強制覆蓋已填值）
+  if (!collapsed) autoFillBGFromCGM(periodId, false);
 }
 function restoreCardStates() {
   var states = {};
@@ -4376,6 +4391,7 @@ function buildPeriodCards() {
             + ' min="20" max="600" step="1"'
             + ' oninput="onBGInput(\'' + p.id + '\')"'
             + ' onfocus="autoFillBGFromCGM(\'' + p.id + '\')" />'
+            + '<button type="button" class="cgm-fill-btn" title="從 CGM 帶入血糖" onclick="autoFillBGFromCGM(\'' + p.id + '\', true)">📡</button>'
             + '<span class="field-unit">mg/dL</span>'
           + '</div>'
           + '<div id="' + p.id + '-bg-badge"></div>'
