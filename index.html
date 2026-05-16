@@ -2568,7 +2568,7 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.10.0</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.10.1</strong>
     </p>
 
     <!-- 版本列表 -->
@@ -4549,7 +4549,7 @@ function renderHistory() {
           <span style="background:#fef3c7;color:#b45309;border-radius:4px;padding:1px 7px;font-weight:700;font-size:0.75rem;white-space:nowrap;">補糖${i+1}</span>
           <span style="color:var(--text-muted);white-space:nowrap;">🕐 ${r.time || '--'}</span>
           ${r.bg ? `<span style="white-space:nowrap;">🩸 <b style="color:#ef4444;">${r.bg}</b> <small>mg/dL</small></span>` : ''}
-          <span style="white-space:nowrap;">🍬 每顆 <b style="color:#b45309;">${carb}</b> 克 × ${qty} = <b>${totalStr}</b> 克</span>
+          <span style="white-space:nowrap;">🍬 ${r.name ? r.name + ' ' : ''}每${r.unit || '顆'} <b style="color:#b45309;">${carb}</b> 克 × ${qty} = <b>${totalStr}</b> 克</span>
         </div>
         ${r.note ? `<div style="color:var(--text-muted);font-size:0.78rem;margin-top:3px;padding-left:2px;">備註：${r.note}</div>` : ''}
       </div>`;
@@ -5700,10 +5700,10 @@ function renderSupplList(type, items) {
           + '<select class="carb-preset-sel" onchange="onCarbPreset(\'' + rowId + '\',this)" title="常用快填">'
             + '<option value="">常用▾</option>'
             + '<option value="fast_glucose">快糖 2.5克/顆</option>'
-            + '<option value="calpico">可爾必思 19克</option>'
-            + '<option value="glucose_tab">葡萄糖片 4克/顆</option>'
+            + '<option value="calpico">可爾必思 19克/瓶</option>'
+            + '<option value="glucose_tab">葡萄糖片 4克/片</option>'
           + '</select>'
-          + '<span class="carb-sep">每顆</span>'
+          + '<span class="carb-sep" id="carb-unit-label-' + rowId + '">每' + (item.unit || '顆') + '</span>'
           + '<input type="number" data-idx="' + idx + '" data-field="carb" class="suppl-val"'
           + ' style="width:46px" value="' + carbVal + '" min="0" max="100" step="0.5"'
           + ' oninput="updateCarbTotal(\'' + rowId + '\',this)" />'
@@ -5715,8 +5715,10 @@ function renderSupplList(type, items) {
         + '</div>'
       + '</div>'
       + '</div>'
-      // ── Hidden rowId ──
+      // ── Hidden rowId / name / unit ──
       + '<input type="hidden" data-field="rowId" class="suppl-val" value="' + rowId + '" />'
+      + '<input type="hidden" data-field="name" class="suppl-val" value="' + (item.name || '') + '" />'
+      + '<input type="hidden" data-field="unit" class="suppl-val" value="' + (item.unit || '顆') + '" />'
       // ── Row 3: Timer ──
       + '<div class="meal-alarm-row" style="margin-top:2px">'
         + '<span class="alarm-label">⏰ 觀測倒計時</span>'
@@ -5762,9 +5764,9 @@ function renderSupplList(type, items) {
 
 // ── 常用補糖快填 ──────────────────────────────────────────────────────────────
 var CARB_PRESETS = {
-  fast_glucose: { carb: 2.5, qty: 2 },
-  calpico:      { carb: 19,  qty: 1 },
-  glucose_tab:  { carb: 4,   qty: 1 },
+  fast_glucose: { carb: 2.5, qty: 2, unit: '顆', name: '快糖'   },
+  calpico:      { carb: 19,  qty: 1, unit: '瓶', name: '可爾必思' },
+  glucose_tab:  { carb: 4,   qty: 1, unit: '片', name: '葡萄糖片' },
 };
 
 function onCarbPreset(rowId, sel) {
@@ -5775,8 +5777,15 @@ function onCarbPreset(rowId, sel) {
   if (!row) return;
   var carbEl = row.querySelector('[data-field="carb"]');
   var qtyEl  = row.querySelector('[data-field="qty"]');
+  var nameEl = row.querySelector('[data-field="name"]');
+  var unitEl = row.querySelector('[data-field="unit"]');
   if (carbEl) { carbEl.value = p.carb; }
   if (qtyEl)  { qtyEl.value  = p.qty;  }
+  if (nameEl) { nameEl.value = p.name || ''; }
+  if (unitEl) { unitEl.value = p.unit || '顆'; }
+  // Refresh unit label
+  var unitLbl = document.getElementById('carb-unit-label-' + rowId);
+  if (unitLbl) { unitLbl.textContent = '每' + (p.unit || '顆'); }
   // Refresh total tag
   var totalEl = document.getElementById('carb-total-' + rowId);
   if (totalEl) {
@@ -6516,7 +6525,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.10.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.10.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID = '1015693868400-14kci11e7s7mqqr95t3nt0t1g77ur9b1.apps.googleusercontent.com';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
 const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
