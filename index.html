@@ -2196,6 +2196,18 @@
     <button class="date-nav-btn" onclick="changeDate(1)">›</button>
   </div>
 
+  <!-- Collapse / Expand all -->
+  <div style="display:flex;gap:8px;margin-bottom:6px;padding:0 2px;">
+    <button onclick="expandAllCards()"
+      style="flex:1;padding:6px 0;font-size:.78rem;font-weight:600;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);cursor:pointer;">
+      ▾ 全部展開
+    </button>
+    <button onclick="collapseAllCards()"
+      style="flex:1;padding:6px 0;font-size:.78rem;font-weight:600;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);cursor:pointer;">
+      ▸ 全部收合
+    </button>
+  </div>
+
   <!-- Period Cards -->
   <div id="period-cards"></div>
 
@@ -4424,6 +4436,34 @@ function restoreCardStates() {
       if (btn)  btn.textContent = '▸';
     }
   });
+}
+
+function collapseAllCards() {
+  var periods = ['morning', 'noon', 'evening', 'bedtime'];
+  var states = {};
+  try { states = JSON.parse(localStorage.getItem('insulin_card_collapsed') || '{}'); } catch(e) {}
+  periods.forEach(function(id) {
+    var body = document.getElementById('body-' + id);
+    var btn  = document.getElementById('collapse-btn-' + id);
+    if (body) { body.classList.add('collapsed'); }
+    if (btn)  { btn.textContent = '▸'; }
+    states[id] = true;
+  });
+  localStorage.setItem('insulin_card_collapsed', JSON.stringify(states));
+}
+
+function expandAllCards() {
+  var periods = ['morning', 'noon', 'evening', 'bedtime'];
+  var states = {};
+  try { states = JSON.parse(localStorage.getItem('insulin_card_collapsed') || '{}'); } catch(e) {}
+  periods.forEach(function(id) {
+    var body = document.getElementById('body-' + id);
+    var btn  = document.getElementById('collapse-btn-' + id);
+    if (body) { body.classList.remove('collapsed'); }
+    if (btn)  { btn.textContent = '▾'; }
+    states[id] = false;
+  });
+  localStorage.setItem('insulin_card_collapsed', JSON.stringify(states));
 }
 
 // ── Scroll indicator ────────────────────────────────────────────────────────
@@ -6832,7 +6872,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.11.5';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.11.6';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
