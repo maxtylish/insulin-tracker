@@ -1838,6 +1838,19 @@
     .supply-days.ok   { color: #22c55e; }
     .supply-days.warn { color: #f59e0b; }
     .supply-days.low  { color: #ef4444; }
+    /* ── Insulin vial card ── */
+    .vial-item { padding:12px 0; border-bottom:1px solid var(--border); }
+    .vial-item:last-child { border-bottom:none; }
+    .vial-name { font-size:.88rem; font-weight:700; color:var(--text); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+    .vial-name a { color:var(--primary); text-decoration:none; font-size:.78rem; font-weight:500; }
+    .vial-name a:hover { text-decoration:underline; }
+    .vial-dates { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+    .vial-date-col { display:flex; flex-direction:column; gap:3px; }
+    .vial-date-label { font-size:.68rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; }
+    .vial-date-input { font-size:.78rem; padding:4px 6px; border:1px solid var(--border); border-radius:6px; background:var(--card); color:var(--text); width:100%; box-sizing:border-box; }
+    .vial-expiry-ok   { font-size:.72rem; color:#22c55e; font-weight:600; margin-top:3px; }
+    .vial-expiry-warn { font-size:.72rem; color:#f59e0b; font-weight:700; margin-top:3px; }
+    .vial-expiry-crit { font-size:.72rem; color:#ef4444; font-weight:700; margin-top:3px; }
     .supply-qty-ctrl { display: flex; align-items: center; gap: 4px; }
     .qty-btn {
       width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border);
@@ -2350,6 +2363,15 @@
       <button class="suppl-add-btn" onclick="addPrescription()">＋ 新增處方</button>
     </div>
     <div id="prescription-list"></div>
+  </div>
+
+  <!-- 胰島素管理 -->
+  <div class="chart-card" id="insulin-vial-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h3 style="margin:0;">💉 胰島素管理</h3>
+      <button class="suppl-add-btn" onclick="saveInsulinVials()">💾 儲存</button>
+    </div>
+    <div id="insulin-vial-list"></div>
   </div>
 
   <!-- 返回首頁按鈕 -->
@@ -6777,7 +6799,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.10.6';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.10.7';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -7212,11 +7234,113 @@ async function checkAndNotifyLowSupplies() {
   sendPushNotif('supply-low', title, body, false);
 }
 
+// ══════════════════════════════════════════
+//  INSULIN VIAL MANAGEMENT
+// ══════════════════════════════════════════
+var INSULIN_VIAL_DEFS = [
+  { key: 'novorapid', label: 'NovoRapid 速效', url: 'https://www.ktgh.com.tw/Medicament_tbDrug_Look.asp?CatID=65&ModuleType=&NewsID=1547&Ordid=30119' },
+  { key: 'tresiba',   label: 'Tresiba 長效',   url: null }
+];
+
+function getInsulinVials() {
+  try { return JSON.parse(localStorage.getItem('insulin_vials') || '{}'); } catch(e) { return {}; }
+}
+
+function saveInsulinVials() {
+  var data = {};
+  INSULIN_VIAL_DEFS.forEach(function(def) {
+    data[def.key] = {
+      mfgDate:  (document.getElementById('vial-mfg-'  + def.key)  || {}).value || '',
+      openDate: (document.getElementById('vial-open-' + def.key)  || {}).value || '',
+      expDate:  (document.getElementById('vial-exp-'  + def.key)  || {}).value || ''
+    };
+  });
+  localStorage.setItem('insulin_vials', JSON.stringify(data));
+  renderInsulinVials();
+  showToast('✅ 胰島素資訊已儲存');
+}
+
+function checkInsulinExpiry() {
+  var data  = getInsulinVials();
+  var today = new Date(); today.setHours(0,0,0,0);
+  var alerts = [];
+  INSULIN_VIAL_DEFS.forEach(function(def) {
+    var v = data[def.key];
+    if (!v || !v.expDate) return;
+    var exp  = new Date(v.expDate); exp.setHours(0,0,0,0);
+    var diff = Math.round((exp - today) / 86400000);
+    if (diff < 0) {
+      alerts.push(def.label + ' 已過期 ' + Math.abs(diff) + ' 天');
+    } else if (diff <= 7) {
+      alerts.push(def.label + ' 將於 ' + diff + ' 天後到期（' + v.expDate + '）');
+    }
+  });
+  if (alerts.length > 0) {
+    setAlertItem('insulin-exp', 5, '💉 胰島素即將到期', alerts.join('　'));
+    sendPushNotif('insulin-exp', '💉 胰島素即將到期', alerts.join(' / '), false);
+  } else {
+    clearAlertItem('insulin-exp');
+  }
+}
+
+function renderInsulinVials() {
+  var el   = document.getElementById('insulin-vial-list');
+  if (!el) return;
+  var data  = getInsulinVials();
+  var today = new Date(); today.setHours(0,0,0,0);
+  var html  = '';
+  INSULIN_VIAL_DEFS.forEach(function(def) {
+    var v   = data[def.key] || {};
+    var mfg  = v.mfgDate  || '';
+    var open = v.openDate || '';
+    var exp  = v.expDate  || '';
+    // Expiry status badge
+    var badge = '';
+    if (exp) {
+      var expD = new Date(exp); expD.setHours(0,0,0,0);
+      var diff = Math.round((expD - today) / 86400000);
+      if (diff < 0) {
+        badge = '<span class="vial-expiry-crit">⛔ 已過期 ' + Math.abs(diff) + ' 天</span>';
+      } else if (diff <= 7) {
+        badge = '<span class="vial-expiry-crit">🚨 ' + diff + ' 天後到期</span>';
+      } else if (diff <= 30) {
+        badge = '<span class="vial-expiry-warn">⚠️ ' + diff + ' 天後到期</span>';
+      } else {
+        badge = '<span class="vial-expiry-ok">✅ 還有 ' + diff + ' 天</span>';
+      }
+    }
+    var nameLink = def.url
+      ? '<a href="' + def.url + '" target="_blank" rel="noopener">藥品說明 ↗</a>'
+      : '';
+    html += '<div class="vial-item">'
+      + '<div class="vial-name">💉 ' + def.label + ' ' + nameLink + '</div>'
+      + '<div class="vial-dates">'
+      + '<div class="vial-date-col">'
+      +   '<span class="vial-date-label">生產日</span>'
+      +   '<input type="date" class="vial-date-input" id="vial-mfg-' + def.key + '" value="' + mfg + '">'
+      + '</div>'
+      + '<div class="vial-date-col">'
+      +   '<span class="vial-date-label">開封日</span>'
+      +   '<input type="date" class="vial-date-input" id="vial-open-' + def.key + '" value="' + open + '">'
+      + '</div>'
+      + '<div class="vial-date-col">'
+      +   '<span class="vial-date-label">到期日</span>'
+      +   '<input type="date" class="vial-date-input" id="vial-exp-' + def.key + '" value="' + exp + '">'
+      + '</div>'
+      + '</div>'
+      + badge
+      + '</div>';
+  });
+  el.innerHTML = html || '<div class="suppl-empty">尚無資料</div>';
+}
+
 function renderManagePage() {
   initSupplyDefaults();
   initRxDefaults();
   renderSupplyList();
   renderPrescriptionList();
+  renderInsulinVials();
+  checkInsulinExpiry();
 }
 
 function renderSupplyList() {
