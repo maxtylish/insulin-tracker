@@ -2086,6 +2086,66 @@
       border-radius: 8px;
     }
 
+
+    /* ── Todo sub-tabs ── */
+    .todo-tab {
+      flex: 1; border: none; background: none; border-radius: 8px;
+      padding: 8px 4px; font-size: .82rem; font-weight: 600;
+      color: var(--text-muted); cursor: pointer; transition: all .2s;
+    }
+    .todo-tab.active { background: var(--primary); color: white; box-shadow: 0 2px 6px rgba(59,130,246,.4); }
+
+    /* ── GCal mini calendar ── */
+    .todo-cal-dow {
+      display: grid; grid-template-columns: repeat(7,1fr);
+      margin-bottom: 4px;
+    }
+    .todo-cal-dow span {
+      text-align: center; font-size: .7rem; font-weight: 600;
+      color: var(--text-muted); padding: 4px 0;
+    }
+    .todo-cal-grid {
+      display: grid; grid-template-columns: repeat(7,1fr); gap: 3px;
+    }
+    .todo-cal-day {
+      position: relative; text-align: center; padding: 7px 2px 10px;
+      font-size: .82rem; border-radius: 8px; cursor: pointer;
+      color: var(--text); transition: background .15s; user-select: none;
+    }
+    .todo-cal-day:hover:not(.empty) { background: var(--hover); }
+    .todo-cal-day.today { background: var(--primary); color: white; font-weight: 700; }
+    .todo-cal-day.selected:not(.today) { background: #dbeafe; color: #1d4ed8; }
+    .todo-cal-day.has-event::after {
+      content: ''; position: absolute; bottom: 3px; left: 50%;
+      transform: translateX(-50%); width: 4px; height: 4px;
+      border-radius: 50%; background: var(--primary);
+    }
+    .todo-cal-day.today.has-event::after { background: white; }
+    .todo-cal-day.empty { cursor: default; color: transparent; }
+    .cal-evt-row {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 0; border-top: 1px solid var(--border);
+    }
+    .cal-evt-time { font-size: .75rem; color: var(--primary); min-width: 80px; }
+    .cal-evt-title { font-size: .85rem; flex: 1; }
+    .cal-evt-del { background: none; border: none; color: #ef4444; cursor: pointer; font-size: .9rem; padding: 2px 4px; }
+    #calDayDetail { display: none; margin-top: 12px; border-top: 1px solid var(--border); padding-top: 10px; }
+    .cal-new-form { display: none; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .cal-new-form input[type=text] {
+      width: 100%; padding: 7px 10px; border: 1px solid var(--border);
+      border-radius: 8px; font-size: .85rem; margin-bottom: 6px;
+      background: var(--surface); color: var(--text);
+    }
+    .cal-new-form input[type=time] {
+      width: 100%; padding: 6px 8px; border: 1px solid var(--border);
+      border-radius: 8px; font-size: .85rem;
+      background: var(--surface); color: var(--text);
+    }
+    .cal-not-connected {
+      text-align: center; padding: 24px 16px; color: var(--text-muted); font-size: .85rem;
+    }
+    .cal-loading { text-align: center; padding: 16px; color: var(--text-muted); font-size: .82rem; }
+
   </style>
   <audio id="mealAlarmAudio" src="data:audio/wav;base64,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AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA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AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA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" preload="auto"></audio>
 </head>
@@ -2435,35 +2495,70 @@
 <!-- ══════════════ TODO PAGE ══════════════ -->
 <div id="page-todo" class="page">
 
-  <!-- GCal 連結提示（未連結時顯示） -->
-  <div id="todo-gcal-hint" style="display:none;margin-bottom:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
-    <span style="font-size:.83rem;color:#1d4ed8;">📅 連結 Google 行事曆後，待辦事項可自動同步</span>
-    <button onclick="switchTab('settings');setTimeout(function(){document.getElementById('gcal-auth-btn').scrollIntoView({behavior:'smooth',block:'center'});},300)"
-      style="flex-shrink:0;padding:5px 12px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer;">前往設定 →</button>
+  <!-- Sub-tab bar -->
+  <div class="period-tabs" style="margin-bottom:14px;">
+    <button class="todo-tab active" onclick="switchTodoTab('list',this)">📝 待辦清單</button>
+    <button class="todo-tab" onclick="switchTodoTab('cal',this)">📅 行事曆</button>
   </div>
 
-  <!-- 健康待辦 -->
-  <div class="chart-card" style="margin-bottom:14px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <h3 style="margin:0;">🏥 健康待辦</h3>
-      <button class="suppl-add-btn" onclick="openTodoForm('health')">＋ 新增</button>
+  <!-- ══ Sub: 待辦清單 ══ -->
+  <div id="todo-sub-list">
+    <!-- GCal 連結提示（未連結時顯示） -->
+    <div id="todo-gcal-hint" style="display:none;margin-bottom:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;align-items:center;justify-content:space-between;gap:10px;">
+      <span style="font-size:.83rem;color:#1d4ed8;">📅 連結 Google 行事曆後，待辦事項可自動同步</span>
+      <button onclick="switchTab('settings');setTimeout(function(){document.getElementById('gcal-auth-btn').scrollIntoView({behavior:'smooth',block:'center'});},300)"
+        style="flex-shrink:0;padding:5px 12px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer;">前往設定 →</button>
     </div>
-    <div id="todo-health-list"><div class="suppl-empty">尚無健康待辦事項</div></div>
-  </div>
 
-  <!-- 一般待辦 -->
-  <div class="chart-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <h3 style="margin:0;">📝 一般待辦</h3>
-      <button class="suppl-add-btn" onclick="openTodoForm('general')">＋ 新增</button>
+    <!-- 健康待辦 -->
+    <div class="chart-card" style="margin-bottom:14px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h3 style="margin:0;">🏥 健康待辦</h3>
+        <button class="suppl-add-btn" onclick="openTodoForm('health')">＋ 新增</button>
+      </div>
+      <div id="todo-health-list"><div class="suppl-empty">尚無健康待辦事項</div></div>
     </div>
-    <div id="todo-general-list"><div class="suppl-empty">尚無一般待辦事項</div></div>
-  </div>
 
-  <!-- 返回首頁按鈕 -->
-  <div class="back-home-wrap">
-    <button class="back-home-btn" onclick="goHome()">⬆ 返回首頁</button>
-  </div>
+    <!-- 一般待辦 -->
+    <div class="chart-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h3 style="margin:0;">📝 一般待辦</h3>
+        <button class="suppl-add-btn" onclick="openTodoForm('general')">＋ 新增</button>
+      </div>
+      <div id="todo-general-list"><div class="suppl-empty">尚無一般待辦事項</div></div>
+    </div>
+
+    <!-- 返回首頁按鈕 -->
+    <div class="back-home-wrap">
+      <button class="back-home-btn" onclick="goHome()">⬆ 返回首頁</button>
+    </div>
+  </div><!-- end todo-sub-list -->
+
+  <!-- ══ Sub: 行事曆 ══ -->
+  <div id="todo-sub-cal" style="display:none;">
+    <div class="chart-card">
+      <!-- Month nav (reuse stat-date-nav style) -->
+      <div class="stat-date-nav" style="margin-bottom:14px;">
+        <button onclick="calNavMonth(-1)">‹</button>
+        <span id="calMonthLabel" class="nav-label">--</span>
+        <button onclick="calNavMonth(1)">›</button>
+      </div>
+      <!-- Day-of-week header -->
+      <div class="todo-cal-dow">
+        <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+      </div>
+      <!-- Day cells (rendered by JS) -->
+      <div id="calDaysGrid" class="todo-cal-grid"></div>
+      <!-- Inline day detail -->
+      <div id="calDayDetail"></div>
+    </div>
+
+    <!-- 返回首頁按鈕 -->
+    <div class="back-home-wrap">
+      <button class="back-home-btn" onclick="goHome()">⬆ 返回首頁</button>
+    </div>
+  </div><!-- end todo-sub-cal -->
+
 </div>
 
 <div id="page-settings" class="page">
@@ -4126,6 +4221,291 @@ async function pollCGM() {
   renderMiniCGMChart();
 }
 
+// ════════════════════════════════════════
+//  TODO SUB-TABS + GCAL CALENDAR
+// ════════════════════════════════════════
+var todoSubTabState = 'list';
+var calViewYM       = null;          // 'YYYY-MM'
+var gcalEventsCache = {};            // { 'YYYY-MM': [...events] }
+var calSelectedDate = null;
+
+function switchTodoTab(tab, btn) {
+  todoSubTabState = tab;
+  document.querySelectorAll('.todo-tab').forEach(function(b){ b.classList.remove('active'); });
+  if (btn) btn.classList.add('active');
+  var listEl = document.getElementById('todo-sub-list');
+  var calEl  = document.getElementById('todo-sub-cal');
+  if (listEl) listEl.style.display = tab === 'list' ? '' : 'none';
+  if (calEl)  calEl.style.display  = tab === 'cal'  ? '' : 'none';
+  if (tab === 'cal') {
+    if (!calViewYM) calViewYM = todayStr().slice(0, 7);
+    renderTodoCalendar();
+  }
+}
+
+function calNavMonth(dir) {
+  if (!calViewYM) calViewYM = todayStr().slice(0, 7);
+  var parts = calViewYM.split('-');
+  var d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1 + dir, 1);
+  calViewYM = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+  calSelectedDate = null;
+  var detail = document.getElementById('calDayDetail');
+  if (detail) { detail.innerHTML = ''; detail.style.display = 'none'; }
+  renderTodoCalendar();
+}
+
+async function renderTodoCalendar() {
+  if (!calViewYM) calViewYM = todayStr().slice(0, 7);
+  var parts = calViewYM.split('-');
+  var year  = parseInt(parts[0]);
+  var month = parseInt(parts[1]);
+  var lbl = document.getElementById('calMonthLabel');
+  if (lbl) lbl.textContent = year + '年' + month + '月';
+
+  var grid = document.getElementById('calDaysGrid');
+  if (!grid) return;
+
+  // Show loading if not cached
+  if (!gcalEventsCache[calViewYM]) {
+    grid.innerHTML = '<div class="cal-loading">載入中…</div>';
+    await loadGCalEventsForMonth(calViewYM);
+  }
+
+  var events = gcalEventsCache[calViewYM] || [];
+
+  // Build set of dates that have events
+  var eventDates = {};
+  events.forEach(function(ev) {
+    var dt = ev.start.date || (ev.start.dateTime || '').slice(0, 10);
+    if (dt) eventDates[dt] = true;
+  });
+
+  var today     = todayStr();
+  var firstDay  = new Date(year, month - 1, 1);
+  var lastDate  = new Date(year, month, 0).getDate();
+  // Mon=0 … Sun=6  (JS getDay: 0=Sun … 6=Sat → (d+6)%7)
+  var startDow  = (firstDay.getDay() + 6) % 7;
+
+  var html = '';
+  for (var i = 0; i < startDow; i++) html += '<div class="todo-cal-day empty"></div>';
+  for (var day = 1; day <= lastDate; day++) {
+    var ds = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+    var cls = 'todo-cal-day';
+    if (ds === today)           cls += ' today';
+    if (ds === calSelectedDate) cls += ' selected';
+    if (eventDates[ds])         cls += ' has-event';
+    html += '<div class="' + cls + '" data-date="' + ds + '">' + day + '</div>';
+  }
+  grid.innerHTML = html;
+
+  // Attach click via event delegation (avoids onclick quote issues)
+  grid.querySelectorAll('.todo-cal-day:not(.empty)').forEach(function(cell) {
+    cell.addEventListener('click', function() { selectCalDay(this.dataset.date); });
+  });
+
+  // Refresh detail panel if a date is already selected
+  if (calSelectedDate && calSelectedDate.startsWith(calViewYM)) {
+    _renderCalDetail(calSelectedDate, events);
+  }
+}
+
+async function loadGCalEventsForMonth(ym) {
+  if (!isGCalConnected()) { gcalEventsCache[ym] = []; return; }
+  var token = await getValidGCalToken();
+  if (!token) { gcalEventsCache[ym] = []; return; }
+  var parts   = ym.split('-');
+  var y = parseInt(parts[0]);
+  var m = parseInt(parts[1]);
+  var lastDay = new Date(y, m, 0).getDate();
+  var timeMin = ym + '-01T00:00:00+08:00';
+  var timeMax = ym + '-' + String(lastDay).padStart(2, '0') + 'T23:59:59+08:00';
+  try {
+    var url = 'https://www.googleapis.com/calendar/v3/calendars/primary/events'
+      + '?timeMin=' + encodeURIComponent(timeMin)
+      + '&timeMax=' + encodeURIComponent(timeMax)
+      + '&singleEvents=true&orderBy=startTime&maxResults=200';
+    var res  = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    var data = await res.json();
+    gcalEventsCache[ym] = data.items || [];
+  } catch(e) {
+    console.error('loadGCalEventsForMonth', e);
+    gcalEventsCache[ym] = [];
+  }
+}
+
+function selectCalDay(dateStr) {
+  var same = calSelectedDate === dateStr;
+  calSelectedDate = same ? null : dateStr;
+
+  // Update grid cell classes without full re-render
+  document.querySelectorAll('.todo-cal-day:not(.empty)').forEach(function(c) {
+    c.classList.remove('selected');
+    if (!same && c.dataset.date === dateStr) c.classList.add('selected');
+  });
+
+  var detail = document.getElementById('calDayDetail');
+  if (!detail) return;
+  if (!calSelectedDate) { detail.innerHTML = ''; detail.style.display = 'none'; return; }
+
+  var events = gcalEventsCache[calViewYM] || [];
+  _renderCalDetail(calSelectedDate, events);
+}
+
+var _calDetailEvents = [];   // store current day events for delete handler
+
+function _renderCalDetail(dateStr, events) {
+  var detail = document.getElementById('calDayDetail');
+  if (!detail) return;
+
+  var dayEvts = events.filter(function(ev) {
+    var dt = ev.start.date || (ev.start.dateTime || '').slice(0, 10);
+    return dt === dateStr;
+  });
+
+  var d    = new Date(dateStr + 'T00:00:00');
+  var days = ['日','一','二','三','四','五','六'];
+  var label = (d.getMonth() + 1) + '月' + d.getDate() + '日（' + days[d.getDay()] + '）';
+
+  var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">'
+    + '<strong style="font-size:.9rem;">' + label + '</strong>'
+    + '<button class="suppl-add-btn" onclick="openCalEventForm()">'
+    + (isGCalConnected() ? '＋ 新增事件' : '🔗 連結日曆') + '</button>'
+    + '</div>';
+
+  if (!isGCalConnected()) {
+    html += '<div class="cal-not-connected">請先在設定頁連結 Google 行事曆</div>';
+  } else if (dayEvts.length === 0) {
+    html += '<div style="font-size:.82rem;color:var(--text-muted);padding:4px 0;">當日無行事曆事件</div>';
+  } else {
+    dayEvts.forEach(function(ev) {
+      var timeStr = '';
+      if (ev.start.dateTime) {
+        var st = new Date(ev.start.dateTime);
+        var et = new Date(ev.end.dateTime);
+        timeStr = st.getHours() + ':' + String(st.getMinutes()).padStart(2, '0')
+          + '–' + et.getHours() + ':' + String(et.getMinutes()).padStart(2, '0');
+      } else {
+        timeStr = '全天';
+      }
+      html += '<div class="cal-evt-row">'
+        + '<span class="cal-evt-time">' + timeStr + '</span>'
+        + '<span class="cal-evt-title">' + _esc(ev.summary || '（無標題）') + '</span>'
+        + '<button class="cal-evt-del" data-eidx="' + i + '" title="刪除">✕</button>'
+        + '</div>';
+    });
+  }
+
+  // New event form
+  html += '<div id="calNewEvtForm" class="cal-new-form">'
+    + '<div style="font-size:.82rem;font-weight:600;margin-bottom:6px;">新增事件</div>'
+    + '<input id="calEvtTitle" type="text" placeholder="事件標題">'
+    + '<div style="display:flex;gap:6px;margin-bottom:8px;">'
+    + '<div style="flex:1;"><div style="font-size:.75rem;color:var(--text-muted);margin-bottom:3px;">開始時間</div>'
+    + '<input id="calEvtStart" type="time" value="09:00"></div>'
+    + '<div style="flex:1;"><div style="font-size:.75rem;color:var(--text-muted);margin-bottom:3px;">結束時間</div>'
+    + '<input id="calEvtEnd" type="time" value="10:00"></div>'
+    + '</div>'
+    + '<label style="display:flex;align-items:center;gap:6px;font-size:.82rem;margin-bottom:8px;cursor:pointer;">'
+    + '<input id="calEvtAllDay" type="checkbox" onchange="toggleCalEvtAllDay(this)"> 全天事件</label>'
+    + '<div style="display:flex;gap:6px;">'
+    + '<button class="settings-save-btn" style="flex:1;padding:7px;" onclick="submitCalEvent()">💾 儲存</button>'
+    + '<button id="calCancelEvtBtn" '
+    + 'style="flex:1;padding:7px;background:#f1f5f9;border:1px solid var(--border);border-radius:8px;font-size:.82rem;cursor:pointer;">取消</button>'
+    + '</div>'
+    + '</div>';
+
+  _calDetailEvents = dayEvts;
+  detail.innerHTML = html;
+  detail.style.display = '';
+
+  // Attach delete listeners via data-eidx
+  detail.querySelectorAll('[data-eidx]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      deleteCalEventFromView(parseInt(this.dataset.eidx));
+    });
+  });
+  // Attach cancel button listener
+  var cancelBtn = detail.querySelector('#calCancelEvtBtn');
+  if (cancelBtn) cancelBtn.addEventListener('click', function() {
+    var f = document.getElementById('calNewEvtForm');
+    if (f) f.style.display = 'none';
+  });
+}
+
+function _esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function openCalEventForm() {
+  if (!isGCalConnected()) {
+    switchTab('settings');
+    setTimeout(function(){ var b=document.getElementById('gcal-auth-btn'); if(b) b.scrollIntoView({behavior:'smooth',block:'center'}); }, 300);
+    return;
+  }
+  var f = document.getElementById('calNewEvtForm');
+  if (f) { f.style.display = f.style.display === 'none' ? '' : 'none'; }
+}
+
+function toggleCalEvtAllDay(cb) {
+  var timeRow = cb.closest('.cal-new-form').querySelectorAll('input[type=time]');
+  timeRow.forEach(function(inp){ inp.disabled = cb.checked; inp.style.opacity = cb.checked ? '.4' : '1'; });
+}
+
+async function submitCalEvent() {
+  if (!calSelectedDate) return;
+  var title  = (document.getElementById('calEvtTitle').value || '').trim();
+  if (!title) { showToast('請輸入事件標題'); return; }
+  var allDay = document.getElementById('calEvtAllDay').checked;
+  var startT = document.getElementById('calEvtStart').value || '09:00';
+  var endT   = document.getElementById('calEvtEnd').value   || '10:00';
+
+  var ev;
+  if (allDay) {
+    // All-day: end = next day
+    var parts = calSelectedDate.split('-');
+    var nextDay = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2])+1);
+    var endDate = nextDay.getFullYear() + '-' + String(nextDay.getMonth()+1).padStart(2,'0') + '-' + String(nextDay.getDate()).padStart(2,'0');
+    ev = { summary: title, start: { date: calSelectedDate }, end: { date: endDate } };
+  } else {
+    ev = {
+      summary: title,
+      start: { dateTime: calSelectedDate + 'T' + startT + ':00+08:00', timeZone: 'Asia/Taipei' },
+      end:   { dateTime: calSelectedDate + 'T' + endT   + ':00+08:00', timeZone: 'Asia/Taipei' }
+    };
+  }
+
+  var token = await getValidGCalToken();
+  if (!token) { showToast('⚠️ Google 行事曆尚未連結'); return; }
+  try {
+    var res  = await _gcalRequest('POST', '', ev, token);
+    if (res && res.id) {
+      showToast('✅ 事件已新增到 Google 行事曆');
+      // Invalidate cache and re-render
+      delete gcalEventsCache[calViewYM];
+      await renderTodoCalendar();
+      var f = document.getElementById('calNewEvtForm');
+      if (f) f.style.display = 'none';
+      var titleEl = document.getElementById('calEvtTitle');
+      if (titleEl) titleEl.value = '';
+    } else {
+      showToast('⚠️ 新增失敗：' + (res && res.error ? res.error.message : '未知錯誤'));
+    }
+  } catch(e) { showToast('⚠️ 網路錯誤，請稍後再試'); }
+}
+
+async function deleteCalEventFromView(idx) {
+  var evObj = _calDetailEvents[idx];
+  if (!evObj) return;
+  if (!confirm('確定刪除此行事曆事件？')) return;
+  await gcalDelete(evObj.id);
+  showToast('🗑️ 事件已刪除');
+  // Invalidate cache and re-render
+  delete gcalEventsCache[calViewYM];
+  await renderTodoCalendar();
+}
+
+// ════════════════════════════════════════
+// Notification action buttons: dismiss / snooze
 // SW → main page: handle dismiss / snooze from notification action buttons
 if (navigator.serviceWorker) {
   navigator.serviceWorker.addEventListener('message', function(ev) {
@@ -5038,9 +5418,13 @@ function getStatDateRange() {
   if (statPeriod === 'day') {
     start = end = statAnchor;
   } else if (statPeriod === 'week') {
-    end = statAnchor;
-    const s = new Date(anchor); s.setDate(s.getDate() - 6);
+    // Snap to Mon–Sun calendar week containing anchor (week starts Monday)
+    const dow = anchor.getDay(); // 0=Sun,1=Mon,...,6=Sat
+    const daysFromMon = (dow + 6) % 7; // Mon→0, Tue→1, ..., Sun→6
+    const s = new Date(anchor); s.setDate(anchor.getDate() - daysFromMon);
+    const e = new Date(s); e.setDate(s.getDate() + 6);
     start = dateToLocalStr(s);
+    end   = dateToLocalStr(e);
   } else if (statPeriod === 'biweek') {
     end = statAnchor;
     const s = new Date(anchor); s.setDate(s.getDate() - 13);
@@ -6906,7 +7290,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.11.7';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.13.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
