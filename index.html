@@ -97,7 +97,7 @@
     }
     nav button {
       flex: 1;
-      padding: 12px 4px;
+      padding: 8px 2px;
       border: none;
       background: none;
       font-size: 0.82rem;
@@ -106,7 +106,13 @@
       border-bottom: 3px solid transparent;
       transition: all 0.2s;
       font-weight: 500;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
     }
+    nav button .nav-ico { font-size: 1.1rem; line-height: 1.3; }
+    nav button .nav-lbl { font-size: 0.62rem; line-height: 1.2; white-space: nowrap; }
     nav button.active {
       color: var(--primary);
       border-bottom-color: var(--primary);
@@ -488,6 +494,32 @@
       background: #dcfce7; color: #166534; border-color: #86efac;
     }
     .snack-type-chip:active { opacity: 0.7; }
+    /* Snack food sub-items */
+    .snack-sub-items { margin: 6px 0 2px; }
+    .snack-sub-item {
+      display: grid;
+      grid-template-columns: 1fr 52px auto 22px;
+      gap: 4px;
+      align-items: center;
+      margin-bottom: 5px;
+    }
+    .snack-sub-item select {
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 5px 4px; font-size: 0.76rem; outline: none;
+      background: white; color: var(--text); width: 100%; box-sizing: border-box;
+    }
+    .snack-sub-item input[type=number] {
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 5px 4px; font-size: 0.82rem; font-weight: 700;
+      text-align: center; outline: none; width: 100%; box-sizing: border-box;
+    }
+    .snack-sub-carb { font-size: 0.76rem; color: #059669; font-weight: 700; white-space: nowrap; }
+    .snack-add-sub-btn {
+      display: block; width: 100%; font-size: 0.78rem; color: #7c3aed;
+      background: none; border: 1.5px dashed #c4b5fd; border-radius: 8px;
+      padding: 4px 0; cursor: pointer; margin-bottom: 8px; text-align: center;
+    }
+    .snack-add-sub-btn:active { opacity: 0.7; }
     /* Row 2: 3 equal columns — carb / BG / time */
     .snack-row-nums {
       display: grid;
@@ -2179,12 +2211,12 @@
 </header>
 
 <nav>
-  <button class="active" onclick="switchTab('today')">📋 今日記錄</button>
-  <button onclick="switchTab('history')">📅 歷史紀錄</button>
-  <button onclick="switchTab('chart')">📊 統計分析</button>
-  <button onclick="switchTab('manage')">📦 管理</button>
-  <button onclick="switchTab('todo')">📝 待辦</button>
-  <button onclick="switchTab('settings')">⚙️ 設定</button>
+  <button class="active" onclick="switchTab('today')"><span class="nav-ico">📋</span><span class="nav-lbl">今日記錄</span></button>
+  <button onclick="switchTab('history')"><span class="nav-ico">📅</span><span class="nav-lbl">歷史紀錄</span></button>
+  <button onclick="switchTab('chart')"><span class="nav-ico">📊</span><span class="nav-lbl">統計分析</span></button>
+  <button onclick="switchTab('manage')"><span class="nav-ico">📦</span><span class="nav-lbl">管理</span></button>
+  <button onclick="switchTab('todo')"><span class="nav-ico">📝</span><span class="nav-lbl">待辦</span></button>
+  <button onclick="switchTab('settings')"><span class="nav-ico">⚙️</span><span class="nav-lbl">設定</span></button>
 </nav>
 
 <!-- ── Alert Carousel (persistent across tabs) ── -->
@@ -3542,6 +3574,33 @@ const SNACK_SECTIONS = [
   { id: 'snack-evening-bedtime', label: '晚餐後～睡前點心',   icon: '🍊', after: 'evening', cir: 10, isf: 110, target: 140, cirLabel: '晚餐 CIR=10' },
 ];
 const SNACK_TYPES = ['點心', '飲料', '自訂'];
+
+// Food options for snack sub-item selector (mirrors calculator food list)
+const SNACK_FOOD_OPTIONS = [
+  { value: 'white_rice',         label: '🍚 白飯 100公克 (碳水30克)' },
+  { value: 'wheat_toast',        label: '🍞 全麥吐司 1片 (碳水12克)' },
+  { value: 'white_toast',        label: '🍞 白吐司 1片 (碳水12克)' },
+  { value: 'strawberry_toast',   label: '🍞 草莓吐司 1片 (碳水15.25克)' },
+  { value: 'udon',               label: '🍜 烏龍麵 100公克 (碳水24.6克)' },
+  { value: 'oil_noodle',         label: '🍜 油麵 100公克 (碳水25.5克)' },
+  { value: 'pan_fried_dumpling', label: '🥟 小煎餃 55公克 (碳水15克)' },
+  { value: 'dumpling',           label: '🥟 水餃 1顆 (碳水4克)' },
+  { value: 'soup_dumpling',      label: '🥟 湯包 1顆 (碳水4.3克)' },
+  { value: 'bacon_egg_pancake',  label: '🥞 培根蛋餅 1份 (碳水30克)' },
+  { value: 'milk_100',           label: '🥛 牛奶 100公克 (碳水4.8克)' },
+  { value: 'milk_150',           label: '🥛 牛奶 150公克 (碳水7克)' },
+  { value: 'milk_200',           label: '🥛 牛奶 200公克 (碳水10克)' },
+  { value: 'yogurt_100',         label: '🥛 優酪乳 100公克 (碳水12克)' },
+  { value: 'yakult',             label: '🧃 養樂多 90ML (碳水14.7克)' },
+  { value: 'guava',              label: '🍈 芭樂 100公克 (碳水10.6克)' },
+  { value: 'apple',              label: '🍎 蘋果 100公克 (碳水11.9克)' },
+  { value: 'banana_peel',        label: '🍌 香蕉帶皮 100公克 (碳水10.6克)' },
+  { value: 'banana',             label: '🍌 香蕉去皮 100公克 (碳水22.1克)' },
+  { value: 'cherry',             label: '🍒 櫻桃 100公克 (碳水19.12克)' },
+  { value: 'pineapple',          label: '🍍 鳳梨 100公克 (碳水13.6克)' },
+  { value: 'dragon_fruit',       label: '🐲 火龍果 100公克 (碳水12.36克)' },
+  { value: 'strawberry',         label: '🍓 草莓去蒂 100公克 (碳水9.3克)' },
+];
 
 const DEFAULT_SETTINGS = {
   low: 80,
@@ -5424,12 +5483,24 @@ function renderHistory() {
           const parts = types.map(t => t === '自訂' ? (r.typeCustom || '自訂') : t);
           return parts.length ? parts.join('＋') : '點心';
         })();
+        const foodDetail = (() => {
+          if (r.subItems && r.subItems.length > 0) {
+            const parts = r.subItems.map(si => {
+              const opt = SNACK_FOOD_OPTIONS.find(o => o.value === si.food);
+              const nm  = opt ? opt.label.replace(/ \(碳水.*/, '') : si.food;
+              const c   = ((CALC_CARB_FOODS[si.food] || 0) * (parseFloat(si.qty) || 1)).toFixed(1);
+              return nm + ' ×' + si.qty + ' =' + c + '克';
+            });
+            return parts.join(' ＋ ') + (carb ? ' <b style="color:#16a34a;">合計' + carb + '</b>克' : '');
+          }
+          return typeLabel + (carb ? ' <b style="color:#16a34a;">' + carb + '</b> 克' : '');
+        })();
         return `<div style="padding:5px 16px;border-bottom:1px solid var(--border);font-size:0.82rem;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span style="background:#dcfce7;color:#166534;border-radius:4px;padding:1px 7px;font-weight:700;font-size:0.75rem;white-space:nowrap;">${sec.icon} 點心${i+1}</span>
             ${r.time ? `<span style="color:var(--text-muted);white-space:nowrap;">🕐 ${r.time}</span>` : ''}
             ${r.bg ? `<span style="white-space:nowrap;">🩸 <b style="color:#ef4444;">${r.bg}</b> <small>mg/dL</small></span>` : ''}
-            <span style="white-space:nowrap;">${typeLabel}${carb ? ' <b style="color:#16a34a;">' + carb + '</b> 克' : ''}</span>
+            <span style="white-space:nowrap;font-size:0.8rem;">${foodDetail}</span>
             ${r.dose ? `<span style="white-space:nowrap;">💉 <b style="color:#2563eb;">${r.dose}</b> 單位</span>` : ''}
           </div>
           ${r.note ? `<div style="color:var(--text-muted);font-size:0.78rem;margin-top:3px;">備註：${r.note}</div>` : ''}
@@ -6022,8 +6093,22 @@ function renderSnackSection(sectionId, items) {
     }).join('');
     var hasCustom = selTypes.indexOf('自訂') !== -1;
 
+    // Food sub-items
+    var subItems     = Array.isArray(item.subItems) ? item.subItems : [];
+    var subItemsHTML = subItems.map(function(si, siIdx) {
+      return buildSnackSubItemHTML(sectionId, idx, siIdx, si);
+    }).join('');
+    var subAutoCarb = subItems.reduce(function(sum, si) {
+      return sum + (CALC_CARB_FOODS[si.food] || 0) * (parseFloat(si.qty) || 1);
+    }, 0);
+    var hasSubItems = subItems.length > 0;
+    var carbVal     = hasSubItems ? subAutoCarb.toFixed(1) : (item.carb || '');
+    var carbRO      = hasSubItems ? ' readonly' : '';
+    var carbBgCol   = hasSubItems ? '#f1f5f9' : 'white';
+    var carbColor   = hasSubItems ? 'color:#64748b;' : '';
+
     // Pre-compute hint & dose card state
-    var carb = parseFloat(item.carb) || 0;
+    var carb = hasSubItems ? subAutoCarb : (parseFloat(item.carb) || 0);
     var bg   = parseFloat(item.bg)   || 0;
     var hint = '', doseCardClass = '', doseAutoClass = '';
     if (carb > 0) {
@@ -6057,14 +6142,20 @@ function renderSnackSection(sectionId, items) {
           '</div>' +
         '</div>' +
 
+        // ── Food sub-items ──
+        '<div class="snack-sub-items" id="' + sectionId + '-subs-' + idx + '">' + subItemsHTML + '</div>' +
+        '<button type="button" class="snack-add-sub-btn"' +
+          ' data-section="' + sectionId + '" data-row="' + idx + '"' +
+          ' onclick="addSnackSubItem(this)">＋ 新增食材</button>' +
+
         // ── Row 2: carb | BG | time ──
         '<div class="snack-row-nums">' +
           '<div class="snack-field">' +
             '<label>碳水 (g)</label>' +
             '<input type="number" class="snack-val" data-idx="' + idx + '" data-field="carb"' +
-              ' value="' + (item.carb || '') + '" min="0" max="300" step="0.5" placeholder="--"' +
+              ' value="' + carbVal + '" min="0" max="300" step="0.5" placeholder="--"' + carbRO +
               ' oninput="calcSnackDose(\'' + sectionId + '\',' + idx + ')"' +
-              ' style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 8px;font-size:0.95rem;font-weight:700;outline:none;background:white;transition:border-color 0.2s" />' +
+              ' style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 8px;font-size:0.95rem;font-weight:700;outline:none;background:' + carbBgCol + ';' + carbColor + 'transition:border-color 0.2s" />' +
           '</div>' +
           '<div class="snack-field">' +
             '<label>血糖 (mg/dL)</label>' +
@@ -6137,7 +6228,29 @@ function collectSnackRows(sectionId) {
         obj[el.dataset.field] = el.value.trim();
       }
     });
-    if (Object.values(obj).some(function(v){ return v !== ''; })) result.push(obj);
+    // Parse types (stored as JSON string in hidden input)
+    if (obj.types && typeof obj.types === 'string') {
+      try { obj.types = JSON.parse(obj.types); } catch(e) { obj.types = []; }
+    }
+    // Collect food sub-items from DOM
+    var siEls = row.querySelectorAll('.snack-sub-item');
+    if (siEls.length > 0) {
+      var subs = [], calcCarb = 0;
+      siEls.forEach(function(siEl) {
+        var sel      = siEl.querySelector('select');
+        var qtyInput = siEl.querySelector('input[type=number]');
+        var food = sel ? sel.value : '';
+        var qty  = parseFloat(qtyInput ? qtyInput.value : 1) || 0;
+        if (food) {
+          subs.push({ food: food, qty: qty });
+          calcCarb += (CALC_CARB_FOODS[food] || 0) * qty;
+        }
+      });
+      if (subs.length > 0) { obj.subItems = subs; obj.carb = calcCarb.toFixed(1); }
+    }
+    if (Object.values(obj).some(function(v){
+      return Array.isArray(v) ? v.length > 0 : (v !== '' && v != null);
+    })) result.push(obj);
   });
   return result;
 }
@@ -6160,6 +6273,83 @@ function toggleSnackType(sectionId, idx, btn) {
     customInput.style.display = hasCustom ? '' : 'none';
     if (!hasCustom) customInput.value = '';
   }
+}
+
+function buildSnackSubItemHTML(sectionId, rowIdx, subIdx, si) {
+  var food = si.food || '';
+  var qty  = (si.qty !== undefined && si.qty !== '') ? si.qty : 1;
+  var carbStr = (food && CALC_CARB_FOODS[food])
+    ? '≈' + (CALC_CARB_FOODS[food] * (parseFloat(qty) || 1)).toFixed(1) + '克' : '–';
+  var opts = '<option value="">── 選擇食材 ──</option>' +
+    SNACK_FOOD_OPTIONS.map(function(o) {
+      return '<option value="' + o.value + '"' + (o.value === food ? ' selected' : '') + '>' + o.label + '</option>';
+    }).join('');
+  return '<div class="snack-sub-item" data-section="' + sectionId + '" data-row="' + rowIdx + '" data-sub="' + subIdx + '">' +
+    '<select onchange="onSnackSubChange(this)">' + opts + '</select>' +
+    '<input type="number" value="' + qty + '" min="0.1" max="99" step="0.1" oninput="onSnackSubChange(this)" />' +
+    '<span class="snack-sub-carb">' + carbStr + '</span>' +
+    '<button type="button" onclick="removeSnackSubItem(this)" style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:1rem;padding:0;line-height:1;">✕</button>' +
+    '</div>';
+}
+
+function addSnackSubItem(btn) {
+  var sectionId = btn.dataset.section;
+  var rowIdx    = parseInt(btn.dataset.row);
+  var subsEl    = document.getElementById(sectionId + '-subs-' + rowIdx);
+  if (!subsEl) return;
+  var subIdx = subsEl.querySelectorAll('.snack-sub-item').length;
+  var temp = document.createElement('div');
+  temp.innerHTML = buildSnackSubItemHTML(sectionId, rowIdx, subIdx, { food: '', qty: 1 });
+  subsEl.appendChild(temp.firstChild);
+  recalcSnackSubTotal(sectionId, rowIdx);
+}
+
+function onSnackSubChange(el) {
+  var siEl = el.closest('.snack-sub-item');
+  if (!siEl) return;
+  var sectionId = siEl.dataset.section;
+  var rowIdx    = parseInt(siEl.dataset.row);
+  var sel       = siEl.querySelector('select');
+  var qtyInput  = siEl.querySelector('input[type=number]');
+  var carbSpan  = siEl.querySelector('.snack-sub-carb');
+  var food = sel ? sel.value : '';
+  var qty  = parseFloat(qtyInput ? qtyInput.value : 1) || 0;
+  var carbStr = (food && CALC_CARB_FOODS[food])
+    ? '≈' + (CALC_CARB_FOODS[food] * qty).toFixed(1) + '克' : '–';
+  if (carbSpan) carbSpan.textContent = carbStr;
+  recalcSnackSubTotal(sectionId, rowIdx);
+}
+
+function removeSnackSubItem(btn) {
+  var siEl = btn.closest('.snack-sub-item');
+  if (!siEl) return;
+  var sectionId = siEl.dataset.section;
+  var rowIdx    = parseInt(siEl.dataset.row);
+  siEl.remove();
+  recalcSnackSubTotal(sectionId, rowIdx);
+}
+
+function recalcSnackSubTotal(sectionId, rowIdx) {
+  var subsEl = document.getElementById(sectionId + '-subs-' + rowIdx);
+  var rowEl  = document.getElementById(sectionId + '-row-' + rowIdx);
+  if (!subsEl || !rowEl) return;
+  var carbEl = rowEl.querySelector('[data-field="carb"]');
+  if (!carbEl) return;
+  var siEls  = subsEl.querySelectorAll('.snack-sub-item');
+  var total  = 0;
+  siEls.forEach(function(siEl) {
+    var sel      = siEl.querySelector('select');
+    var qtyInput = siEl.querySelector('input[type=number]');
+    var food = sel ? sel.value : '';
+    var qty  = parseFloat(qtyInput ? qtyInput.value : 1) || 0;
+    if (food && CALC_CARB_FOODS[food]) total += CALC_CARB_FOODS[food] * qty;
+  });
+  var hasItems = siEls.length > 0;
+  carbEl.readOnly = hasItems;
+  carbEl.style.background = hasItems ? '#f1f5f9' : '';
+  carbEl.style.color      = hasItems ? '#64748b' : '';
+  if (hasItems) carbEl.value = total.toFixed(1);
+  calcSnackDose(sectionId, rowIdx);
 }
 
 function calcSnackDose(sectionId, idx) {
