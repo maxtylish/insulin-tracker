@@ -3613,7 +3613,16 @@ async function loadFromCloud() {
       .eq('user_id', currentUserId);
     if (error) throw error;
     if (data && data.length > 0) {
-      data.forEach(row => { allDataCache[row.date] = row.data; });
+      data.forEach(row => {
+        if (row.date === '__vials__') {
+          // Restore insulin vials — cloud wins (newer device always syncs back)
+          if (row.data && Array.isArray(row.data.vials)) {
+            localStorage.setItem('insulin_vials', JSON.stringify(row.data.vials));
+          }
+        } else {
+          allDataCache[row.date] = row.data;
+        }
+      });
       localStorage.setItem('insulin_records', JSON.stringify(allDataCache));
     }
     await loadTodosFromCloud();  // also sync todos
@@ -7906,6 +7915,19 @@ function getInsulinVials() {
 
 function _saveVialsToStorage(arr) {
   localStorage.setItem('insulin_vials', JSON.stringify(arr));
+  syncVialsToCloud(arr);
+}
+
+async function syncVialsToCloud(arr) {
+  if (!sbClient || !currentUserId) return;
+  try {
+    await sbClient.from('insulin_records').upsert({
+      user_id:    currentUserId,
+      date:       '__vials__',
+      data:       { vials: arr },
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id,date' });
+  } catch(e) { console.warn('syncVialsToCloud:', e); }
 }
 
 function addInsulinVial(type) {
