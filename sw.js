@@ -38,9 +38,23 @@ self.addEventListener('fetch', e => {
   );
 });
 
-// Open app when user taps a notification
+// Notification action buttons: dismiss / snooze
 self.addEventListener('notificationclick', e => {
   e.notification.close();
+  const action = e.action;                          // 'dismiss' | 'snooze' | ''
+  const key    = e.notification.data && e.notification.data.key;
+
+  // Relay action back to all open app windows
+  if (action === 'dismiss' || action === 'snooze') {
+    e.waitUntil(
+      clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+        list.forEach(c => c.postMessage({ type: 'notif-action', action, key }));
+      })
+    );
+    return;
+  }
+
+  // Default: focus / open app
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       for (const c of list) {

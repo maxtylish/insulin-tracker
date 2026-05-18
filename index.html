@@ -3583,7 +3583,8 @@ const NS_TREND = {
 
 // ── Warning banner state ──────────────────────────────
 var lastCGMEntry = null;  // kept for correction dose calc
-var warnDismissed = { hypo: null, hyper: null };  // dismissed-at sgv
+var warnDismissed  = { hypo: null, hyper: null };  // dismissed-at sgv
+var notifSnoozed   = {};   // key → timestamp (snooze until)
 
 function dismissWarning(type) {
   var el = document.getElementById(type + '-warning');
@@ -3992,12 +3993,14 @@ function playBeep(urgent) {
 async function sendPushNotif(key, title, body, urgent) {
   if (!notifEnabled() || Notification.permission !== 'granted') return;
   var now = Date.now();
-  if (now - lastNotifTime[key] < NOTIF_COOLDOWN) return;
+  if (now - (lastNotifTime[key] || 0) < NOTIF_COOLDOWN) return;
+  if (notifSnoozed[key] && now < notifSnoozed[key]) return;   // snoozed
   lastNotifTime[key] = now;
   if (notifSound()) playBeep(urgent);
+  var isBGAlert = (key === 'hyper' || key === 'hypo');
   try {
     var reg = await navigator.serviceWorker.ready;
-    reg.showNotification(title, {
+    var opts = {
       body: body,
       icon: '/insulin-tracker/apple-touch-icon.png',
       badge: '/insulin-tracker/apple-touch-icon.png',
@@ -4005,8 +4008,13 @@ async function sendPushNotif(key, title, body, urgent) {
       renotify: true,
       vibrate: urgent ? [300,100,300,100,500] : [200,100,200],
       requireInteraction: true,
-      data: { url: '/insulin-tracker/' }
-    });
+      data: { url: '/insulin-tracker/', key: key }
+    };
+    if (isBGAlert) opts.actions = [
+      { action: 'snooze',  title: '稍後通知' },
+      { action: 'dismiss', title: '關閉'     }
+    ];
+    reg.showNotification(title, opts);
   } catch(e) { try { new Notification(title, { body: body }); } catch(e2) {} }
 }
 
@@ -4045,6 +4053,27 @@ async function pollCGM() {
   updateCGMWidget(entry);
   checkAndNotify(entry);
   renderMiniCGMChart();
+}
+
+// SW → main page: handle dismiss / snooze from notification action buttons
+if (navigator.serviceWorker) {
+  navigator.serviceWorker.addEventListener('message', function(ev) {
+    var d = ev.data;
+    if (!d || d.type !== 'notif-action') return;
+    var key = d.key;   // 'hyper' or 'hypo'
+    if (d.action === 'dismiss') {
+      // Suppress until BG changes by ≥5 mg/dL
+      var sgv = lastCGMEntry && lastCGMEntry.sgv ? Math.round(lastCGMEntry.sgv) : 9999;
+      if (key === 'hyper' || key === 'hypo') {
+        warnDismissed[key] = sgv;
+        hideBanner(key);
+      }
+      // Also clear the cooldown so it won't fire even if BG stays flat
+      lastNotifTime[key] = Date.now() + 24 * 60 * 60000; // suppress 24h
+    } else if (d.action === 'snooze') {
+      notifSnoozed[key] = Date.now() + 30 * 60000;  // snooze 30 min
+    }
+  });
 }
 
 function _tickCGMTime() {
@@ -6748,7 +6777,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.10.5';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.10.6';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
