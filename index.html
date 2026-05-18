@@ -2489,6 +2489,7 @@
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
       <h3 style="margin:0;">💉 胰島素管理</h3>
       <div style="display:flex;gap:6px;">
+        <button class="suppl-add-btn" onclick="manualSyncVials(this)" title="同步胰島素資料到雲端">🔄</button>
         <button class="suppl-add-btn" onclick="addInsulinVial('novorapid')">＋ 速效</button>
         <button class="suppl-add-btn" onclick="addInsulinVial('tresiba')">＋ 長效</button>
       </div>
@@ -4876,7 +4877,7 @@ function goHome() {
 }
 
 function switchTab(tab) {
-  if (tab === 'manage') renderManagePage();
+  if (tab === 'manage') { renderManagePage(); pullVialsFromCloud(); }
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
   document.getElementById('page-' + tab).classList.add('active');
@@ -7943,6 +7944,45 @@ async function syncVialsToCloud(arr) {
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id,date' });
   } catch(e) { console.warn('syncVialsToCloud:', e); }
+}
+
+async function pullVialsFromCloud() {
+  if (!sbClient || !currentUserId) return false;
+  try {
+    var res = await sbClient.from('insulin_records')
+      .select('data')
+      .eq('user_id', currentUserId)
+      .eq('date', '__vials__')
+      .single();
+    if (!res.error && res.data && Array.isArray(res.data.data && res.data.data.vials)) {
+      var cloudVials = res.data.data.vials;
+      var localVials = JSON.parse(localStorage.getItem('insulin_vials') || '[]');
+      // Merge: union by id, cloud wins for same id
+      var merged = cloudVials.slice();
+      localVials.forEach(function(lv) {
+        if (!merged.some(function(cv) { return cv.id === lv.id; })) merged.push(lv);
+      });
+      localStorage.setItem('insulin_vials', JSON.stringify(merged));
+      renderInsulinVials();
+      return true;
+    }
+    return false;
+  } catch(e) { console.warn('pullVialsFromCloud:', e); return false; }
+}
+
+async function manualSyncVials(btn) {
+  if (!sbClient || !currentUserId) { showToast('⚠️ 尚未連線 Supabase'); return; }
+  var orig = btn.textContent;
+  btn.textContent = '⏳';
+  btn.disabled = true;
+  // Push local → cloud first
+  var arr = getInsulinVials();
+  await syncVialsToCloud(arr);
+  // Then pull cloud → local (merge)
+  await pullVialsFromCloud();
+  btn.textContent = orig;
+  btn.disabled = false;
+  showToast('✅ 胰島素資料已同步');
 }
 
 function addInsulinVial(type) {
