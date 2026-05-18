@@ -8737,44 +8737,111 @@ function refreshRxDrugEditor() {
 }
 
 
-// 速效胰島素峰值作用剩餘時間（以施打後 3 小時為作用結束）
+// 速效胰島素作用時間條（考慮施打部位起效延遲）
+// 起效延遲：肚子 15min、手臂 20min、大腿 30min（來自 SITE_ALARM_MAP）
+// 作用持續：起效後 3 小時
+// 產生單一胰島素作用條 HTML（速效 or 長效共用）
+function _insulinBarBlock(last, durationH, opts) {
+  // opts: { pendingBg, pendingBorder, pendingColor, pendingTrack, pendingFill,
+  //         activeBg,  activeBorder,  activeColor,  activeTrack,  activeFill,
+  //         pendingEmoji, activeEmoji, label }
+  var nowMs    = Date.now();
+  var onsetMin = (SITE_ALARM_MAP[last.site] && SITE_ALARM_MAP[last.site].def) || 20;
+  var injectMs = last.dt.getTime();
+  var onsetMs  = injectMs + onsetMin * 60000;
+  var endMs    = onsetMs  + durationH * 3600000;
+  if (nowMs >= endMs) return '';
+
+  var injectStr = last.dt.getHours() + ':' + String(last.dt.getMinutes()).padStart(2,'0');
+  var onsetDT   = new Date(onsetMs);
+  var onsetStr  = onsetDT.getHours() + ':' + String(onsetDT.getMinutes()).padStart(2,'0');
+  var siteLabel = last.site || '未知部位';
+
+  if (nowMs < onsetMs) {
+    var minsLeft = Math.ceil((onsetMs - nowMs) / 60000);
+    var pct = Math.max(0, Math.min(100, (1 - (onsetMs - nowMs) / (onsetMin * 60000)) * 100)).toFixed(1);
+    return '<div style="background:' + opts.pendingBg + ';border:1px solid ' + opts.pendingBorder + ';border-radius:8px;padding:7px 12px;color:' + opts.pendingColor + ';font-size:.82rem;">'
+      + opts.pendingEmoji + ' <b>' + opts.label + '</b> 起效中（' + injectStr + ' 打 ' + siteLabel + '，' + onsetMin + 'min 後）還有 <strong>' + minsLeft + ' 分鐘</strong>開始'
+      + '<div style="margin-top:5px;height:4px;border-radius:2px;background:' + opts.pendingTrack + ';">'
+      + '<div style="height:4px;border-radius:2px;background:' + opts.pendingFill + ';width:' + pct + '%"></div></div>'
+      + '</div>';
+  } else {
+    var remainMs = endMs - nowMs;
+    var remainH  = remainMs / 3600000;
+    var rh = Math.floor(remainH);
+    var rm = Math.round((remainH - rh) * 60);
+    var pct2 = (remainMs / (durationH * 3600000) * 100).toFixed(1);
+    return '<div style="background:' + opts.activeBg + ';border:1px solid ' + opts.activeBorder + ';border-radius:8px;padding:7px 12px;color:' + opts.activeColor + ';font-size:.82rem;">'
+      + opts.activeEmoji + ' <b>' + opts.label + '</b> 作用中（' + onsetStr + ' 起效 · ' + siteLabel + '）剩餘 <strong>' + rh + 'h ' + rm + 'm</strong>'
+      + '<div style="margin-top:5px;height:4px;border-radius:2px;background:' + opts.activeTrack + ';">'
+      + '<div style="height:4px;border-radius:2px;background:' + opts.activeFill + ';width:' + pct2 + '%"></div></div>'
+      + '</div>';
+  }
+}
+
 function updateBasalTimeBar() {
   var bar = document.getElementById('basal-time-bar');
   if (!bar) return;
-  var RAPID_H = 3;  // 峰值作用時間 3 小時
-  var all = getAllData();
+  var all   = getAllData();
   var today = todayStr();
+  var nowMs = Date.now();
 
-  // 收集今天與昨天所有速效注射時間點（早/午/晚 + 補打）
-  var candidates = [];
+  // ── 速效：早/午/晚 + 補打，搜尋過去 2 天 ──
+  var rapidCandidates = [];
   for (var i = 0; i < 2; i++) {
     var d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() - i);
     var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     var day = all[ds] || {};
     ['morning','noon','evening'].forEach(function(pid) {
       var rec = day[pid];
-      if (rec && rec.insulin && rec.time) candidates.push(new Date(ds + 'T' + rec.time + ':00'));
+      if (rec && rec.insulin && rec.time)
+        rapidCandidates.push({ dt: new Date(ds + 'T' + rec.time + ':00'), site: rec.site || SITE_DEFAULTS[pid] || '' });
     });
     (day.corrections || []).forEach(function(r) {
-      if (r.dose && r.time) candidates.push(new Date(ds + 'T' + r.time + ':00'));
+      if (r.dose && r.time)
+        rapidCandidates.push({ dt: new Date(ds + 'T' + r.time + ':00'), site: r.site || '' });
     });
   }
-  if (!candidates.length) { bar.style.display = 'none'; return; }
 
-  // 最近一次注射
-  var lastDT = candidates.reduce(function(a, b) { return a > b ? a : b; });
-  var elapsedH = (Date.now() - lastDT.getTime()) / 3600000;
-  var remainH  = RAPID_H - elapsedH;
-  if (remainH <= 0) { bar.style.display = 'none'; return; }
+  // ── 長效（Tresiba 42h）：睡前，搜尋過去 3 天 ──
+  var basalCandidates = [];
+  for (var j = 0; j < 3; j++) {
+    var d2 = new Date(today + 'T00:00:00'); d2.setDate(d2.getDate() - j);
+    var ds2 = d2.getFullYear() + '-' + String(d2.getMonth()+1).padStart(2,'0') + '-' + String(d2.getDate()).padStart(2,'0');
+    var rec2 = (all[ds2] || {}).bedtime;
+    if (rec2 && rec2.insulin && rec2.time)
+      basalCandidates.push({ dt: new Date(ds2 + 'T' + rec2.time + ':00'), site: rec2.site || SITE_DEFAULTS.bedtime || '' });
+  }
 
-  var rh  = Math.floor(remainH);
-  var rm  = Math.round((remainH - rh) * 60);
-  var pct = (remainH / RAPID_H * 100).toFixed(1);
-  var timeStr = lastDT.getHours() + ':' + String(lastDT.getMinutes()).padStart(2,'0');
+  var rapidOpts = {
+    pendingBg: '#fefce8', pendingBorder: '#fde68a', pendingColor: '#92400e',
+    pendingTrack: '#fde68a', pendingFill: '#f59e0b', pendingEmoji: '⏳',
+    activeBg: '#eff6ff', activeBorder: '#bfdbfe', activeColor: '#1e40af',
+    activeTrack: '#dbeafe', activeFill: '#3b82f6', activeEmoji: '⚡',
+    label: '速效'
+  };
+  var basalOpts = {
+    pendingBg: '#f0fdf4', pendingBorder: '#bbf7d0', pendingColor: '#14532d',
+    pendingTrack: '#bbf7d0', pendingFill: '#22c55e', pendingEmoji: '⏳',
+    activeBg: '#f0fdf4', activeBorder: '#bbf7d0', activeColor: '#14532d',
+    activeTrack: '#bbf7d0', activeFill: '#22c55e', activeEmoji: '💉',
+    label: '長效 Tresiba'
+  };
+
+  var lastRapid = rapidCandidates.length ? rapidCandidates.reduce(function(a,b){ return a.dt > b.dt ? a : b; }) : null;
+  var lastBasal = basalCandidates.length ? basalCandidates.reduce(function(a,b){ return a.dt > b.dt ? a : b; }) : null;
+
+  var rapidHTML = lastRapid ? _insulinBarBlock(lastRapid, 3,  rapidOpts) : '';
+  var basalHTML = lastBasal ? _insulinBarBlock(lastBasal, 42, basalOpts) : '';
+
+  var combined = [rapidHTML, basalHTML].filter(Boolean).join('<div style="height:6px;"></div>');
+  if (!combined) { bar.style.display = 'none'; return; }
+
   bar.style.display = '';
-  bar.innerHTML = '⚡ 速效胰島素作用中（' + timeStr + ' 施打）剩餘：<strong>' + rh + 'h ' + rm + 'm</strong>'
-    + '<div style="margin-top:5px;height:4px;border-radius:2px;background:#dbeafe;">'
-    + '<div style="height:4px;border-radius:2px;background:#3b82f6;width:' + pct + '%"></div></div>';
+  bar.style.background = 'transparent';
+  bar.style.border = 'none';
+  bar.style.padding = '0';
+  bar.innerHTML = combined;
 }
 
 function saveRxModal() {
