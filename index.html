@@ -6799,7 +6799,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.10.7';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.10.8';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -7238,9 +7238,54 @@ async function checkAndNotifyLowSupplies() {
 //  INSULIN VIAL MANAGEMENT
 // ══════════════════════════════════════════
 var INSULIN_VIAL_DEFS = [
-  { key: 'novorapid', label: 'NovoRapid 速效', url: 'https://www.ktgh.com.tw/Medicament_tbDrug_Look.asp?CatID=65&ModuleType=&NewsID=1547&Ordid=30119' },
-  { key: 'tresiba',   label: 'Tresiba 長效',   url: null }
+  { key: 'novorapid', label: 'NovoRapid 速效', openExpDays: 28, url: 'https://www.ktgh.com.tw/Medicament_tbDrug_Look.asp?CatID=65&ModuleType=&NewsID=1547&Ordid=30119' },
+  { key: 'tresiba',   label: 'Tresiba 長效',   openExpDays: 56, url: null }
 ];
+
+// 根據開封日 + openExpDays 計算到期日字串 (YYYY-MM-DD)
+function calcVialExpDate(openDateStr, days) {
+  if (!openDateStr || !days) return '';
+  var d = new Date(openDateStr + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+// 開封日變更時自動填入到期日
+function onVialOpenChange(key) {
+  var def = INSULIN_VIAL_DEFS.find(function(d){ return d.key === key; });
+  if (!def) return;
+  var openVal = (document.getElementById('vial-open-' + key) || {}).value || '';
+  var expEl   = document.getElementById('vial-exp-' + key);
+  if (!expEl) return;
+  expEl.value = calcVialExpDate(openVal, def.openExpDays);
+  // 即時重繪 badge
+  _refreshVialBadge(key, expEl.value);
+}
+
+// 到期日欄手動變更也即時更新 badge
+function onVialExpChange(key) {
+  var expEl = document.getElementById('vial-exp-' + key);
+  if (!expEl) return;
+  _refreshVialBadge(key, expEl.value);
+}
+
+function _refreshVialBadge(key, expStr) {
+  var badgeEl = document.getElementById('vial-badge-' + key);
+  if (!badgeEl) return;
+  if (!expStr) { badgeEl.innerHTML = ''; return; }
+  var today = new Date(); today.setHours(0,0,0,0);
+  var expD  = new Date(expStr); expD.setHours(0,0,0,0);
+  var diff  = Math.round((expD - today) / 86400000);
+  if (diff < 0) {
+    badgeEl.innerHTML = '<span class="vial-expiry-crit">⛔ 已過期 ' + Math.abs(diff) + ' 天</span>';
+  } else if (diff <= 7) {
+    badgeEl.innerHTML = '<span class="vial-expiry-crit">🚨 ' + diff + ' 天後到期</span>';
+  } else if (diff <= 30) {
+    badgeEl.innerHTML = '<span class="vial-expiry-warn">⚠️ ' + diff + ' 天後到期</span>';
+  } else {
+    badgeEl.innerHTML = '<span class="vial-expiry-ok">✅ 還有 ' + diff + ' 天</span>';
+  }
+}
 
 function getInsulinVials() {
   try { return JSON.parse(localStorage.getItem('insulin_vials') || '{}'); } catch(e) { return {}; }
@@ -7249,10 +7294,14 @@ function getInsulinVials() {
 function saveInsulinVials() {
   var data = {};
   INSULIN_VIAL_DEFS.forEach(function(def) {
+    var openVal = (document.getElementById('vial-open-' + def.key) || {}).value || '';
+    var expVal  = (document.getElementById('vial-exp-'  + def.key) || {}).value || '';
+    // If exp is empty, auto-calc from open date
+    if (!expVal && openVal) expVal = calcVialExpDate(openVal, def.openExpDays);
     data[def.key] = {
-      mfgDate:  (document.getElementById('vial-mfg-'  + def.key)  || {}).value || '',
-      openDate: (document.getElementById('vial-open-' + def.key)  || {}).value || '',
-      expDate:  (document.getElementById('vial-exp-'  + def.key)  || {}).value || ''
+      mfgDate:  (document.getElementById('vial-mfg-' + def.key) || {}).value || '',
+      openDate: openVal,
+      expDate:  expVal
     };
   });
   localStorage.setItem('insulin_vials', JSON.stringify(data));
@@ -7290,23 +7339,24 @@ function renderInsulinVials() {
   var today = new Date(); today.setHours(0,0,0,0);
   var html  = '';
   INSULIN_VIAL_DEFS.forEach(function(def) {
-    var v   = data[def.key] || {};
+    var v    = data[def.key] || {};
     var mfg  = v.mfgDate  || '';
     var open = v.openDate || '';
-    var exp  = v.expDate  || '';
-    // Expiry status badge
-    var badge = '';
+    // 若已有開封日，自動計算到期日（優先用儲存值，若無則算）
+    var exp  = v.expDate  || (open ? calcVialExpDate(open, def.openExpDays) : '');
+    // Badge HTML（先算好）
+    var badgeHtml = '';
     if (exp) {
       var expD = new Date(exp); expD.setHours(0,0,0,0);
       var diff = Math.round((expD - today) / 86400000);
       if (diff < 0) {
-        badge = '<span class="vial-expiry-crit">⛔ 已過期 ' + Math.abs(diff) + ' 天</span>';
+        badgeHtml = '<span class="vial-expiry-crit">⛔ 已過期 ' + Math.abs(diff) + ' 天</span>';
       } else if (diff <= 7) {
-        badge = '<span class="vial-expiry-crit">🚨 ' + diff + ' 天後到期</span>';
+        badgeHtml = '<span class="vial-expiry-crit">🚨 ' + diff + ' 天後到期</span>';
       } else if (diff <= 30) {
-        badge = '<span class="vial-expiry-warn">⚠️ ' + diff + ' 天後到期</span>';
+        badgeHtml = '<span class="vial-expiry-warn">⚠️ ' + diff + ' 天後到期</span>';
       } else {
-        badge = '<span class="vial-expiry-ok">✅ 還有 ' + diff + ' 天</span>';
+        badgeHtml = '<span class="vial-expiry-ok">✅ 還有 ' + diff + ' 天</span>';
       }
     }
     var nameLink = def.url
@@ -7321,14 +7371,16 @@ function renderInsulinVials() {
       + '</div>'
       + '<div class="vial-date-col">'
       +   '<span class="vial-date-label">開封日</span>'
-      +   '<input type="date" class="vial-date-input" id="vial-open-' + def.key + '" value="' + open + '">'
+      +   '<input type="date" class="vial-date-input" id="vial-open-' + def.key + '" value="' + open + '"'
+      +   ' data-vkey="' + def.key + '" onchange="onVialOpenChange(this.dataset.vkey)">'
       + '</div>'
       + '<div class="vial-date-col">'
-      +   '<span class="vial-date-label">到期日</span>'
-      +   '<input type="date" class="vial-date-input" id="vial-exp-' + def.key + '" value="' + exp + '">'
+      +   '<span class="vial-date-label">到期日 <span style="font-size:.6rem;color:var(--text-muted);">（自動）</span></span>'
+      +   '<input type="date" class="vial-date-input" id="vial-exp-' + def.key + '" value="' + exp + '"'
+      +   ' data-vkey="' + def.key + '" onchange="onVialExpChange(this.dataset.vkey)">'
       + '</div>'
       + '</div>'
-      + badge
+      + '<div id="vial-badge-' + def.key + '" style="margin-top:5px;">' + badgeHtml + '</div>'
       + '</div>';
   });
   el.innerHTML = html || '<div class="suppl-empty">尚無資料</div>';
