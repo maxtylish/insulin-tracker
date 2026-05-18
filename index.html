@@ -2808,7 +2808,7 @@ alter table user_todos enable row level security;
           <li>【補糖自動儲存】確認補糖後立即寫入 localStorage，不再需要另按「儲存今日紀錄」</li>
           <li>【點心血糖自動帶入】新增點心時自動填入目前 CGM 血糖值</li>
           <li>【點心列表下方新增按鈕】每個點心區塊底部增加「＋ 新增點心」快捷按鈕</li>
-          <li>【長效胰島素剩餘時間】CGM 血糖值下方新增 Tresiba 42h 剩餘作用時間進度條</li>
+          <li>【速效胰島素剩餘時間】CGM 血糖值下方新增速效峰值作用剩餘時間進度條（施打後 3 小時）</li>
           <li>【處方儲存同步行事曆】儲存處方時自動建立/更新領藥 &amp; 回診 GCal 全天事件</li>
         </ul>
       </div>
@@ -8715,32 +8715,44 @@ function refreshRxDrugEditor() {
 }
 
 
-// 長效胰島素（Tresiba 42h）剩餘作用時間
+// 速效胰島素峰值作用剩餘時間（以施打後 3 小時為作用結束）
 function updateBasalTimeBar() {
   var bar = document.getElementById('basal-time-bar');
   if (!bar) return;
-  var TRESIBA_H = 42;
+  var RAPID_H = 3;  // 峰值作用時間 3 小時
   var all = getAllData();
   var today = todayStr();
-  var lastDate = null, lastTime = null;
-  for (var i = 0; i < 3; i++) {
+
+  // 收集今天與昨天所有速效注射時間點（早/午/晚 + 補打）
+  var candidates = [];
+  for (var i = 0; i < 2; i++) {
     var d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() - i);
     var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-    var rec = all[ds] && all[ds].bedtime;
-    if (rec && rec.insulin && rec.time) { lastDate = ds; lastTime = rec.time; break; }
+    var day = all[ds] || {};
+    ['morning','noon','evening'].forEach(function(pid) {
+      var rec = day[pid];
+      if (rec && rec.insulin && rec.time) candidates.push(new Date(ds + 'T' + rec.time + ':00'));
+    });
+    (day.corrections || []).forEach(function(r) {
+      if (r.dose && r.time) candidates.push(new Date(ds + 'T' + r.time + ':00'));
+    });
   }
-  if (!lastDate) { bar.style.display = 'none'; return; }
-  var injectDT = new Date(lastDate + 'T' + lastTime + ':00');
-  var elapsedH = (Date.now() - injectDT.getTime()) / 3600000;
-  var remainH  = TRESIBA_H - elapsedH;
+  if (!candidates.length) { bar.style.display = 'none'; return; }
+
+  // 最近一次注射
+  var lastDT = candidates.reduce(function(a, b) { return a > b ? a : b; });
+  var elapsedH = (Date.now() - lastDT.getTime()) / 3600000;
+  var remainH  = RAPID_H - elapsedH;
   if (remainH <= 0) { bar.style.display = 'none'; return; }
-  var rh = Math.floor(remainH);
-  var rm = Math.round((remainH - rh) * 60);
-  var pct = (remainH / TRESIBA_H * 100).toFixed(1);
+
+  var rh  = Math.floor(remainH);
+  var rm  = Math.round((remainH - rh) * 60);
+  var pct = (remainH / RAPID_H * 100).toFixed(1);
+  var timeStr = lastDT.getHours() + ':' + String(lastDT.getMinutes()).padStart(2,'0');
   bar.style.display = '';
-  bar.innerHTML = '💉 長效胰島素（Tresiba）剩餘作用：<strong>' + rh + 'h ' + rm + 'm</strong>'
-    + '<div style="margin-top:5px;height:4px;border-radius:2px;background:#d1fae5;">'
-    + '<div style="height:4px;border-radius:2px;background:#22c55e;width:' + pct + '%"></div></div>';
+  bar.innerHTML = '⚡ 速效胰島素作用中（' + timeStr + ' 施打）剩餘：<strong>' + rh + 'h ' + rm + 'm</strong>'
+    + '<div style="margin-top:5px;height:4px;border-radius:2px;background:#dbeafe;">'
+    + '<div style="height:4px;border-radius:2px;background:#3b82f6;width:' + pct + '%"></div></div>';
 }
 
 function saveRxModal() {
