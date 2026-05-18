@@ -477,6 +477,17 @@
     .snack-del-abs:hover { background: #ef4444; color: white; border-color: #ef4444; }
     /* Row 1: food type (leave room for X button) */
     .snack-row-food { margin-right: 36px; margin-bottom: 10px; }
+    /* Snack type chip buttons */
+    .snack-type-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+    .snack-type-chip {
+      padding: 4px 12px; border-radius: 20px; border: 1.5px solid var(--border);
+      background: white; color: var(--text-muted); font-size: 0.82rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s; line-height: 1.4;
+    }
+    .snack-type-chip.active {
+      background: #dcfce7; color: #166534; border-color: #86efac;
+    }
+    .snack-type-chip:active { opacity: 0.7; }
     /* Row 2: 3 equal columns — carb / BG / time */
     .snack-row-nums {
       display: grid;
@@ -3529,7 +3540,7 @@ const SNACK_SECTIONS = [
   { id: 'snack-noon-evening',    label: '午餐後～晚餐前點心', icon: '🥝', after: 'noon',    cir: 10, isf: 110, target: 150, cirLabel: '午餐 CIR=10' },
   { id: 'snack-evening-bedtime', label: '晚餐後～睡前點心',   icon: '🍊', after: 'evening', cir: 10, isf: 110, target: 140, cirLabel: '晚餐 CIR=10' },
 ];
-const SNACK_TYPES = ['麵包/餅乾', '水果', '飲料', '堅果', '甜點', '其他'];
+const SNACK_TYPES = ['點心', '飲料', '自訂'];
 
 const DEFAULT_SETTINGS = {
   low: 80,
@@ -5384,7 +5395,11 @@ function renderHistory() {
     const snackHTML = snackData.map(({ sec, items }) => {
       const rows = items.map((r, i) => {
         const carb = parseFloat(r.carb) || 0;
-        const typeLabel = r.type === '其他' ? (r.typeCustom || '其他') : (r.type || '點心');
+        const typeLabel = (() => {
+          const types = Array.isArray(r.types) ? r.types : (r.type ? [r.type] : []);
+          const parts = types.map(t => t === '自訂' ? (r.typeCustom || '自訂') : t);
+          return parts.length ? parts.join('＋') : '點心';
+        })();
         return `<div style="padding:5px 16px;border-bottom:1px solid var(--border);font-size:0.82rem;">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span style="background:#dcfce7;color:#166534;border-radius:4px;padding:1px 7px;font-weight:700;font-size:0.75rem;white-space:nowrap;">${sec.icon} 點心${i+1}</span>
@@ -5973,10 +5988,15 @@ function renderSnackSection(sectionId, items) {
   sec = Object.assign({}, sec, { cir: _mp5.cir, isf: _mp5.isf, target: _mp5.target });
 
   listEl.innerHTML = items.map(function(item, idx) {
-    var typeOptions = SNACK_TYPES.map(function(t) {
-      return '<option value="' + t + '"' + (item.type === t ? ' selected' : '') + '>' + t + '</option>';
+    // Build selected types array (support legacy single string)
+    var selTypes = Array.isArray(item.types) ? item.types : (item.type ? [item.type] : []);
+    var chipHTML = SNACK_TYPES.map(function(t) {
+      var active = selTypes.indexOf(t) !== -1 ? ' active' : '';
+      return '<button type="button" class="snack-type-chip' + active + '"' +
+             ' data-type="' + t + '"' +
+             ' onclick="toggleSnackType(\'' + sectionId + '\',' + idx + ',this)">' + t + '</button>';
     }).join('');
-    var isOther = item.type === '其他';
+    var hasCustom = selTypes.indexOf('自訂') !== -1;
 
     // Pre-compute hint & dose card state
     var carb = parseFloat(item.carb) || 0;
@@ -6000,17 +6020,16 @@ function renderSnackSection(sectionId, items) {
         // ── Delete btn (absolute top-right) ──
         '<button class="snack-del-abs" onclick="removeSnackRow(\'' + sectionId + '\',' + idx + ')" title="刪除">✕</button>' +
 
-        // ── Row 1: food type ──
+        // ── Row 1: food type chips ──
         '<div class="snack-row-food">' +
           '<div class="snack-field">' +
             '<label>食物種類</label>' +
-            '<select class="snack-val snack-select" data-idx="' + idx + '" data-field="type"' +
-              ' onchange="onSnackTypeChange(\'' + sectionId + '\',' + idx + ',this)">' +
-              '<option value="">── 選擇種類 ──</option>' + typeOptions +
-            '</select>' +
+            '<div class="snack-type-chips" id="' + sectionId + '-chips-' + idx + '">' + chipHTML + '</div>' +
+            '<input type="hidden" class="snack-val" data-idx="' + idx + '" data-field="types"' +
+              ' value="' + JSON.stringify(selTypes).replace(/"/g, '&quot;') + '" />' +
             '<input type="text" class="snack-val snack-custom-input" data-idx="' + idx + '" data-field="typeCustom"' +
               ' placeholder="自填食物名稱" value="' + (item.typeCustom || '') + '"' +
-              ' style="' + (isOther ? '' : 'display:none') + '" />' +
+              ' style="' + (hasCustom ? '' : 'display:none') + '" />' +
           '</div>' +
         '</div>' +
 
@@ -6099,13 +6118,23 @@ function collectSnackRows(sectionId) {
   return result;
 }
 
-function onSnackTypeChange(sectionId, idx, selectEl) {
+function toggleSnackType(sectionId, idx, btn) {
   var rowEl = document.getElementById(sectionId + '-row-' + idx);
   if (!rowEl) return;
+  btn.classList.toggle('active');
+  // Collect selected types from chips
+  var chips = document.querySelectorAll('#' + sectionId + '-chips-' + idx + ' .snack-type-chip');
+  var selTypes = [];
+  chips.forEach(function(c) { if (c.classList.contains('active')) selTypes.push(c.dataset.type); });
+  // Update hidden input
+  var hiddenInput = rowEl.querySelector('[data-field="types"]');
+  if (hiddenInput) hiddenInput.value = JSON.stringify(selTypes);
+  // Show/hide custom text input
   var customInput = rowEl.querySelector('[data-field="typeCustom"]');
   if (customInput) {
-    customInput.style.display = selectEl.value === '其他' ? '' : 'none';
-    if (selectEl.value !== '其他') customInput.value = '';
+    var hasCustom = selTypes.indexOf('自訂') !== -1;
+    customInput.style.display = hasCustom ? '' : 'none';
+    if (!hasCustom) customInput.value = '';
   }
 }
 
