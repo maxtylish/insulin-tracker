@@ -2386,16 +2386,21 @@
 <div id="page-manage" class="page">
   <!-- 耗材庫存 -->
   <div class="chart-card" style="margin-bottom:14px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <h3 style="margin:0;">🧴 耗材庫存</h3>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+      <h3 style="margin:0;cursor:pointer;user-select:none;" onclick="toggleSection('supply-body','supply-collapse-btn')">
+        🧴 耗材庫存
+        <span id="supply-collapse-btn" style="font-size:.85rem;color:var(--text-muted);margin-left:4px;">▾</span>
+      </h3>
       <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;">
         <input type="checkbox" id="supply-auto-deduct" style="width:15px;height:15px;" onchange="saveSupplies()">
-        <span>儲存紀錄時自動扣除</span>
+        <span>自動扣除</span>
       </label>
     </div>
-    <div id="supply-low-banner" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:0.82rem;color:#dc2626;"></div>
-    <div id="supply-list"></div>
-    <button class="settings-save-btn" style="width:100%;margin-top:14px;" onclick="saveSuppliesManual()">💾 儲存庫存</button>
+    <div id="supply-body" style="margin-top:10px;">
+      <div id="supply-low-banner" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:0.82rem;color:#dc2626;"></div>
+      <div id="supply-list"></div>
+      <button class="settings-save-btn" style="width:100%;margin-top:14px;" onclick="saveSuppliesManual()">💾 儲存庫存</button>
+    </div>
   </div>
 
   <!-- 藥品管理 -->
@@ -4436,6 +4441,35 @@ function restoreCardStates() {
       if (btn)  btn.textContent = '▸';
     }
   });
+}
+
+// ── Generic section toggle (used in manage page) ─────────────────────────
+function toggleSection(bodyId, btnId) {
+  var body = document.getElementById(bodyId);
+  var btn  = document.getElementById(btnId);
+  if (!body) return;
+  var collapsed = body.style.display === 'none';
+  body.style.display = collapsed ? '' : 'none';
+  if (btn) btn.textContent = collapsed ? '▾' : '▸';
+  try {
+    var states = JSON.parse(localStorage.getItem('insulin_section_collapsed') || '{}');
+    states[bodyId] = !collapsed;
+    localStorage.setItem('insulin_section_collapsed', JSON.stringify(states));
+  } catch(e) {}
+}
+
+function restoreSectionStates() {
+  try {
+    var states = JSON.parse(localStorage.getItem('insulin_section_collapsed') || '{}');
+    Object.keys(states).forEach(function(bodyId) {
+      if (states[bodyId]) {
+        var body = document.getElementById(bodyId);
+        var btn  = document.getElementById(bodyId.replace('-body', '-collapse-btn'));
+        if (body) body.style.display = 'none';
+        if (btn)  btn.textContent = '▸';
+      }
+    });
+  } catch(e) {}
 }
 
 function collapseAllCards() {
@@ -6872,7 +6906,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.11.6';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.11.7';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -7627,6 +7661,7 @@ function renderManagePage() {
   renderPrescriptionList();
   renderInsulinVials();
   checkInsulinExpiry();
+  restoreSectionStates();
 }
 
 function renderSupplyList() {
