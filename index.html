@@ -3612,18 +3612,32 @@ async function loadFromCloud() {
       .select('date, data')
       .eq('user_id', currentUserId);
     if (error) throw error;
+    var cloudHasVials = false;
     if (data && data.length > 0) {
       data.forEach(row => {
         if (row.date === '__vials__') {
-          // Restore insulin vials — cloud wins (newer device always syncs back)
+          cloudHasVials = true;
           if (row.data && Array.isArray(row.data.vials)) {
-            localStorage.setItem('insulin_vials', JSON.stringify(row.data.vials));
+            // Merge: union by id — cloud wins for conflicts, keep local-only items
+            var localVials = JSON.parse(localStorage.getItem('insulin_vials') || '[]');
+            var cloudVials = row.data.vials;
+            var merged = cloudVials.slice();
+            localVials.forEach(function(lv) {
+              if (!merged.some(function(cv) { return cv.id === lv.id; })) merged.push(lv);
+            });
+            localStorage.setItem('insulin_vials', JSON.stringify(merged));
+            if (merged.length !== cloudVials.length) syncVialsToCloud(merged); // push merged back
           }
         } else {
           allDataCache[row.date] = row.data;
         }
       });
       localStorage.setItem('insulin_records', JSON.stringify(allDataCache));
+    }
+    if (!cloudHasVials) {
+      // First-time sync: push existing local vials up to cloud
+      var localVials = JSON.parse(localStorage.getItem('insulin_vials') || '[]');
+      if (localVials.length > 0) syncVialsToCloud(localVials);
     }
     await loadTodosFromCloud();  // also sync todos
     setSyncBadge('☁️ 已同步', 'sync-ok');
@@ -7019,7 +7033,8 @@ function init() {
     // (first install / new device). If user already has local data, don't
     // overwrite what they may have started editing.
     if (!hadLocalDataToday) loadDayData();
-    renderTodoPage();  // refresh todos with cloud data
+    renderTodoPage();      // refresh todos with cloud data
+    renderInsulinVials();  // refresh vials with cloud data
   });
   startCGMPolling();   // start real-time CGM widget
   setTimeout(checkAndNotifyLowSupplies, 4000); // delayed supply check on load
