@@ -4377,7 +4377,7 @@ function _renderCalDetail(dateStr, events) {
   } else if (dayEvts.length === 0) {
     html += '<div style="font-size:.82rem;color:var(--text-muted);padding:4px 0;">當日無行事曆事件</div>';
   } else {
-    dayEvts.forEach(function(ev) {
+    dayEvts.forEach(function(ev, i) {
       var timeStr = '';
       if (ev.start.dateTime) {
         var st = new Date(ev.start.dateTime);
@@ -4416,7 +4416,7 @@ function _renderCalDetail(dateStr, events) {
 
   _calDetailEvents = dayEvts;
   detail.innerHTML = html;
-  detail.style.display = '';
+  detail.style.display = 'block';
 
   // Attach delete listeners via data-eidx
   detail.querySelectorAll('[data-eidx]').forEach(function(btn) {
