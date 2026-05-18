@@ -1845,6 +1845,11 @@
     .vial-name a { color:var(--primary); text-decoration:none; font-size:.78rem; font-weight:500; }
     .vial-name a:hover { text-decoration:underline; }
     .vial-4col  { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:6px; }
+    .vial-item.vtype-novorapid { border-left:4px solid #F5A623; padding-left:10px; }
+    .vial-item.vtype-tresiba   { border-left:4px solid #7FFF00; padding-left:10px; }
+    .vial-color-dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:middle; flex-shrink:0; }
+    .vial-note-input { width:100%; box-sizing:border-box; font-size:.78rem; padding:5px 8px; border:1px solid var(--border); border-radius:6px; background:var(--card); color:var(--text); resize:vertical; min-height:36px; margin-top:6px; }
+    .vial-note-view  { font-size:.76rem; color:var(--text-muted); margin-top:4px; white-space:pre-wrap; }
     .vial-date-col { display:flex; flex-direction:column; gap:3px; }
     .vial-date-label { font-size:.68rem; color:var(--text-muted); font-weight:600; text-transform:uppercase; }
     .vial-date-input { font-size:.78rem; padding:4px 6px; border:1px solid var(--border); border-radius:6px; background:var(--card); color:var(--text); width:100%; box-sizing:border-box; }
@@ -6808,7 +6813,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.11.2';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.11.3';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -7247,9 +7252,9 @@ async function checkAndNotifyLowSupplies() {
 //  INSULIN VIAL MANAGEMENT
 // ══════════════════════════════════════════
 var INSULIN_VIAL_DEFS = {
-  novorapid: { label: 'NovoRapid 速效', openExpDays: 28, shelfMonths: 29,
+  novorapid: { label: 'NovoRapid 速效', color: '#F5A623', openExpDays: 28, shelfMonths: 29,
                url: 'https://www.ktgh.com.tw/Medicament_tbDrug_Look.asp?CatID=65&ModuleType=&NewsID=1547&Ordid=30119' },
-  tresiba:   { label: 'Tresiba 長效',   openExpDays: 56, shelfMonths: 29, url: null }
+  tresiba:   { label: 'Tresiba 長效',   color: '#7FFF00', openExpDays: 56, shelfMonths: 29, url: null }
 };
 
 var _vialEditIds = {};
@@ -7302,7 +7307,7 @@ function _saveVialsToStorage(arr) {
 function addInsulinVial(type) {
   var arr = getInsulinVials();
   var id  = 'v' + Date.now().toString(36);
-  arr.push({ id: id, type: type, mfgYM: '', serialNo: '', openDate: '', expDate: '' });
+  arr.push({ id: id, type: type, mfgYM: '', serialNo: '', openDate: '', expDate: '', note: '' });
   _saveVialsToStorage(arr);
   _vialEditIds[id] = true;
   renderInsulinVials();
@@ -7322,6 +7327,7 @@ function saveVial(id) {
   if (!expVal && openVal) expVal = calcVialExpDate(openVal, def.openExpDays);
   v.mfgYM    = (document.getElementById('vial-mfg-'    + id) || {}).value || '';
   v.serialNo = ((document.getElementById('vial-serial-'+ id) || {}).value || '').trim();
+  v.note     = ((document.getElementById('vial-note-'   + id) || {}).value || '').trim();
   v.openDate = openVal;
   v.expDate  = expVal;
   _saveVialsToStorage(arr);
@@ -7337,7 +7343,7 @@ function saveVial(id) {
 function cancelEditVial(id) {
   var arr = getInsulinVials();
   var v   = arr.find(function(x){ return x.id === id; });
-  if (v && !v.mfgYM && !v.serialNo && !v.openDate && !v.expDate) { deleteVial(id); return; }
+  if (v && !v.mfgYM && !v.serialNo && !v.openDate && !v.expDate && !v.note) { deleteVial(id); return; }
   delete _vialEditIds[id]; _rerenderVialItem(id);
 }
 
@@ -7370,7 +7376,8 @@ function _vialItemHTML(v, idx, isEdit) {
   var nameLink = def.url
     ? ' <a href="' + def.url + '" target="_blank" rel="noopener" style="font-size:.72rem;color:var(--primary);text-decoration:none;">藥品說明 ↗</a>'
     : '';
-  var title = '<div class="vial-name">💉 ' + def.label + ' #' + idx + nameLink + '</div>';
+  var dot   = '<span class="vial-color-dot" style="background:' + def.color + ';"></span>';
+  var title = '<div class="vial-name">' + dot + def.label + ' #' + idx + nameLink + '</div>';
 
   if (isEdit) {
     var unopenedHtml = unopened
@@ -7378,7 +7385,7 @@ function _vialItemHTML(v, idx, isEdit) {
       + '<div style="font-size:.8rem;font-weight:700;color:var(--text);">' + unopened + '</div>'
       + '<div style="font-size:.6rem;color:var(--text-muted);">保存期限 ' + def.shelfMonths + ' 個月</div>'
       : '<div style="font-size:.6rem;color:var(--text-muted);margin-top:4px;">保存期限 ' + def.shelfMonths + ' 個月</div>';
-    return '<div class="vial-item" id="vial-item-' + v.id + '">'
+    return '<div class="vial-item vtype-' + v.type + '" id="vial-item-' + v.id + '">'
       + title
       + '<div class="vial-4col">'
       + '<div class="vial-date-col"><span class="vial-date-label">製造日期</span>'
@@ -7395,14 +7402,16 @@ function _vialItemHTML(v, idx, isEdit) {
       +   ' data-vid="' + v.id + '" onchange="_onVialExpEdit(this.dataset.vid)"></div>'
       + '</div>'
       + '<div id="vial-badge-' + v.id + '" style="margin:4px 0 2px;">' + badge + '</div>'
+      + '<textarea class="vial-note-input" id="vial-note-' + v.id + '" placeholder="備註（顏色標記、儲存位置…）">' + (v.note||'') + '</textarea>'
       + '<div class="vial-actions">'
       +   '<button class="vial-btn primary" data-vid="' + v.id + '" onclick="saveVial(this.dataset.vid)">💾 儲存</button>'
       +   '<button class="vial-btn" data-vid="' + v.id + '" onclick="cancelEditVial(this.dataset.vid)">取消</button>'
       + '</div></div>';
   } else {
     var mfgDisp    = v.mfgYM ? v.mfgYM.replace('-', '/') : '—';
+    var noteHtml   = v.note ? '<div class="vial-note-view">📝 ' + v.note + '</div>' : '';
     var unopenDisp = unopened ? '📋 未開封到期 ' + unopened : '';
-    return '<div class="vial-item" id="vial-item-' + v.id + '">'
+    return '<div class="vial-item vtype-' + v.type + '" id="vial-item-' + v.id + '">'
       + title
       + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:.72rem;margin-bottom:5px;">'
       + '<div><div style="color:var(--text-muted);font-weight:600;">製造日期</div><div>' + mfgDisp + '</div>'
@@ -7413,6 +7422,7 @@ function _vialItemHTML(v, idx, isEdit) {
       + '<div><div style="color:var(--text-muted);font-weight:600;">失效日期</div><div>' + (exp||'—') + '</div></div>'
       + '</div>'
       + badge
+      + noteHtml
       + '<div class="vial-actions">'
       +   '<button class="vial-btn" data-vid="' + v.id + '" onclick="editVial(this.dataset.vid)">✏️ 編輯</button>'
       +   '<button class="vial-btn danger" data-vid="' + v.id + '" onclick="deleteVial(this.dataset.vid)">🗑 刪除</button>'
