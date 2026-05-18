@@ -2228,6 +2228,9 @@
     </div>
   </div>
 
+  <!-- Basal Insulin Remaining Time -->
+  <div id="basal-time-bar" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:8px 14px;font-size:.82rem;color:#166534;margin-bottom:8px;"></div>
+
   <!-- Mini CGM Chart -->
   <div class="mini-cgm-card" id="mini-cgm-card" style="display:none;">
     <div class="mini-cgm-header" style="display:flex;align-items:center;justify-content:space-between;">
@@ -2788,11 +2791,71 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.10.4</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.14.0</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.14.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.14.0</span>
+          <span class="cl-date">2026-05-18</span>
+          <span class="cl-tag">行事曆整合 / 補糖修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【行事曆點擊修正】calDayDetail display:none → block，forEach 補 index 參數（ReferenceError 修正）</li>
+          <li>【拿取慢籤 / 登記回診】處方卡新增兩按鈕，點擊直接開啟 Google 行事曆建立全天事件</li>
+          <li>【補糖自動儲存】確認補糖後立即寫入 localStorage，不再需要另按「儲存今日紀錄」</li>
+          <li>【點心血糖自動帶入】新增點心時自動填入目前 CGM 血糖值</li>
+          <li>【點心列表下方新增按鈕】每個點心區塊底部增加「＋ 新增點心」快捷按鈕</li>
+          <li>【長效胰島素剩餘時間】CGM 血糖值下方新增 Tresiba 42h 剩餘作用時間進度條</li>
+          <li>【處方儲存同步行事曆】儲存處方時自動建立/更新領藥 &amp; 回診 GCal 全天事件</li>
+        </ul>
+      </div>
+
+      <!-- v2.13.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.13.0</span>
+          <span class="cl-date">2026-05-17</span>
+          <span class="cl-tag">待辦行事曆 / 月曆</span>
+        </div>
+        <ul class="cl-list">
+          <li>待辦頁新增「📅 行事曆」子分頁：月曆格（週一起始）、藍點標示有事件日期</li>
+          <li>點擊日期展開當日事件列表，可刪除；新增事件 inline 表單 → POST 到 GCal API</li>
+          <li>Google Calendar PKCE OAuth：胰島素開封日 + 到期日自動建立行事曆事件</li>
+        </ul>
+      </div>
+
+      <!-- v2.12.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.12.0</span>
+          <span class="cl-date">2026-05-16</span>
+          <span class="cl-tag">胰島素管理</span>
+        </div>
+        <ul class="cl-list">
+          <li>💉 胰島素管理：多支瓶記錄（製造日 / 序號 / 開封日 / 到期日 / 備註）</li>
+          <li>NovoRapid 橘色、Tresiba 綠色標示；7天跨頁到期警報</li>
+          <li>耗材庫存收合按鍵，通用 toggleSection() 函式</li>
+        </ul>
+      </div>
+
+      <!-- v2.11.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.11.0</span>
+          <span class="cl-date">2026-05-16</span>
+          <span class="cl-tag">統計 / UI</span>
+        </div>
+        <ul class="cl-list">
+          <li>統計頁週起始改為星期一（(getDay()+6)%7），對齊行事曆</li>
+          <li>各餐施打部位下拉預設：早/肚子、午/手臂、晚/左大腿、睡前/右大腿</li>
+          <li>今日記錄頁全部展開 / 全部收合按鈕</li>
+        </ul>
+      </div>
 
       <!-- v2.10.2 -->
       <div class="cl-item">
@@ -3863,6 +3926,7 @@ function updateCGMWidget(entry) {
       }
     } else { hideBanner('hyper'); }
   } else { hideBanner('hyper'); }
+  updateBasalTimeBar();
 }
 
 // ── Push notification helpers ──────────────────────────
@@ -5017,6 +5081,9 @@ function buildPeriodCards() {
           + '</div>'
         + '</div>'
         + '<div id="' + snack.id + '-list"></div>'
+        + '<div style="padding:4px 8px 8px;">'
+          + '<button class="suppl-add-btn" style="width:100%;justify-content:center;" data-snackid="' + snack.id + '" onclick="addSnackRow(this.dataset.snackid)">＋ 新增點心</button>'
+        + '</div>'
       + '</div>';
     }
   });
@@ -5092,6 +5159,7 @@ function loadDayData() {
   renderSupplList('carbs',       dayData.carbs       || []);
   // Load snack sections
   SNACK_SECTIONS.forEach(s => renderSnackSection(s.id, dayData[s.id] || []));
+  updateBasalTimeBar();
 }
 
 function savePeriod(periodId) {
@@ -5981,7 +6049,9 @@ function renderSnackSection(sectionId, items) {
 
 function addSnackRow(sectionId) {
   var current = collectSnackRows(sectionId);
-  current.push({ time: getNowTime() });
+  var newRow = { time: getNowTime() };
+  if (lastCGMEntry && lastCGMEntry.sgv) newRow.bg = String(Math.round(lastCGMEntry.sgv));
+  current.push(newRow);
   renderSnackSection(sectionId, current);
 }
 
@@ -6582,6 +6652,16 @@ function confirmCarbRow(rowId) {
   var btn = document.getElementById('carb-confirm-btn-' + rowId);
   if (btn) { btn.textContent = '✓ 已記錄'; btn.disabled = true; btn.onclick = null; }
   showToast('✅ 補糖記錄已確認');
+  saveCarbsNow();
+}
+
+function saveCarbsNow() {
+  var date = document.getElementById('todayDate').value;
+  var all = getAllData();
+  all[date] = all[date] || {};
+  all[date].carbs = collectSupplRows('carbs');
+  setAllData(all);
+  syncDayToCloud(date, all[date]);
 }
 
 function collectSupplRows(type) {
@@ -7290,7 +7370,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.13.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.14.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -8010,6 +8090,86 @@ async function deleteVialGCalEvents(vial) {
   if (vial.gcalExpEventId)  await gcalDelete(vial.gcalExpEventId);
 }
 
+// 處方 GCal 事件建構
+function _rxNextDay(dateStr) {
+  var d = new Date(dateStr + 'T00:00:00'); d.setDate(d.getDate() + 1);
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
+function _rxCalEvent(rx, type) {
+  var date = type === 'refill' ? rx.nextRefill : rx.nextAppointment;
+  if (!date) return null;
+  var emoji  = type === 'refill' ? '💊' : '📅';
+  var action = type === 'refill' ? '領藥' : '回診';
+  var summary = emoji + ' ' + action + '｜' + (rx.title || '慢性處方簽');
+  var descParts = [];
+  if (type === 'appt') {
+    var session = rx.apptSession === 'morning' ? '上午診' : rx.apptSession === 'afternoon' ? '下午診' : '';
+    if (session)       descParts.push(session);
+    if (rx.apptClinic) descParts.push(rx.apptClinic);
+    if (rx.apptRoom)   descParts.push(rx.apptRoom);
+  }
+  if (rx.hospital) descParts.push(rx.hospital);
+  descParts.push('由胰島素紀錄 app 自動建立');
+  return {
+    summary: summary,
+    description: descParts.join('\n'),
+    start: { date: date },
+    end:   { date: _rxNextDay(date) },
+    reminders: { useDefault: false, overrides: [{ method: 'popup', minutes: 24*60 }] }
+  };
+}
+
+async function syncRxToGCal(rx) {
+  if (!isGCalConnected()) return;
+  var token = await getValidGCalToken(); if (!token) return;
+  var meds = getMedications();
+  var stored = meds.find(function(r){ return r.id === rx.id; });
+  if (!stored) return;
+  var changed = false;
+
+  // 領藥
+  if (rx.nextRefill) {
+    var evR = _rxCalEvent(rx, 'refill');
+    if (evR) {
+      if (stored.gcalRefillEventId) {
+        await _gcalRequest('PUT', '/' + stored.gcalRefillEventId, evR, token);
+      } else {
+        var dR = await _gcalRequest('POST', '', evR, token);
+        if (dR && dR.id) { stored.gcalRefillEventId = dR.id; changed = true; }
+      }
+    }
+  } else if (stored.gcalRefillEventId) {
+    await gcalDelete(stored.gcalRefillEventId);
+    stored.gcalRefillEventId = null; changed = true;
+  }
+
+  // 回診
+  if (rx.nextAppointment) {
+    var evA = _rxCalEvent(rx, 'appt');
+    if (evA) {
+      if (stored.gcalApptEventId) {
+        await _gcalRequest('PUT', '/' + stored.gcalApptEventId, evA, token);
+      } else {
+        var dA = await _gcalRequest('POST', '', evA, token);
+        if (dA && dA.id) { stored.gcalApptEventId = dA.id; changed = true; }
+      }
+    }
+  } else if (stored.gcalApptEventId) {
+    await gcalDelete(stored.gcalApptEventId);
+    stored.gcalApptEventId = null; changed = true;
+  }
+
+  if (changed) setMedications(meds);
+  gcalEventsCache = {};  // 就地刷新月曆快取
+}
+
+async function deleteRxGCalEvents(rx) {
+  var token = await getValidGCalToken(); if (!token) return;
+  if (rx.gcalRefillEventId) await gcalDelete(rx.gcalRefillEventId);
+  if (rx.gcalApptEventId)   await gcalDelete(rx.gcalApptEventId);
+}
+
 function checkInsulinExpiry() {
   var arr = getInsulinVials(); var today = new Date(); today.setHours(0,0,0,0);
   var alerts = [];
@@ -8319,6 +8479,31 @@ function rxDaysLeft(dateStr) {
   return diff;
 }
 
+function _rxGCalDateStr(dateStr) {
+  var d = new Date(dateStr + 'T00:00:00');
+  var n = new Date(d); n.setDate(n.getDate() + 1);
+  var fmt = function(dt) { return dt.getFullYear() + String(dt.getMonth()+1).padStart(2,'0') + String(dt.getDate()).padStart(2,'0'); };
+  return fmt(d) + '/' + fmt(n);
+}
+
+function openRefillInGCal(rxId) {
+  var rx = getMedications().find(function(r){ return r.id === rxId; });
+  if (!rx || !rx.nextRefill) return;
+  var title  = encodeURIComponent('💊 拿取慢籤｜' + (rx.title || '慢性處方簽'));
+  var detail = encodeURIComponent((rx.hospital ? rx.hospital + '\n' : '') + '由胰島素紀錄 app 新增');
+  window.open('https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + title + '&dates=' + _rxGCalDateStr(rx.nextRefill) + '&details=' + detail, '_blank');
+}
+
+function openApptInGCal(rxId) {
+  var rx = getMedications().find(function(r){ return r.id === rxId; });
+  if (!rx || !rx.nextAppointment) return;
+  var session = rx.apptSession === 'morning' ? '上午診' : rx.apptSession === 'afternoon' ? '下午診' : '';
+  var parts   = [session, rx.apptClinic, rx.apptRoom, rx.hospital].filter(Boolean);
+  var title   = encodeURIComponent('📅 登記回診｜' + (rx.title || '慢性處方簽'));
+  var detail  = encodeURIComponent(parts.join('　') + '\n由胰島素紀錄 app 新增');
+  window.open('https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + title + '&dates=' + _rxGCalDateStr(rx.nextAppointment) + '&details=' + detail, '_blank');
+}
+
 function rxCountdownHTML(days, label, dateStr, type, session, apptClinic, apptRoom) {
   if (!dateStr) return '<div class="rx-date-chip ' + type + '"><span class="rx-date-label">' + label + '</span><span class="rx-date-countdown" style="font-size:.9rem;color:var(--text-muted)">未設定</span></div>';
   var cls = days > 14 ? 'ok' : days > 3 ? 'warn' : 'past';
@@ -8410,6 +8595,12 @@ function renderPrescriptionList() {
           + rxCountdownHTML(refillDays, '💊 下次領藥', rx.nextRefill, 'refill')
           + rxCountdownHTML(apptDays,   '📅 下次回診', rx.nextAppointment, 'appt', rx.apptSession, rx.apptClinic, rx.apptRoom)
         + '</div>'
+        + (function() {
+            var btns = '';
+            if (rx.nextRefill)      btns += '<button class="suppl-add-btn" data-rxid="' + rx.id + '" onclick="openRefillInGCal(this.dataset.rxid)">📅 拿取慢籤</button>';
+            if (rx.nextAppointment) btns += '<button class="suppl-add-btn" data-rxid="' + rx.id + '" onclick="openApptInGCal(this.dataset.rxid)">🏥 登記回診</button>';
+            return btns ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">' + btns + '</div>' : '';
+          })()
         + (function() {
             if (!rx.refillRecords || !rx.refillRecords.length) return '';
             var chips = rx.refillRecords.map(function(rec, i) {
@@ -8528,6 +8719,34 @@ function refreshRxDrugEditor() {
 }
 
 
+// 長效胰島素（Tresiba 42h）剩餘作用時間
+function updateBasalTimeBar() {
+  var bar = document.getElementById('basal-time-bar');
+  if (!bar) return;
+  var TRESIBA_H = 42;
+  var all = getAllData();
+  var today = todayStr();
+  var lastDate = null, lastTime = null;
+  for (var i = 0; i < 3; i++) {
+    var d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() - i);
+    var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    var rec = all[ds] && all[ds].bedtime;
+    if (rec && rec.insulin && rec.time) { lastDate = ds; lastTime = rec.time; break; }
+  }
+  if (!lastDate) { bar.style.display = 'none'; return; }
+  var injectDT = new Date(lastDate + 'T' + lastTime + ':00');
+  var elapsedH = (Date.now() - injectDT.getTime()) / 3600000;
+  var remainH  = TRESIBA_H - elapsedH;
+  if (remainH <= 0) { bar.style.display = 'none'; return; }
+  var rh = Math.floor(remainH);
+  var rm = Math.round((remainH - rh) * 60);
+  var pct = (remainH / TRESIBA_H * 100).toFixed(1);
+  bar.style.display = '';
+  bar.innerHTML = '💉 長效胰島素（Tresiba）剩餘作用：<strong>' + rh + 'h ' + rm + 'm</strong>'
+    + '<div style="margin-top:5px;height:4px;border-radius:2px;background:#d1fae5;">'
+    + '<div style="height:4px;border-radius:2px;background:#22c55e;width:' + pct + '%"></div></div>';
+}
+
 function saveRxModal() {
   var rx = {
     id:              rxEditId || ('rx_' + Date.now()),
@@ -8547,7 +8766,11 @@ function saveRxModal() {
   var meds = getMedications();
   if (rxEditId) {
     var idx = meds.findIndex(function(r){ return r.id === rxEditId; });
-    if (idx >= 0) meds[idx] = rx; else meds.push(rx);
+    if (idx >= 0) {
+      rx.gcalRefillEventId = meds[idx].gcalRefillEventId || null;
+      rx.gcalApptEventId   = meds[idx].gcalApptEventId   || null;
+      meds[idx] = rx;
+    } else { meds.push(rx); }
   } else {
     meds.push(rx);
   }
@@ -8556,6 +8779,14 @@ function saveRxModal() {
   renderPrescriptionList();
   refreshCarouselAlerts();
   showToast('✅ 處方已儲存！');
+  if (isGCalConnected()) {
+    syncRxToGCal(rx).then(function() {
+      var msgs = [];
+      if (rx.nextRefill)      msgs.push('領藥');
+      if (rx.nextAppointment) msgs.push('回診');
+      if (msgs.length) showToast('📅 ' + msgs.join(' / ') + ' 已同步至 Google 行事曆');
+    });
+  }
 }
 
 
