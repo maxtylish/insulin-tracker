@@ -429,12 +429,10 @@
 
     /* ── Snack Divider ── */
     .snack-divider {
-      background: white;
-      border-radius: var(--radius);
-      padding: 14px 16px;
-      margin-bottom: 12px;
-      box-shadow: var(--shadow);
+      border-top: 1px solid #d1fae5;
       border-left: 3px solid #10b981;
+      padding: 12px 0 4px;
+      margin-top: 14px;
     }
     .snack-divider-header {
       display: flex;
@@ -5067,25 +5065,23 @@ function buildPeriodCards() {
             + ' disabled'
             + ' onclick="savePeriod(\'' + p.id + '\')">💾 ' + lbl + '</button>';
         })()
+    + (snackMap[p.id] ? (function(snack) {
+        return '<div class="snack-divider" id="' + snack.id + '-section">'
+          + '<div class="snack-divider-header" id="' + snack.id + '-header">'
+            + '<span class="snack-divider-label">' + snack.icon + ' ' + snack.label + '</span>'
+            + '<div style="display:flex;gap:6px;">'
+              + '<button class="suppl-add-btn" style="background:var(--primary);color:white;border-color:var(--primary);" onclick="openSnackCalcModal(\'' + snack.id + '\')">💊 計算</button>'
+              + '<button class="suppl-add-btn" onclick="addSnackRow(\'' + snack.id + '\')">＋ 新增點心</button>'
+            + '</div>'
+          + '</div>'
+          + '<div id="' + snack.id + '-list"></div>'
+          + '<div style="padding:4px 0 2px;">'
+            + '<button class="suppl-add-btn" style="width:100%;justify-content:center;" data-snackid="' + snack.id + '" onclick="addSnackRow(this.dataset.snackid)">＋ 新增點心</button>'
+          + '</div>'
+        + '</div>';
+      })(snackMap[p.id]) : '')
     + '</div>'   // close period-body
   + '</div>';    // close period-card
-
-    const snack = snackMap[p.id];
-    if (snack) {
-      html += '<div class="snack-divider" id="' + snack.id + '-section">'
-        + '<div class="snack-divider-header" id="' + snack.id + '-header">'
-          + '<span class="snack-divider-label">' + snack.icon + ' ' + snack.label + '</span>'
-          + '<div style="display:flex;gap:6px;">'
-            + '<button class="suppl-add-btn" style="background:var(--primary);color:white;border-color:var(--primary);" onclick="openSnackCalcModal(\'' + snack.id + '\')">💊 計算</button>'
-            + '<button class="suppl-add-btn" onclick="addSnackRow(\'' + snack.id + '\')">＋ 新增點心</button>'
-          + '</div>'
-        + '</div>'
-        + '<div id="' + snack.id + '-list"></div>'
-        + '<div style="padding:4px 8px 8px;">'
-          + '<button class="suppl-add-btn" style="width:100%;justify-content:center;" data-snackid="' + snack.id + '" onclick="addSnackRow(this.dataset.snackid)">＋ 新增點心</button>'
-        + '</div>'
-      + '</div>';
-    }
   });
 
   container.innerHTML = html;  // single DOM write — preserves all onclick handlers
