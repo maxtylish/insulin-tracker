@@ -5338,14 +5338,17 @@ function renderHistory() {
     const insulins = PERIODS.map(p => parseFloat(all[date]?.[p.id]?.insulin)).filter(n => !isNaN(n));
     const corrections = dayData.corrections || [];
     const carbsData   = dayData.carbs       || [];
+    const snackData   = SNACK_SECTIONS.map(s => ({ sec: s, items: dayData[s.id] || [] })).filter(x => x.items.length > 0);
     const totalCorr   = corrections.reduce((a,r) => a + (parseFloat(r.dose)||0), 0);
     const avgBG = bgs.length ? (bgs.reduce((a,b)=>a+b,0)/bgs.length).toFixed(0) : null;
     const totalInsulin = insulins.length ? (insulins.reduce((a,b)=>a+b,0) + totalCorr).toFixed(1) : null;
+    const totalSnacks  = snackData.reduce((a,x) => a + x.items.length, 0);
     const summaryParts = [];
     if (avgBG)        summaryParts.push(`平均血糖 ${avgBG}`);
     if (totalInsulin) summaryParts.push(`總劑量 ${totalInsulin} 單位`);
     if (corrections.length) summaryParts.push(`補打 ${corrections.length} 次`);
     if (carbsData.length)   summaryParts.push(`補糖 ${carbsData.length} 次`);
+    if (totalSnacks)        summaryParts.push(`點心 ${totalSnacks} 筆`);
 
     // Supplemental HTML
     const corrHTML = corrections.length ? corrections.map((r,i) => `
@@ -5378,10 +5381,29 @@ function renderHistory() {
       </div>`;
     }).join('') : '';
 
-    const supplSection = (corrHTML || carbHTML) ? `
+    const snackHTML = snackData.map(({ sec, items }) => {
+      const rows = items.map((r, i) => {
+        const carb = parseFloat(r.carb) || 0;
+        const typeLabel = r.type === '其他' ? (r.typeCustom || '其他') : (r.type || '點心');
+        return `<div style="padding:5px 16px;border-bottom:1px solid var(--border);font-size:0.82rem;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span style="background:#dcfce7;color:#166534;border-radius:4px;padding:1px 7px;font-weight:700;font-size:0.75rem;white-space:nowrap;">${sec.icon} 點心${i+1}</span>
+            ${r.time ? `<span style="color:var(--text-muted);white-space:nowrap;">🕐 ${r.time}</span>` : ''}
+            ${r.bg ? `<span style="white-space:nowrap;">🩸 <b style="color:#ef4444;">${r.bg}</b> <small>mg/dL</small></span>` : ''}
+            <span style="white-space:nowrap;">${typeLabel}${carb ? ' <b style="color:#16a34a;">' + carb + '</b> 克' : ''}</span>
+            ${r.dose ? `<span style="white-space:nowrap;">💉 <b style="color:#2563eb;">${r.dose}</b> 單位</span>` : ''}
+          </div>
+          ${r.note ? `<div style="color:var(--text-muted);font-size:0.78rem;margin-top:3px;">備註：${r.note}</div>` : ''}
+        </div>`;
+      }).join('');
+      return `<div style="padding:6px 16px 2px;font-size:0.72rem;color:var(--text-muted);font-weight:700;">${sec.icon} ${sec.label}</div>${rows}`;
+    }).join('');
+
+    const supplSection = (corrHTML || carbHTML || snackHTML) ? `
       <div style="background:#f8fafc;padding:8px 0;">
-        ${corrHTML ? `<div style="padding:6px 16px 2px;font-size:0.72rem;color:var(--text-muted);font-weight:700;">💉 補打記錄</div>${corrHTML}` : ''}
-        ${carbHTML ? `<div style="padding:6px 16px 2px;font-size:0.72rem;color:var(--text-muted);font-weight:700;">🍬 補糖記錄</div>${carbHTML}` : ''}
+        ${corrHTML  ? `<div style="padding:6px 16px 2px;font-size:0.72rem;color:var(--text-muted);font-weight:700;">💉 補打記錄</div>${corrHTML}` : ''}
+        ${carbHTML  ? `<div style="padding:6px 16px 2px;font-size:0.72rem;color:var(--text-muted);font-weight:700;">🍬 補糖記錄</div>${carbHTML}` : ''}
+        ${snackHTML ? snackHTML : ''}
       </div>` : '';
 
     const id = 'hist-' + date;
