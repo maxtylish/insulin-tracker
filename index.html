@@ -4416,6 +4416,13 @@ async function pollCGM() {
   updateCGMWidget(entry);
   checkAndNotify(entry);
   renderMiniCGMChart();
+  if (entry && entry.sgv) {
+    var ts = entry.date || Date.now();
+    if (!_pipHistory.length || _pipHistory[_pipHistory.length-1].date !== ts) {
+      _pipHistory.push({ sgv: Math.round(entry.sgv), date: ts });
+      if (_pipHistory.length > 60) _pipHistory.shift();
+    }
+  }
 }
 
 // ════════════════════════════════════════
@@ -7732,37 +7739,139 @@ function buildRoundHint(rawDose) {
 
 // ── Document Picture-in-Picture (floating CGM window) ──────────────────────
 var _pipWin = null;
+var _pipHistory = [];  // [{sgv, date}] last 60 readings (~5h)
 var _pipThemeKey = (function() { try { return localStorage.getItem('pip_theme') || 'white'; } catch(e) { return 'white'; } })();
 
 var PIP_THEMES = {
   white:  { bg:'#ffffff', text:'#111111', sub:'#999999', ring:'#333333',
             low:'#7c3aed', normal:'#16a34a', warn:'#d97706', high:'#dc2626',
-            dot:'#e5e7eb', label:'白色' },
+            spark:'#16a34a', band:'rgba(0,0,0,0.06)', dot:'#e5e7eb', label:'白色' },
   black:  { bg:'#111111', text:'#f0f0f0', sub:'#888888', ring:'#ffffff',
             low:'#a78bfa', normal:'#4ade80', warn:'#fbbf24', high:'#f87171',
-            dot:'#111111', label:'黑色' },
+            spark:'#4ade80', band:'rgba(255,255,255,0.06)', dot:'#111111', label:'黑色' },
   navy:   { bg:'#0f172a', text:'#e2e8f0', sub:'#64748b', ring:'#94a3b8',
             low:'#c4b5fd', normal:'#6ee7b7', warn:'#fcd34d', high:'#fca5a5',
-            dot:'#1e3a5f', label:'深藍' },
+            spark:'#6ee7b7', band:'rgba(255,255,255,0.05)', dot:'#1e3a5f', label:'深藍' },
   forest: { bg:'#0a1a0e', text:'#dcfce7', sub:'#4d7a5a', ring:'#86efac',
             low:'#c4b5fd', normal:'#4ade80', warn:'#fbbf24', high:'#f87171',
-            dot:'#14532d', label:'深綠' }
+            spark:'#4ade80', band:'rgba(255,255,255,0.05)', dot:'#14532d', label:'深綠' }
 };
+
+// ── IOB calculation for PiP ──────────────────────────────────────────────────
+function calcIOBRemainingMins() {
+  // Returns minutes until all NovoRapid IOB clears (max remaining across active injections)
+  var now = Date.now();
+  var todayData = getAllData()[todayStr()] || {};
+  var END_HOURS = 4.5;
+  var maxRemainMs = 0;
+  function checkInj(timeStr, dose) {
+    if (!timeStr || !(parseFloat(dose) > 0)) return;
+    var injMs = new Date(todayStr() + 'T' + timeStr + ':00').getTime();
+    var clearMs = injMs + END_HOURS * 3600000;
+    var remain = clearMs - now;
+    if (remain > maxRemainMs) maxRemainMs = remain;
+  }
+  PERIODS.forEach(function(p) {
+    if (p.id === 'bedtime') return; // skip Tresiba
+    var rec = todayData[p.id];
+    if (rec) checkInj(rec.time, rec.insulin);
+  });
+  SNACK_SECTIONS.forEach(function(s) {
+    (todayData[s.id] || []).forEach(function(sk) { checkInj(sk.time, sk.dose); });
+  });
+  (todayData.corrections || []).forEach(function(rec) { checkInj(rec.time, rec.dose); });
+  return Math.max(0, Math.round(maxRemainMs / 60000));
+}
+
+function calcCurrentIOB() {
+  var now = Date.now();
+  var todayData = getAllData()[todayStr()] || {};
+  var total = 0;
+  function addInj(timeStr, dose, type) {
+    if (!timeStr || !(dose > 0)) return;
+    var injMs = new Date(todayStr() + 'T' + timeStr + ':00').getTime();
+    var tHours = (now - injMs) / 3600000;
+    if (tHours < 0) return;
+    var act = type === 'tresiba' ? tresibaActivity(tHours) : novoRapidActivity(tHours);
+    total += act * dose;
+  }
+  PERIODS.forEach(function(p) {
+    var rec = todayData[p.id];
+    if (rec && rec.insulin && rec.time)
+      addInj(rec.time, parseFloat(rec.insulin), p.id === 'bedtime' ? 'tresiba' : 'noverapid');
+  });
+  SNACK_SECTIONS.forEach(function(s) {
+    (todayData[s.id] || []).forEach(function(sk) {
+      addInj(sk.time, parseFloat(sk.dose), 'noverapid');
+    });
+  });
+  (todayData.corrections || []).forEach(function(rec) {
+    addInj(rec.time, parseFloat(rec.dose), 'noverapid');
+  });
+  return Math.max(0, total);
+}
+
+// ── Sparkline SVG builder ─────────────────────────────────────────────────────
+function buildPipSparkSVG(history, sparkColor, bandColor, w, h) {
+  if (!history || history.length < 2) {
+    return '<svg width="' + w + '" height="' + h + '"><text x="' + (w/2) + '" y="' + (h/2+4) + '" text-anchor="middle" font-size="9" fill="' + sparkColor + '" opacity="0.4">no data</text></svg>';
+  }
+  var vals = history.map(function(p) { return p.sgv; });
+  var minV = Math.min.apply(null, vals);
+  var maxV = Math.max.apply(null, vals);
+  var pad = 4;
+  var range = Math.max(maxV - minV, 50);
+  var lo = Math.min(minV - 10, 70), hi = Math.max(maxV + 10, 180);
+  var totalRange = hi - lo;
+  function toY(v) { return h - pad - ((v - lo) / totalRange) * (h - pad * 2); }
+  // target band 70-180
+  var bandY1 = toY(180), bandY2 = toY(70);
+  var pts = vals.map(function(v, i) {
+    return (i / (vals.length - 1) * w).toFixed(1) + ',' + toY(v).toFixed(1);
+  }).join(' ');
+  return '<svg width="' + w + '" height="' + h + '" xmlns="http://www.w3.org/2000/svg">' +
+    '<rect x="0" y="' + bandY1.toFixed(1) + '" width="' + w + '" height="' + (bandY2 - bandY1).toFixed(1) + '" fill="' + bandColor + '"/>' +
+    '<polyline points="' + pts + '" fill="none" stroke="' + sparkColor + '" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>' +
+    '</svg>';
+}
+
+// ── Fetch 5h CGM history from Nightscout ─────────────────────────────────────
+async function fetchPipHistory() {
+  if (!settings.nsUrl) return;
+  try {
+    var token = settings.nsToken ? '?token=' + encodeURIComponent(settings.nsToken) : '';
+    var sep = token ? '&' : '?';
+    var url = settings.nsUrl + '/api/v1/entries.json' + token + sep + 'count=60';
+    var res = await fetch(url, { headers: nsHeaders(), cache: 'no-store' });
+    if (!res.ok) return;
+    var data = await res.json();
+    if (!Array.isArray(data)) return;
+    _pipHistory = data.slice().reverse().map(function(e) {
+      return { sgv: Math.round(e.sgv), date: e.date || 0 };
+    }).filter(function(p) { return p.sgv > 0; });
+  } catch(e) {}
+}
 
 function _buildPipStyle(tKey) {
   var t = PIP_THEMES[tKey] || PIP_THEMES.white;
   return [
     '* { margin:0; padding:0; box-sizing:border-box; }',
     'body { background:' + t.bg + '; color:' + t.text + ';',
-    '       display:inline-flex; flex-direction:column; align-items:flex-start;',
-    '       padding:10px 14px 9px; cursor:pointer; user-select:none;',
+    '       display:flex; flex-direction:column; justify-content:space-between;',
+    '       width:100%; height:100%; padding:8px 10px 6px; cursor:default; user-select:none;',
     '       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }',
-    '.pip-main { display:flex; align-items:baseline; gap:3px; }',
-    '.pip-val   { font-size:2.6rem; font-weight:900; font-variant-numeric:tabular-nums; line-height:1; letter-spacing:-1px; }',
-    '.pip-trend { font-size:1.8rem; font-weight:900; line-height:1; }',
-    '.pip-sub   { font-size:0.72rem; color:' + t.sub + '; margin-top:2px; white-space:nowrap; }',
-    '.pip-dots  { display:flex; gap:5px; margin-top:7px; }',
-    '.pip-dot   { width:9px; height:9px; border-radius:50%; cursor:pointer; flex-shrink:0; }',
+    '.pip-row { display:flex; align-items:center; gap:8px; flex:1; min-height:0; }',
+    '.pip-left { display:flex; flex-direction:column; flex-shrink:0; }',
+    '.pip-main { display:flex; align-items:baseline; gap:2px; line-height:1; }',
+    '.pip-val   { font-size:1.6rem; font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:-1px; }',
+    '.pip-trend { font-size:1.2rem; font-weight:900; }',
+    '.pip-sub   { font-size:0.62rem; color:' + t.sub + '; margin-top:2px; white-space:nowrap; }',
+    '.pip-mid   { flex:1; display:flex; align-items:center; min-width:0; }',
+    '.pip-right { display:flex; flex-direction:column; align-items:center; flex-shrink:0; min-width:38px; }',
+    '.pip-iob-val { font-size:0.95rem; font-weight:900; font-variant-numeric:tabular-nums; }',
+    '.pip-iob-lbl { font-size:0.55rem; color:' + t.sub + '; margin-top:1px; letter-spacing:0.3px; }',
+    '.pip-dots  { display:flex; gap:4px; justify-content:flex-start; }',
+    '.pip-dot   { width:7px; height:7px; border-radius:50%; cursor:pointer; flex-shrink:0; }',
     '.pip-dot.sel { box-shadow:0 0 0 1.5px ' + t.bg + ', 0 0 0 3px ' + t.ring + '; }',
     '.cgm-status-low    { color:' + t.low    + '; }',
     '.cgm-status-normal { color:' + t.normal + '; }',
@@ -7776,12 +7885,22 @@ function _buildPipHTML(tKey) {
     var sel = k === tKey ? ' sel' : '';
     return '<span class="pip-dot' + sel + '" data-t="' + k + '" style="background:' + PIP_THEMES[k].dot + ';" title="' + PIP_THEMES[k].label + '"></span>';
   }).join('');
-  return '<div class="pip-main">' +
-           '<span id="pip-val" class="pip-val">---</span>' +
-           '<span id="pip-trend" class="pip-trend">\u2192</span>' +
-         '</div>' +
-         '<div id="pip-sub" class="pip-sub">CGM \u5373\u6642\u8840\u7cd6</div>' +
-         '<div class="pip-dots">' + dots + '</div>';
+  return '<div class="pip-row">' +
+    '<div class="pip-left">' +
+      '<div class="pip-main">' +
+        '<span id="pip-val" class="pip-val">---</span>' +
+        '<span id="pip-trend" class="pip-trend">\u2192</span>' +
+      '</div>' +
+      '<div id="pip-sub" class="pip-sub">\u8acb\u7a0d\u5019</div>' +
+    '</div>' +
+    '<div class="pip-mid"><div id="pip-spark" style="width:100%;"></div></div>' +
+    '<div class="pip-right">' +
+      '<span id="pip-iob-val" class="pip-iob-val">--</span>' +
+      '<span class="pip-iob-lbl">IOB</span>' +
+      '<span id="pip-iob-sub" class="pip-iob-lbl" style="margin-top:0;"></span>' +
+    '</div>' +
+  '</div>' +
+  '<div class="pip-dots">' + dots + '</div>';
 }
 
 async function openCGMPip() {
@@ -7797,8 +7916,9 @@ async function openCGMPip() {
     return;
   }
   try {
-    _pipWin = await window.documentPictureInPicture.requestWindow({ width: 180, height: 105 });
+    _pipWin = await window.documentPictureInPicture.requestWindow({ width: 290, height: 95 });
     if (btn) btn.classList.add('active');
+    if (_pipHistory.length < 5) await fetchPipHistory();
     _renderPipContent(_pipThemeKey);
     updateCGMPip();
     _pipWin.addEventListener('pagehide', function() {
@@ -7841,20 +7961,47 @@ function updateCGMPip() {
   var deltaEl = document.getElementById('cgm-delta');
   var metaEl  = document.getElementById('cgm-meta');
   if (!valEl) return;
+  var t = PIP_THEMES[_pipThemeKey] || PIP_THEMES.white;
 
+  // BG value + trend
   var colorCls = (valEl.className.match(/cgm-status-\w+/) || [''])[0];
   var pipVal   = _pipWin.document.getElementById('pip-val');
   var pipTrend = _pipWin.document.getElementById('pip-trend');
   var pipSub   = _pipWin.document.getElementById('pip-sub');
-
-  if (pipVal)   { pipVal.textContent   = valEl.textContent;
-                  pipVal.className     = 'pip-val ' + colorCls; }
-  if (pipTrend) { pipTrend.textContent = trendEl ? trendEl.textContent : '';
-                  pipTrend.className   = 'pip-trend ' + colorCls; }
-  if (pipSub) {
+  if (pipVal)   { pipVal.textContent = valEl.textContent; pipVal.className = 'pip-val ' + colorCls; }
+  if (pipTrend) { pipTrend.textContent = trendEl ? trendEl.textContent : ''; pipTrend.className = 'pip-trend ' + colorCls; }
+  if (pipSub)   {
     var delta = deltaEl ? deltaEl.textContent : '';
     var meta  = metaEl  ? metaEl.textContent.replace('CGM · ', '') : '';
     pipSub.textContent = delta + (delta && meta ? ' · ' : '') + meta;
+  }
+
+  // Sparkline
+  var sparkEl = _pipWin.document.getElementById('pip-spark');
+  if (sparkEl) {
+    var sw = sparkEl.offsetWidth || 110;
+    var sh = 44;
+    sparkEl.innerHTML = buildPipSparkSVG(_pipHistory, t.spark, t.band, sw, sh);
+  }
+
+  // IOB
+  var iob = calcCurrentIOB();
+  var iobValEl = _pipWin.document.getElementById('pip-iob-val');
+  var iobSubEl = _pipWin.document.getElementById('pip-iob-sub');
+  if (iobValEl) {
+    iobValEl.textContent = iob > 0.05 ? iob.toFixed(1) + 'U' : '0U';
+    iobValEl.className = 'pip-iob-val ' + colorCls;
+  }
+  if (iobSubEl) {
+    var remMins = calcIOBRemainingMins();
+    if (remMins > 0) {
+      var rh = Math.floor(remMins / 60), rm = remMins % 60;
+      iobSubEl.textContent = rh > 0
+        ? '\u5269' + rh + '\u6642' + rm + '\u5206'
+        : '\u5269' + rm + '\u5206\u9418';
+    } else {
+      iobSubEl.textContent = '\u5df2\u6e05\u9664';
+    }
   }
 }
 
