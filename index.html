@@ -3630,6 +3630,7 @@ const SNACK_FOOD_OPTIONS = [
   { value: 'pineapple',          label: '🍍 鳳梨 100公克 (碳水13.6克)' },
   { value: 'dragon_fruit',       label: '🐲 火龍果 100公克 (碳水12.36克)' },
   { value: 'strawberry',         label: '🍓 草莓去蒂 100公克 (碳水9.3克)' },
+  { value: 'kiwi',               label: '🥝 奇異果 100公克 (碳水14.6克)' },
 ];
 
 const DEFAULT_SETTINGS = {
@@ -7311,7 +7312,7 @@ const CALC_CARB_FOODS = {
   dumpling: 4, soup_dumpling: 4.3,
   mcd_combo_1: 66, mcd_combo_2: 55.2,
   guava: 10.6, apple: 11.9, cherry: 19.12, banana_peel: 10.6, banana: 22.1,
-  pineapple: 13.6, dragon_fruit: 12.36, strawberry: 9.3,
+  pineapple: 13.6, dragon_fruit: 12.36, strawberry: 9.3, kiwi: 14.6,
   milk_100: 4.8, milk_150: 7, milk_200: 10, yogurt_100: 12, yakult: 14.7,
 };
 
@@ -9859,6 +9860,7 @@ function checkTodoAlerts() {
             <option value="pineapple">鳳梨 100公克 (碳水13.6克)</option>
             <option value="dragon_fruit">火龍果 100公克 (碳水12.36克)</option>
             <option value="strawberry">草莓去蒂 100公克 (碳水9.3克)</option>
+            <option value="kiwi">奇異果 100公克 (碳水14.6克)</option>
           </select>
           <input type="number" id="calc-qty-3" min="0" step="0.1" value="1" oninput="calcRecalc()" />
         </div>
