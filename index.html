@@ -112,6 +112,17 @@
       gap: 1px;
     }
     nav button .nav-ico { font-size: 1.1rem; line-height: 1.3; }
+    /* Dose rounding hint */
+    .calc-round-hint { margin: 10px 0; font-size: 0.82rem; border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden; }
+    .crh-title { padding: 7px 12px; background: #f8fafc; font-weight: 700; font-size: 0.84rem; border-bottom: 1px solid var(--border); color: var(--text); }
+    .crh-row { display: flex; align-items: center; gap: 8px; padding: 5px 12px; color: var(--text-muted); border-bottom: 1px solid #f1f5f9; }
+    .crh-row:last-child { border-bottom: none; }
+    .crh-row.crh-active-down   { background: #eff6ff; color: #1d4ed8; font-weight: 700; }
+    .crh-row.crh-active-mid    { background: #f5f3ff; color: #6d28d9; font-weight: 700; }
+    .crh-row.crh-active-up     { background: #fef2f2; color: #dc2626; font-weight: 700; }
+    .crh-range { font-variant-numeric: tabular-nums; min-width: 120px; letter-spacing: 0.5px; }
+    .crh-arrow { color: #94a3b8; flex-shrink: 0; }
+    .crh-action { flex: 1; }
     nav button .nav-lbl { font-size: 0.62rem; line-height: 1.2; white-space: nowrap; }
     nav button.active {
       color: var(--primary);
@@ -7566,6 +7577,41 @@ function calcRecalc() {
     warns.push('估算結果為 0 單位。請確認輸入值與個人醫囑，尤其是 CIR 醣類係數、ISF 敏感係數與有效胰島素。');
   document.getElementById('calc-warnings').innerHTML =
     warns.map(w => '<div class="calc-warning">⚠️ ' + w + '</div>').join('');
+  var _rh = document.getElementById('calc-round-hint');
+  if (_rh) _rh.innerHTML = buildRoundHint(rawDose);
+}
+
+// ── Rounding hint builder ──
+function buildRoundHint(rawDose) {
+  if (rawDose <= 0) return '';
+  var dec10   = Math.round((rawDose % 1) * 10);
+  var intPart = Math.floor(rawDose);
+  if (dec10 === 0) {
+    return '<div class="calc-round-hint"><div class="crh-title">試算建議劑量 ' + intPart + ' 單位 — 整數，直接打</div></div>';
+  }
+  var isDown = dec10 <= 2;
+  var isMid  = dec10 >= 3 && dec10 <= 7;
+  var isUp   = dec10 >= 8;
+  var suggested = isDown ? intPart : isMid ? (intPart + 0.5) : (intPart + 1);
+  var titleExtra = isUp ? ' ＋ 補糖' : '';
+  return '<div class="calc-round-hint">' +
+    '<div class="crh-title">試算建議劑量 ' + rawDose.toFixed(1) + ' → 建議打 <strong>' + suggested + '</strong> 單位' + titleExtra + '</div>' +
+    '<div class="crh-row' + (isDown ? ' crh-active-down' : '') + '">' +
+      '<span class="crh-range">.1 &nbsp; .2</span>' +
+      '<span class="crh-arrow">→</span>' +
+      '<span class="crh-action">打整數 (' + intPart + ' 單位)</span>' +
+    '</div>' +
+    '<div class="crh-row' + (isMid ? ' crh-active-mid' : '') + '">' +
+      '<span class="crh-range">.3 &nbsp; .4 &nbsp; .5 &nbsp; .6 &nbsp; .7</span>' +
+      '<span class="crh-arrow">→</span>' +
+      '<span class="crh-action">打 .5 (' + (intPart + 0.5) + ' 單位)</span>' +
+    '</div>' +
+    '<div class="crh-row' + (isUp ? ' crh-active-up' : '') + '">' +
+      '<span class="crh-range">.8 &nbsp; .9</span>' +
+      '<span class="crh-arrow">→</span>' +
+      '<span class="crh-action">打整數補糖 (' + (intPart + 1) + ' 單位)</span>' +
+    '</div>' +
+  '</div>';
 }
 
 // ── Apply result to tracker ──
@@ -9776,6 +9822,9 @@ function checkTodoAlerts() {
 
       <!-- 餐別備註 -->
       <div id="calc-meal-notes" class="calc-notes" style="display:none"></div>
+
+      <!-- 進位提示 -->
+      <div id="calc-round-hint"></div>
 
       <!-- 帶入按鈕 -->
       <button class="calc-apply-btn" type="button" onclick="calcApply()">✅ 帶入紀錄表</button>
