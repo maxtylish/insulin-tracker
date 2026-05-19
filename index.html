@@ -1545,6 +1545,8 @@
       padding: 6px 4px; font-size: 0.82rem; outline: none; text-align: center; width: 100%;
     }
     .calc-food-row input[type="number"]:focus { border-color: #7c3aed; }
+    .badge-set { background: #fef3c7; color: #92400e; font-weight: 700; }
+    .calc-set-divider { border: none; border-top: 1.5px dashed var(--border); margin: 4px 0 8px; }
     .calc-preset-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-top: 10px; }
     .calc-preset-item {
       background: #f8fafc; border-radius: 8px;
@@ -2844,11 +2846,28 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.14.0</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.15.0</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.15.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.15.0</span>
+          <span class="cl-date">2026-05-19</span>
+          <span class="cl-tag">套餐 / 進位提示 / 手機導覽 / 點心子項 / 雲端同步</span>
+        </div>
+        <ul class="cl-list">
+          <li>計算劑量：新增「套餐」下拉（主餐上方），一鍵帶入預設分量</li>
+          <li>晚餐新增套餐「丸美屋咖哩組合」（白飯×1.2＋牛奶×1.2＋丸美屋咖哩醬13克）</li>
+          <li>計算結果下方新增進位提示（.1.2→整數 / .3~.7→打.5 / .8.9→整數補糖）</li>
+          <li>手機版導覽列圖示與文字改為上下排列，避免擠壓</li>
+          <li>點心新增多食材子項目，支援小數量、自動加總碳水</li>
+          <li>胰島素管理新增雲端手動同步按鈕，跨裝置即時同步</li>
+        </ul>
+      </div>
 
       <!-- v2.14.0 -->
       <div class="cl-item">
@@ -7298,7 +7317,6 @@ const CALC_CARB_FOODS = {
 
 const CALC_MAIN_OPTIONS = {
   breakfast: [
-    { value: 'wheat_toast_milk_combo', label: '🥛 熱壓全麥吐司＋牛奶120ml 碳水 17.8克' },
     { value: 'white_rice',         label: '白飯 100公克 (碳水30克)' },
     { value: 'udon',               label: '烏龍麵 100公克 (碳水24.6克)' },
     { value: 'yangchun_noodle',    label: '陽春麵 100公克 (碳水27.8克)' },
@@ -7325,11 +7343,8 @@ const CALC_MAIN_OPTIONS = {
     { value: 'potato_skin',     label: '馬鈴薯帶皮 100公克 (碳水12.9克)' },
     { value: 'dumpling',        label: '水餃 1顆 (碳水4克)' },
     { value: 'soup_dumpling',   label: '湯包 1顆 (碳水4.3克)' },
-    { value: 'mcd_combo_1',     label: '麥當勞組合1（鱈魚堡＋玉米杯＋牛奶）1組 (碳水66克)' },
-    { value: 'mcd_combo_2',     label: '麥當勞組合2（鱈魚堡＋玉米杯＋水果袋）1組 (碳水55.2克)' },
   ],
   dinner: [
-    { value: 'night_market_noodle_combo', label: '🏮 夜市油麵組合（油麵140g＋牛奶120ml）碳水 51克' },
     { value: 'white_rice',      label: '白飯 100公克 (碳水30克)' },
     { value: 'udon',            label: '烏龍麵 100公克 (碳水24.6克)' },
     { value: 'yangchun_noodle', label: '陽春麵 100公克 (碳水27.8克)' },
@@ -7339,8 +7354,48 @@ const CALC_MAIN_OPTIONS = {
     { value: 'potato_skin',     label: '馬鈴薯帶皮 100公克 (碳水12.9克)' },
     { value: 'dumpling',        label: '水餃 1顆 (碳水4克)' },
     { value: 'soup_dumpling',   label: '湯包 1顆 (碳水4.3克)' },
-    { value: 'mcd_combo_1',     label: '麥當勞組合1（鱈魚堡＋玉米杯＋牛奶）1組 (碳水66克)' },
-    { value: 'mcd_combo_2',     label: '麥當勞組合2（鱈魚堡＋玉米杯＋水果袋）1組 (碳水55.2克)' },
+  ],
+};
+
+// ── Meal set presets (套餐) ─────────────────────────────────────────────────
+// slot: 1=主餐 2=餐食2 3=甜點 4=飲品 'other'=其他固定碳水
+const CALC_MEAL_SETS = {
+  breakfast: [
+    { label: '🥛 熱壓全麥吐司＋牛奶',
+      items: [
+        { slot: 1, food: 'wheat_toast', qty: 1 },
+        { slot: 4, food: 'milk_100',    qty: 1.2 },
+      ]
+    },
+  ],
+  lunch: [
+    { label: '🍔 麥當勞組合1（鱈魚堡＋玉米杯＋牛奶）',
+      items: [{ slot: 'other', name: '麥當勞組合1', carb: 66 }]
+    },
+    { label: '🍟 麥當勞組合2（鱈魚堡＋玉米杯＋水果袋）',
+      items: [{ slot: 'other', name: '麥當勞組合2', carb: 55.2 }]
+    },
+  ],
+  dinner: [
+    { label: '🏮 夜市油麵組合（油麵140g＋牛奶120ml）',
+      items: [
+        { slot: 1, food: 'oil_noodle', qty: 1.4 },
+        { slot: 4, food: 'milk_100',   qty: 1.2 },
+      ]
+    },
+    { label: '🍛 丸美屋咖哩組合',
+      items: [
+        { slot: 1, food: 'white_rice', qty: 1.2 },
+        { slot: 4, food: 'milk_100',   qty: 1.2 },
+        { slot: 'other', name: '丸美屋咖哩醬', carb: 13 },
+      ]
+    },
+    { label: '🍔 麥當勞組合1（鱈魚堡＋玉米杯＋牛奶）',
+      items: [{ slot: 'other', name: '麥當勞組合1', carb: 66 }]
+    },
+    { label: '🍟 麥當勞組合2（鱈魚堡＋玉米杯＋水果袋）',
+      items: [{ slot: 'other', name: '麥當勞組合2', carb: 55.2 }]
+    },
   ],
 };
 
@@ -7490,6 +7545,51 @@ function calcOverlayClick(e) {
   if (e.target.id === 'calcOverlay') closeCalcModal();
 }
 
+// ── Meal set (套餐) helpers ──
+function calcUpdateMealSets() {
+  var meal = document.getElementById('calc-meal-period').value || 'breakfast';
+  var sets = CALC_MEAL_SETS[meal] || [];
+  var sel  = document.getElementById('calc-meal-set');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">── 選擇套餐（自動填入）──</option>' +
+    sets.map(function(s, i) {
+      return '<option value="' + i + '">' + s.label + '</option>';
+    }).join('');
+}
+
+function calcApplyMealSet(val) {
+  // Clear all food slots first
+  [1,2,3,4].forEach(function(n) {
+    var fs = document.getElementById('calc-food-' + n);
+    var qs = document.getElementById('calc-qty-' + n);
+    if (fs) fs.value = '';
+    if (qs) qs.value = '1';
+  });
+  var otherName  = document.getElementById('calc-other-name');
+  var otherCarbs = document.getElementById('calc-other-carbs');
+  if (otherName)  otherName.value  = '';
+  if (otherCarbs) otherCarbs.value = '';
+
+  if (!val && val !== 0) { calcUpdateFood1(); return; }
+
+  var meal = document.getElementById('calc-meal-period').value || 'breakfast';
+  var set  = (CALC_MEAL_SETS[meal] || [])[parseInt(val)];
+  if (!set) { calcUpdateFood1(); return; }
+
+  set.items.forEach(function(item) {
+    if (item.slot === 'other') {
+      if (otherName)  otherName.value  = item.name || '';
+      if (otherCarbs) otherCarbs.value = item.carb != null ? item.carb : '';
+    } else {
+      var fs = document.getElementById('calc-food-' + item.slot);
+      var qs = document.getElementById('calc-qty-' + item.slot);
+      if (fs) fs.value = item.food;
+      if (qs) qs.value = item.qty;
+    }
+  });
+  calcUpdateFood1();  // rebuild food-2 options + recalc
+}
+
 // ── Meal select → rebuild food dropdowns ──
 function calcUpdateMeal() {
   const meal = document.getElementById('calc-meal-period').value;
@@ -7497,6 +7597,10 @@ function calcUpdateMeal() {
   const sel1 = document.getElementById('calc-food-1');
   sel1.innerHTML = '<option value="">不選擇</option>' +
     opts.map(o => '<option value="' + o.value + '">' + o.label + '</option>').join('');
+  calcUpdateMealSets();  // rebuild 套餐 dropdown
+  // Reset 套餐 selection when meal changes
+  var mealSetSel = document.getElementById('calc-meal-set');
+  if (mealSetSel) mealSetSel.value = '';
   calcUpdateFood1();
 }
 
@@ -7678,7 +7782,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.14.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.15.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -9726,6 +9830,13 @@ function checkTodoAlerts() {
       <!-- 飲食紀錄 -->
       <div class="calc-section">
         <div class="calc-section-title">飲食紀錄</div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-set">套餐</span>
+          <select id="calc-meal-set" onchange="calcApplyMealSet(this.value)" style="flex:1 1 auto;min-width:0;">
+            <option value="">── 選擇套餐（自動填入）──</option>
+          </select>
+        </div>
+        <hr class="calc-set-divider">
         <div class="calc-food-row">
           <span class="calc-food-badge badge-main">主餐</span>
           <select id="calc-food-1" onchange="calcUpdateFood1()"></select>
