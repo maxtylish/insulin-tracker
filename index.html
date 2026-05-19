@@ -1601,17 +1601,24 @@
     /* ── CGM Real-time Widget ── */
     .cgm-widget {
       background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%);
-      color: white; border-radius: 14px; padding: 12px 16px;
-      display: flex; align-items: center; justify-content: space-between;
+      color: white; border-radius: 14px; padding: 14px 18px;
+      display: flex; flex-direction: column; align-items: flex-start;
       margin-bottom: 12px; box-shadow: 0 4px 16px rgba(30,64,175,0.3);
     }
-    .cgm-left { display: flex; align-items: baseline; gap: 8px; }
-    .cgm-value { font-size: 2.4rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
-    .cgm-unit  { font-size: 0.75rem; opacity: 0.75; }
-    .cgm-trend { font-size: 1.6rem; line-height: 1; }
-    .cgm-right { text-align: right; }
-    .cgm-delta { font-size: 0.85rem; font-weight: 700; opacity: 0.9; }
-    .cgm-meta  { font-size: 0.7rem; opacity: 0.65; margin-top: 2px; }
+    .cgm-main-row { display: flex; align-items: baseline; gap: 6px; line-height: 1; }
+    .cgm-pip-btn {
+      margin-left: auto; background: rgba(255,255,255,0.15); border: none; color: white;
+      font-size: 1rem; cursor: pointer; border-radius: 6px; padding: 2px 7px; line-height: 1.4;
+      transition: background 0.15s; flex-shrink: 0; align-self: center;
+    }
+    .cgm-pip-btn:hover { background: rgba(255,255,255,0.3); }
+    .cgm-pip-btn.active { background: rgba(255,255,255,0.35); }
+    .cgm-value { font-size: 3.2rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+    .cgm-trend { font-size: 2.2rem; font-weight: 900; line-height: 1; }
+    .cgm-sub-row { display: flex; align-items: center; gap: 4px; margin-top: 4px; opacity: 0.85; }
+    .cgm-delta { font-size: 0.88rem; font-weight: 700; }
+    .cgm-sep   { font-size: 0.8rem; opacity: 0.6; margin: 0 2px; }
+    .cgm-meta  { font-size: 0.8rem; opacity: 0.8; }
     .cgm-status-low    { color: #a78bfa; }
     .cgm-status-normal { color: #86efac; }
     .cgm-status-warn   { color: #fcd34d; }
@@ -2247,14 +2254,15 @@
 
   <!-- CGM Real-time Widget -->
   <div class="cgm-widget" id="cgm-widget" style="display:none">
-    <div class="cgm-left">
+    <div class="cgm-main-row">
       <span class="cgm-value" id="cgm-value">---</span>
-      <span class="cgm-unit">mg/dL</span>
       <span class="cgm-trend" id="cgm-trend">→</span>
+      <button class="cgm-pip-btn" id="cgm-pip-btn" onclick="openCGMPip()" title="浮動視窗（常駐最上層）">⊡</button>
     </div>
-    <div class="cgm-right">
-      <div class="cgm-delta" id="cgm-delta">--</div>
-      <div class="cgm-meta" id="cgm-meta">CGM 即時血糖</div>
+    <div class="cgm-sub-row">
+      <span class="cgm-delta" id="cgm-delta">--</span>
+      <span class="cgm-sep">·</span>
+      <span class="cgm-meta" id="cgm-meta">CGM 即時血糖</span>
     </div>
   </div>
 
@@ -4003,8 +4011,10 @@ function updateCGMWidget(entry) {
   valEl.textContent = sgv;
   valEl.className = 'cgm-value ' + colorClass;
   document.getElementById('cgm-trend').textContent = trend;
+  document.getElementById('cgm-trend').className = 'cgm-trend ' + colorClass;
   document.getElementById('cgm-delta').textContent = deltaStr;
   document.getElementById('cgm-meta').textContent  = 'CGM · ' + timeAgo;
+  updateCGMPip();
 
   var low  = settings.low  || 80;
   var high = settings.high || 250;
@@ -7717,6 +7727,98 @@ function buildRoundHint(rawDose) {
       '<span class="crh-action">打整數補糖 (' + (intPart + 1) + ' 單位)</span>' +
     '</div>' +
   '</div>';
+}
+
+
+// ── Document Picture-in-Picture (floating CGM window) ──────────────────────
+var _pipWin = null;
+
+async function openCGMPip() {
+  var btn = document.getElementById('cgm-pip-btn');
+  if (!('documentPictureInPicture' in window)) {
+    showToast('需要 Chrome 116+ 才支援浮動視窗功能');
+    return;
+  }
+  // Toggle: if already open, close it
+  if (_pipWin && !_pipWin.closed) {
+    _pipWin.close();
+    _pipWin = null;
+    if (btn) btn.classList.remove('active');
+    return;
+  }
+  try {
+    _pipWin = await window.documentPictureInPicture.requestWindow({ width: 240, height: 120 });
+    if (btn) btn.classList.add('active');
+
+    // Inject styles
+    var style = _pipWin.document.createElement('style');
+    style.textContent = [
+      '* { margin:0; padding:0; box-sizing:border-box; }',
+      'body { background: linear-gradient(135deg,#1e3a5f,#1e40af); color:#fff;',
+      '       display:flex; flex-direction:column; align-items:center; justify-content:center;',
+      '       height:100vh; cursor:pointer; user-select:none;',
+      '       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }',
+      '.pip-main { display:flex; align-items:baseline; gap:6px; }',
+      '.pip-val   { font-size:3rem; font-weight:900; font-variant-numeric:tabular-nums; line-height:1; }',
+      '.pip-trend { font-size:2rem; font-weight:900; line-height:1; }',
+      '.pip-sub   { font-size:0.8rem; opacity:0.8; margin-top:5px; }',
+      '.cgm-status-low    { color:#a78bfa; }',
+      '.cgm-status-normal { color:#86efac; }',
+      '.cgm-status-warn   { color:#fcd34d; }',
+      '.cgm-status-high   { color:#fca5a5; }'
+    ].join('\n');
+    _pipWin.document.head.appendChild(style);
+
+    // Inject HTML
+    _pipWin.document.body.innerHTML =
+      '<div class="pip-main">' +
+        '<span id="pip-val" class="pip-val">---</span>' +
+        '<span id="pip-trend" class="pip-trend">→</span>' +
+      '</div>' +
+      '<div id="pip-sub" class="pip-sub">CGM 即時血糖</div>';
+
+    // Click body -> focus main window
+    _pipWin.document.body.addEventListener('click', function() { window.focus(); });
+
+    // Sync current data immediately
+    updateCGMPip();
+
+    // Clean up when PiP closes
+    _pipWin.addEventListener('pagehide', function() {
+      _pipWin = null;
+      var b = document.getElementById('cgm-pip-btn');
+      if (b) b.classList.remove('active');
+    });
+
+  } catch(e) {
+    showToast('無法開啟浮動視窗：' + e.message);
+    _pipWin = null;
+    if (btn) btn.classList.remove('active');
+  }
+}
+
+function updateCGMPip() {
+  if (!_pipWin || _pipWin.closed) return;
+  var valEl   = document.getElementById('cgm-value');
+  var trendEl = document.getElementById('cgm-trend');
+  var deltaEl = document.getElementById('cgm-delta');
+  var metaEl  = document.getElementById('cgm-meta');
+  if (!valEl) return;
+
+  var colorCls = (valEl.className.match(/cgm-status-\w+/) || [''])[0];
+  var pipVal   = _pipWin.document.getElementById('pip-val');
+  var pipTrend = _pipWin.document.getElementById('pip-trend');
+  var pipSub   = _pipWin.document.getElementById('pip-sub');
+
+  if (pipVal)   { pipVal.textContent   = valEl.textContent;
+                  pipVal.className     = 'pip-val ' + colorCls; }
+  if (pipTrend) { pipTrend.textContent = trendEl ? trendEl.textContent : '';
+                  pipTrend.className   = 'pip-trend ' + colorCls; }
+  if (pipSub) {
+    var delta = deltaEl ? deltaEl.textContent : '';
+    var meta  = metaEl  ? metaEl.textContent.replace('CGM · ', '') : '';
+    pipSub.textContent = delta + (delta && meta ? ' · ' : '') + meta;
+  }
 }
 
 // ── Apply result to tracker ──
