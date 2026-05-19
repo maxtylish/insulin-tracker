@@ -7732,6 +7732,57 @@ function buildRoundHint(rawDose) {
 
 // ── Document Picture-in-Picture (floating CGM window) ──────────────────────
 var _pipWin = null;
+var _pipThemeKey = (function() { try { return localStorage.getItem('pip_theme') || 'white'; } catch(e) { return 'white'; } })();
+
+var PIP_THEMES = {
+  white:  { bg:'#ffffff', text:'#111111', sub:'#999999', ring:'#333333',
+            low:'#7c3aed', normal:'#16a34a', warn:'#d97706', high:'#dc2626',
+            dot:'#e5e7eb', label:'白色' },
+  black:  { bg:'#111111', text:'#f0f0f0', sub:'#888888', ring:'#ffffff',
+            low:'#a78bfa', normal:'#4ade80', warn:'#fbbf24', high:'#f87171',
+            dot:'#111111', label:'黑色' },
+  navy:   { bg:'#0f172a', text:'#e2e8f0', sub:'#64748b', ring:'#94a3b8',
+            low:'#c4b5fd', normal:'#6ee7b7', warn:'#fcd34d', high:'#fca5a5',
+            dot:'#1e3a5f', label:'深藍' },
+  forest: { bg:'#0a1a0e', text:'#dcfce7', sub:'#4d7a5a', ring:'#86efac',
+            low:'#c4b5fd', normal:'#4ade80', warn:'#fbbf24', high:'#f87171',
+            dot:'#14532d', label:'深綠' }
+};
+
+function _buildPipStyle(tKey) {
+  var t = PIP_THEMES[tKey] || PIP_THEMES.white;
+  return [
+    '* { margin:0; padding:0; box-sizing:border-box; }',
+    'body { background:' + t.bg + '; color:' + t.text + ';',
+    '       display:inline-flex; flex-direction:column; align-items:flex-start;',
+    '       padding:10px 14px 9px; cursor:pointer; user-select:none;',
+    '       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }',
+    '.pip-main { display:flex; align-items:baseline; gap:3px; }',
+    '.pip-val   { font-size:2.6rem; font-weight:900; font-variant-numeric:tabular-nums; line-height:1; letter-spacing:-1px; }',
+    '.pip-trend { font-size:1.8rem; font-weight:900; line-height:1; }',
+    '.pip-sub   { font-size:0.72rem; color:' + t.sub + '; margin-top:2px; white-space:nowrap; }',
+    '.pip-dots  { display:flex; gap:5px; margin-top:7px; }',
+    '.pip-dot   { width:9px; height:9px; border-radius:50%; cursor:pointer; flex-shrink:0; }',
+    '.pip-dot.sel { box-shadow:0 0 0 1.5px ' + t.bg + ', 0 0 0 3px ' + t.ring + '; }',
+    '.cgm-status-low    { color:' + t.low    + '; }',
+    '.cgm-status-normal { color:' + t.normal + '; }',
+    '.cgm-status-warn   { color:' + t.warn   + '; }',
+    '.cgm-status-high   { color:' + t.high   + '; }'
+  ].join('\n');
+}
+
+function _buildPipHTML(tKey) {
+  var dots = Object.keys(PIP_THEMES).map(function(k) {
+    var sel = k === tKey ? ' sel' : '';
+    return '<span class="pip-dot' + sel + '" data-t="' + k + '" style="background:' + PIP_THEMES[k].dot + ';" title="' + PIP_THEMES[k].label + '"></span>';
+  }).join('');
+  return '<div class="pip-main">' +
+           '<span id="pip-val" class="pip-val">---</span>' +
+           '<span id="pip-trend" class="pip-trend">\u2192</span>' +
+         '</div>' +
+         '<div id="pip-sub" class="pip-sub">CGM \u5373\u6642\u8840\u7cd6</div>' +
+         '<div class="pip-dots">' + dots + '</div>';
+}
 
 async function openCGMPip() {
   var btn = document.getElementById('cgm-pip-btn');
@@ -7739,7 +7790,6 @@ async function openCGMPip() {
     showToast('需要 Chrome 116+ 才支援浮動視窗功能');
     return;
   }
-  // Toggle: if already open, close it
   if (_pipWin && !_pipWin.closed) {
     _pipWin.close();
     _pipWin = null;
@@ -7747,54 +7797,41 @@ async function openCGMPip() {
     return;
   }
   try {
-    _pipWin = await window.documentPictureInPicture.requestWindow({ width: 180, height: 80 });
+    _pipWin = await window.documentPictureInPicture.requestWindow({ width: 180, height: 105 });
     if (btn) btn.classList.add('active');
-
-    // Inject styles
-    var style = _pipWin.document.createElement('style');
-    style.textContent = [
-      '* { margin:0; padding:0; box-sizing:border-box; }',
-      'body { background:#fff; color:#111;',
-      '       display:inline-flex; flex-direction:column; align-items:flex-start;',
-      '       padding:10px 14px; cursor:pointer; user-select:none;',
-      '       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }',
-      '.pip-main { display:flex; align-items:baseline; gap:3px; }',
-      '.pip-val   { font-size:2.6rem; font-weight:900; font-variant-numeric:tabular-nums; line-height:1; letter-spacing:-1px; }',
-      '.pip-trend { font-size:1.8rem; font-weight:900; line-height:1; }',
-      '.pip-sub   { font-size:0.72rem; color:#888; margin-top:3px; white-space:nowrap; }',
-      '.cgm-status-low    { color:#7c3aed; }',
-      '.cgm-status-normal { color:#16a34a; }',
-      '.cgm-status-warn   { color:#d97706; }',
-      '.cgm-status-high   { color:#dc2626; }'
-    ].join('\n');
-    _pipWin.document.head.appendChild(style);
-
-    // Inject HTML
-    _pipWin.document.body.innerHTML =
-      '<div class="pip-main">' +
-        '<span id="pip-val" class="pip-val">---</span>' +
-        '<span id="pip-trend" class="pip-trend">→</span>' +
-      '</div>' +
-      '<div id="pip-sub" class="pip-sub">CGM 即時血糖</div>';
-
-    // Click body -> focus main window
-    _pipWin.document.body.addEventListener('click', function() { window.focus(); });
-
-    // Sync current data immediately
+    _renderPipContent(_pipThemeKey);
     updateCGMPip();
-
-    // Clean up when PiP closes
     _pipWin.addEventListener('pagehide', function() {
       _pipWin = null;
       var b = document.getElementById('cgm-pip-btn');
       if (b) b.classList.remove('active');
     });
-
   } catch(e) {
     showToast('無法開啟浮動視窗：' + e.message);
     _pipWin = null;
     if (btn) btn.classList.remove('active');
   }
+}
+
+function _renderPipContent(tKey) {
+  if (!_pipWin || _pipWin.closed) return;
+  var existing = _pipWin.document.getElementById('pip-style');
+  if (existing) existing.remove();
+  var style = _pipWin.document.createElement('style');
+  style.id = 'pip-style';
+  style.textContent = _buildPipStyle(tKey);
+  _pipWin.document.head.appendChild(style);
+  _pipWin.document.body.innerHTML = _buildPipHTML(tKey);
+  _pipWin.document.body.addEventListener('click', function(e) {
+    if (e.target.classList.contains('pip-dot')) {
+      _pipThemeKey = e.target.getAttribute('data-t');
+      try { localStorage.setItem('pip_theme', _pipThemeKey); } catch(ex) {}
+      _renderPipContent(_pipThemeKey);
+      updateCGMPip();
+      return;
+    }
+    window.focus();
+  });
 }
 
 function updateCGMPip() {
