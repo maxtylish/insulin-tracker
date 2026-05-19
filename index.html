@@ -7747,25 +7747,25 @@ async function openCGMPip() {
     return;
   }
   try {
-    _pipWin = await window.documentPictureInPicture.requestWindow({ width: 240, height: 120 });
+    _pipWin = await window.documentPictureInPicture.requestWindow({ width: 180, height: 80 });
     if (btn) btn.classList.add('active');
 
     // Inject styles
     var style = _pipWin.document.createElement('style');
     style.textContent = [
       '* { margin:0; padding:0; box-sizing:border-box; }',
-      'body { background: linear-gradient(135deg,#1e3a5f,#1e40af); color:#fff;',
-      '       display:flex; flex-direction:column; align-items:center; justify-content:center;',
-      '       height:100vh; cursor:pointer; user-select:none;',
+      'body { background:#fff; color:#111;',
+      '       display:inline-flex; flex-direction:column; align-items:flex-start;',
+      '       padding:10px 14px; cursor:pointer; user-select:none;',
       '       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }',
-      '.pip-main { display:flex; align-items:baseline; gap:6px; }',
-      '.pip-val   { font-size:3rem; font-weight:900; font-variant-numeric:tabular-nums; line-height:1; }',
-      '.pip-trend { font-size:2rem; font-weight:900; line-height:1; }',
-      '.pip-sub   { font-size:0.8rem; opacity:0.8; margin-top:5px; }',
-      '.cgm-status-low    { color:#a78bfa; }',
-      '.cgm-status-normal { color:#86efac; }',
-      '.cgm-status-warn   { color:#fcd34d; }',
-      '.cgm-status-high   { color:#fca5a5; }'
+      '.pip-main { display:flex; align-items:baseline; gap:3px; }',
+      '.pip-val   { font-size:2.6rem; font-weight:900; font-variant-numeric:tabular-nums; line-height:1; letter-spacing:-1px; }',
+      '.pip-trend { font-size:1.8rem; font-weight:900; line-height:1; }',
+      '.pip-sub   { font-size:0.72rem; color:#888; margin-top:3px; white-space:nowrap; }',
+      '.cgm-status-low    { color:#7c3aed; }',
+      '.cgm-status-normal { color:#16a34a; }',
+      '.cgm-status-warn   { color:#d97706; }',
+      '.cgm-status-high   { color:#dc2626; }'
     ].join('\n');
     _pipWin.document.head.appendChild(style);
 
