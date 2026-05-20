@@ -7945,7 +7945,7 @@ function _buildPipStyle(tKey) {
 function _buildPipHTML(tKey) {
   var dots = Object.keys(PIP_THEMES).map(function(k) {
     var sel = k === tKey ? ' sel' : '';
-    return '<span class="pip-dot' + sel + '" data-t="' + k + '" style="background:' + PIP_THEMES[k].dot + ';" title="' + PIP_THEMES[k].label + '"></span>';
+    return '<span class="pip-dot' + sel + '" onclick="window._pipSetTheme(\'' + k + '\')" style="background:' + PIP_THEMES[k].dot + ';cursor:pointer;" title="' + PIP_THEMES[k].label + '"></span>';
   }).join('');
   return '<div class="pip-row">' +
     '<div class="pip-left">' +
@@ -7966,10 +7966,10 @@ function _buildPipHTML(tKey) {
   '<div class="pip-bottom">' +
     '<div class="pip-dots">' + dots + '</div>' +
     '<div class="pip-dot-sep"></div>' +
-    '<button class="pip-evt-btn" id="pip-evt-prev" data-pipnav="-1">&#8249;</button>' +
-    '<span class="pip-evt-txt" id="pip-evt-txt"></span>' +
+    '<button class="pip-evt-btn" id="pip-evt-prev" onclick="window._pipNavEvent(-1)">&#8249;</button>' +
+    '<span class="pip-evt-txt" id="pip-evt-txt">載入中…</span>' +
     '<span class="pip-evt-idx" id="pip-evt-idx"></span>' +
-    '<button class="pip-evt-btn" id="pip-evt-next" data-pipnav="1">&#8250;</button>' +
+    '<button class="pip-evt-btn" id="pip-evt-next" onclick="window._pipNavEvent(1)">&#8250;</button>' +
   '</div>';
 }
 
@@ -8013,16 +8013,17 @@ function _renderPipContent(tKey) {
   style.textContent = _buildPipStyle(tKey);
   _pipWin.document.head.appendChild(style);
   _pipWin.document.body.innerHTML = _buildPipHTML(tKey);
-  _pipWin.document.body.addEventListener('click', function(e) {
-    if (e.target.classList.contains('pip-dot')) {
-      _pipThemeKey = e.target.getAttribute('data-t');
-      try { localStorage.setItem('pip_theme', _pipThemeKey); } catch(ex) {}
-      _renderPipContent(_pipThemeKey);
-      updateCGMPip();
-      return;
-    }
-    window.focus();
-  });
+  // 注入控制函式到 PiP window（inline onclick 呼叫，避免多重 listener 問題）
+  _pipWin._pipSetTheme = function(t) {
+    _pipThemeKey = t;
+    try { localStorage.setItem('pip_theme', t); } catch(ex) {}
+    _renderPipContent(t);
+    updateCGMPip();
+  };
+  _pipWin._pipNavEvent = function(dir) {
+    var len = _cgmCarouselItems.length;
+    if (len) { _pipCarouselIdx = (_pipCarouselIdx + dir + len) % len; _updatePipEvents(); }
+  };
 }
 
 function updateCGMPip() {
