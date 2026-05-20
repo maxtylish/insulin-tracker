@@ -7968,6 +7968,7 @@ var _pipWin = null;
 var _pipHistory = [];  // [{sgv, date}] last 60 readings (~5h)
 var _pipThemeKey = (function() { try { return localStorage.getItem('pip_theme') || 'white'; } catch(e) { return 'white'; } })();
 var _pipCarouselIdx = 0;      // PiP event carousel current index
+var _pipLastRapid = null;     // last rapid injection {dt, site} for PiP display
 
 var PIP_THEMES = {
   white:   { bg:'#ffffff', text:'#111111', sub:'#888888', ring:'#444444',
@@ -8292,6 +8293,33 @@ function _updatePipEvents() {
   try {
     var items = [];
     var today = new Date(); today.setHours(0,0,0,0);
+
+    // 速效胰島素起效倒數（三段式：待起效 / 起效中 / 作用結束）
+    if (_pipLastRapid) {
+      var _pnow    = Date.now();
+      var _ponMin  = (SITE_ALARM_MAP[_pipLastRapid.site] && SITE_ALARM_MAP[_pipLastRapid.site].def) || 20;
+      var _pinjMs  = _pipLastRapid.dt.getTime();
+      var _ponMs   = _pinjMs + _ponMin * 60000;
+      var _pendMs  = _ponMs  + 3 * 3600000;
+      var _pclrMs  = 1.5 * 3600000;
+      if (!(_pnow >= _pendMs && (_pnow - _pendMs) > _pclrMs)) {
+        var _pSite = _pipLastRapid.site || '';
+        var _pLabel = '⚡ 速效' + (_pSite ? ' · ' + _pSite : '');
+        var _pItem;
+        if (_pnow >= _pendMs) {
+          _pItem = _pLabel + ' 作用結束';
+        } else if (_pnow < _ponMs) {
+          var _pmLeft = Math.ceil((_ponMs - _pnow) / 60000);
+          _pItem = _pLabel + ' ' + _pmLeft + '分後起效';
+        } else {
+          var _premMs = _pendMs - _pnow;
+          var _prh = Math.floor(_premMs / 3600000);
+          var _prm = Math.round((_premMs % 3600000) / 60000);
+          _pItem = _pLabel + ' 剩' + (_prh > 0 ? _prh + 'h' + _prm + 'm' : _prm + 'm');
+        }
+        items.push(_pItem);
+      }
+    }
 
     // 未完成 todos
     var todos = getTodos ? getTodos() : [];
@@ -9878,15 +9906,16 @@ function _insulinBarBlock(last, durationH, color, emoji, labelText) {
     var clrMins = Math.round((nowMs - endMs) / 60000);
     var ch = Math.floor(clrMins / 60), cm = clrMins % 60;
     var clrStr = ch > 0 ? ch + '時' + cm + '分前' : cm + '分鐘前';
-    statusBadge = '<span style="font-size:.7rem;padding:1px 5px;border-radius:10px;background:#94a3b820;color:#94a3b8;font-weight:600;">已清除</span>';
+    var _expLabel = durationH <= 4 ? '作用結束' : '已清除';
+    statusBadge = '<span style="font-size:.7rem;padding:1px 5px;border-radius:10px;background:#94a3b820;color:#94a3b8;font-weight:600;">' + _expLabel + '</span>';
     metaText = onsetStr + ' 起效 · ' + siteLabel;
-    remainText = '<span style="color:#94a3b8;font-size:.78rem;">' + clrStr + '已清除</span>';
+    remainText = '<span style="color:#94a3b8;font-size:.78rem;">' + clrStr + _expLabel + '</span>';
   } else if (nowMs < onsetMs) {
-    var minsLeft = Math.min(onsetMin, Math.ceil((onsetMs - nowMs) / 60000));  // cap 防止異常大值
+    var minsLeft = Math.ceil((onsetMs - nowMs) / 60000);
     pct = Math.max(0, Math.min(100, (1 - (onsetMs - nowMs) / (onsetMin * 60000)) * 100)).toFixed(1);
-    statusBadge = '<span style="font-size:.7rem;padding:1px 5px;border-radius:10px;background:' + color + '28;color:' + color + ';font-weight:600;">起效中</span>';
+    statusBadge = '<span style="font-size:.7rem;padding:1px 5px;border-radius:10px;background:' + color + '28;color:' + color + ';font-weight:600;">待起效</span>';
     metaText = injectStr + ' 注射 · ' + siteLabel + ' · ' + onsetMin + 'min 後起效';
-    remainText = '<span style="color:#94a3b8;font-size:.78rem;">還有 <b style="color:' + color + '">' + minsLeft + ' 分</b>（' + siteLabel + '）</span>';
+    remainText = '<span style="color:#94a3b8;font-size:.78rem;">還有 <b style="color:' + color + '">' + minsLeft + ' 分</b>後起效</span>';
   } else {
     var remainMs = endMs - nowMs;
     var remainH  = remainMs / 3600000;
@@ -10002,12 +10031,18 @@ function updateBasalTimeBar() {
     var day = all[ds] || {};
     ['morning','noon','evening'].forEach(function(pid) {
       var rec = day[pid];
-      if (rec && rec.insulin && rec.time)
-        rapidCandidates.push({ dt: new Date(ds + 'T' + rec.time + ':00'), site: rec.site || SITE_DEFAULTS[pid] || '' });
+      if (rec && rec.insulin && rec.time) {
+        var _rdt = new Date(ds + 'T' + rec.time + ':00');
+        if (_rdt.getTime() <= nowMs)
+          rapidCandidates.push({ dt: _rdt, site: rec.site || SITE_DEFAULTS[pid] || '' });
+      }
     });
     (day.corrections || []).forEach(function(r) {
-      if (r.dose && r.time)
-        rapidCandidates.push({ dt: new Date(ds + 'T' + r.time + ':00'), site: r.site || '' });
+      if (r.dose && r.time) {
+        var _rdt2 = new Date(ds + 'T' + r.time + ':00');
+        if (_rdt2.getTime() <= nowMs)
+          rapidCandidates.push({ dt: _rdt2, site: r.site || '' });
+      }
     });
   }
 
@@ -10022,6 +10057,7 @@ function updateBasalTimeBar() {
   }
 
   var lastRapid = rapidCandidates.length ? rapidCandidates.reduce(function(a,b){ return a.dt > b.dt ? a : b; }) : null;
+  _pipLastRapid = lastRapid;  // share with PiP display
   var lastBasal = basalCandidates.length ? basalCandidates.reduce(function(a,b){ return a.dt > b.dt ? a : b; }) : null;
 
   var rapidHTML = lastRapid ? _insulinBarBlock(lastRapid, 3,  '#f97316', '⚡', '速效 NovoRapid') : '';
@@ -10052,20 +10088,20 @@ function updateBasalTimeBar() {
         var pct, timeStr, headerStr;
         if (isExp) {
           pct = '0';
-          timeStr = '已清除';
+          timeStr = durationH <= 4 ? '作用結束' : '已清除';
           headerStr = emoji + ' ' + shortLabel + (last.site ? ' · ' + last.site : '');
         } else if (nowMs < onsetMs) {
-          var minsLeft = Math.min(onsetMin, Math.ceil((onsetMs - nowMs) / 60000));  // cap 防止異常大值
+          var minsLeft = Math.ceil((onsetMs - nowMs) / 60000);
           pct = Math.max(0, Math.min(100, (1 - (onsetMs - nowMs) / (onsetMin * 60000)) * 100)).toFixed(1);
           timeStr = minsLeft + '分後起效';
-          headerStr = emoji + ' ' + shortLabel + ' 起效中' + (last.site ? ' · ' + last.site : '');
+          headerStr = emoji + ' ' + shortLabel + (last.site ? ' · ' + last.site : '');
         } else {
           var remainMs = endMs - nowMs;
           var rh = Math.floor(remainMs / 3600000);
           var rm = Math.round((remainMs % 3600000) / 60000);
           pct = (remainMs / (durationH * 3600000) * 100).toFixed(1);
           timeStr = rh > 0 ? (rh + 'h' + rm + 'm') : (rm + 'm');
-          headerStr = emoji + ' ' + shortLabel + (last.site ? ' · ' + last.site : '');
+          headerStr = emoji + ' ' + shortLabel + ' 起效中' + (last.site ? ' · ' + last.site : '');
         }
         return '<div class="cgm-insulin-row">'
           + '<div class="cgm-ins-header">' + headerStr + '</div>'
