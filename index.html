@@ -1621,7 +1621,7 @@
     }
     /* insulin stacked rows */
     .cgm-ins-header { font-size: .72rem; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .cgm-ins-time { font-size: 1rem; font-weight: 800; line-height: 1.15; }
+    .cgm-ins-time { font-size: .92rem; font-weight: 800; line-height: 1.15; white-space: nowrap; }
     .cgm-ins-bar-track { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.18); margin-top: 2px; }
     .cgm-ins-bar-fill { height: 3px; border-radius: 2px; transition: width .4s; }
     /* cgm events carousel */
@@ -1643,14 +1643,14 @@
     .cgm-carousel-idx { font-size: .65rem; color: rgba(255,255,255,0.4); flex-shrink: 0; }
     .cgm-main-row { display: flex; align-items: baseline; gap: 6px; line-height: 1; }
     .cgm-pip-btn {
-      margin-left: auto; background: rgba(255,255,255,0.15); border: none; color: white;
-      font-size: 1rem; cursor: pointer; border-radius: 6px; padding: 2px 7px; line-height: 1.4;
-      transition: background 0.15s; flex-shrink: 0; align-self: center;
+      background: rgba(255,255,255,0.15); border: none; color: white;
+      font-size: .82rem; cursor: pointer; border-radius: 5px; padding: 1px 6px; line-height: 1.4;
+      transition: background 0.15s; flex-shrink: 0; align-self: center; margin-left: 4px;
     }
     .cgm-pip-btn:hover { background: rgba(255,255,255,0.3); }
     .cgm-pip-btn.active { background: rgba(255,255,255,0.35); }
-    .cgm-value { font-size: 3.2rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
-    .cgm-trend { font-size: 2.2rem; font-weight: 900; line-height: 1; }
+    .cgm-value { font-size: 2.4rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
+    .cgm-trend { font-size: 1.6rem; font-weight: 900; line-height: 1; }
     .cgm-sub-row { display: flex; align-items: center; gap: 4px; margin-top: 4px; opacity: 0.85; }
     .cgm-delta { font-size: 0.88rem; font-weight: 700; }
     .cgm-sep   { font-size: 0.8rem; opacity: 0.6; margin: 0 2px; }
@@ -2295,12 +2295,12 @@
       <div class="cgm-main-row">
         <span class="cgm-value" id="cgm-value">---</span>
         <span class="cgm-trend" id="cgm-trend">→</span>
-        <button class="cgm-pip-btn" id="cgm-pip-btn" onclick="openCGMPip()" title="浮動視窗（常駐最上層）">⊡</button>
       </div>
       <div class="cgm-sub-row">
         <span class="cgm-delta" id="cgm-delta">--</span>
         <span class="cgm-sep">·</span>
         <span class="cgm-meta" id="cgm-meta">CGM 即時血糖</span>
+        <button class="cgm-pip-btn" id="cgm-pip-btn" onclick="openCGMPip()" title="浮動視窗（常駐最上層）">⊡</button>
       </div>
       <!-- Events carousel -->
       <div class="cgm-carousel" id="cgm-carousel" style="display:none;">
@@ -9740,7 +9740,7 @@ function updateBasalTimeBar() {
           var rh = Math.floor(remainMs / 3600000);
           var rm = Math.round((remainMs % 3600000) / 60000);
           pct = (remainMs / (durationH * 3600000) * 100).toFixed(1);
-          timeStr = rh > 0 ? (rh + 'h ' + rm + 'm') : (rm + 'm');
+          timeStr = rh > 0 ? (rh + 'h' + rm + 'm') : (rm + 'm');
           headerStr = emoji + ' ' + shortLabel + (last.site ? ' · ' + last.site : '');
         }
         return '<div class="cgm-insulin-row">'
