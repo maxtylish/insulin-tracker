@@ -2799,19 +2799,19 @@ alter table user_todos enable row level security;
         <span class="mpt-label">🌅 早餐</span>
         <input type="number" id="mp-cir-breakfast"    min="1" max="30"  step="0.5" value="7"   oninput="">
         <input type="number" id="mp-isf-breakfast"    min="10" max="300" step="1"  value="110" oninput="">
-        <input type="number" id="mp-target-breakfast" min="80" max="250" step="1"  value="130" oninput="">
+        <input type="number" id="mp-target-breakfast" min="80" max="250" step="1"  value="150" oninput="">
       </div>
       <div class="mpt-row">
         <span class="mpt-label">☀️ 午餐</span>
         <input type="number" id="mp-cir-lunch"    min="1" max="30"  step="0.5" value="10"  oninput="">
         <input type="number" id="mp-isf-lunch"    min="10" max="300" step="1"  value="110" oninput="">
-        <input type="number" id="mp-target-lunch" min="80" max="250" step="1"  value="150" oninput="">
+        <input type="number" id="mp-target-lunch" min="80" max="250" step="1"  value="160" oninput="">
       </div>
       <div class="mpt-row">
         <span class="mpt-label">🌙 晚餐</span>
         <input type="number" id="mp-cir-dinner"    min="1" max="30"  step="0.5" value="10"  oninput="">
         <input type="number" id="mp-isf-dinner"    min="10" max="300" step="1"  value="110" oninput="">
-        <input type="number" id="mp-target-dinner" min="80" max="250" step="1"  value="140" oninput="">
+        <input type="number" id="mp-target-dinner" min="80" max="250" step="1"  value="170" oninput="">
       </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap;">
@@ -6543,9 +6543,11 @@ function confirmSaveMealParams() {
   });
   settings.mealParams = mp;
   saveSettingsToStorage();
+  // ⚠️ 獨立備份：insulin_meal_params 與 insulin_settings 解耦，避免整包設定被清除時重置
+  try { localStorage.setItem('insulin_meal_params', JSON.stringify(mp)); } catch(e) {}
   var confirmRow = document.getElementById('mp-confirm-row');
   if (confirmRow) confirmRow.style.display = 'none';
-  showToast('✅ 餐前參數已儲存！');
+  showToast('✅ 餐前參數已儲存！（已加密備份）');
 }
 
 function loadSettingsUI() {
@@ -7349,20 +7351,19 @@ function init() {
 // ══════════════════════════════════════════
 const CALC_MEAL_PRESETS = {
   breakfast: {
-    label: '早餐', cir: 7, isf: 110, target: 130,
+    label: '早餐', cir: 7, isf: 110, target: 150,
     notes: ['施打部位 >> 肚子', '施打完 15 分鐘後進食'],
   },
   lunch: {
-    label: '午餐', cir: 10, isf: 110, target: 150,
+    label: '午餐', cir: 10, isf: 110, target: 160,
     notes: [
-      '施打部位 >> 手臂',
-      '施打完 20 分鐘後進食',
-      '因為 11:30 開始吃，若當下血糖低於 130，打完胰島素後先補 1 顆葡萄糖片',
-      '週四體育課 >>> 打手臂後，低於 150 時先補充 2 顆糖，預防性課間低血糖；低於 170 時先補充 1 顆糖，預防性課間低血糖',
+      '施打部位 >> 手臂，施打完 20 分鐘後進食（11:30 開始吃）',
+      '📊 血糖建議劑量：>250 → 5U｜200~250 → 4.5U｜<200 → 4.5U + 補 1 顆糖（2.5克碳水+水）',
+      '週四體育課 >>> 打手臂後，低於 150 時先補充 2 顆糖；低於 170 時先補充 1 顆糖（預防課間低血糖）',
     ],
   },
   dinner: {
-    label: '晚餐', cir: 10, isf: 110, target: 140,
+    label: '晚餐', cir: 10, isf: 110, target: 170,
     notes: [
       '施打部位 >> 左大腿',
       '施打完 30~45 分鐘後進食',
@@ -7438,6 +7439,9 @@ const CALC_MEAL_SETS = {
     },
   ],
   lunch: [
+    { label: '🍱 學校午餐（白飯×1.4）',
+      items: [{ slot: 1, food: 'white_rice', qty: 1.4 }]
+    },
     { label: '🍔 麥當勞組合1（鱈魚堡＋玉米杯＋牛奶）',
       items: [{ slot: 'other', name: '麥當勞組合1', carb: 66 }]
     },
@@ -7479,7 +7483,13 @@ function _fmtTimeAgo(mins) {
 // ── Dynamic meal preset (reads settings.mealParams with fallback) ───────
 function getMealPreset(meal) {
   var base = CALC_MEAL_PRESETS[meal] || CALC_MEAL_PRESETS.breakfast;
-  var mp   = settings.mealParams && settings.mealParams[meal];
+  // ⚠️ 優先讀獨立備份 insulin_meal_params（與 insulin_settings 解耦，防止版本更新重置）
+  var savedMp = null;
+  try {
+    var raw = localStorage.getItem('insulin_meal_params');
+    if (raw) savedMp = JSON.parse(raw);
+  } catch(e) {}
+  var mp = (savedMp && savedMp[meal]) || (settings.mealParams && settings.mealParams[meal]);
   if (!mp) return base;
   return Object.assign({}, base, {
     cir:    (mp.cir    != null && !isNaN(mp.cir))    ? mp.cir    : base.cir,
