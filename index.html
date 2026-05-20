@@ -1619,13 +1619,28 @@
     .cgm-insulin-row + .cgm-insulin-row {
       border-top: 1px solid rgba(255,255,255,0.13); margin-top: 2px; padding-top: 6px;
     }
-    .cgm-ins-top { display: flex; align-items: center; gap: 5px; }
-    .cgm-ins-label { font-size: .78rem; font-weight: 700; color: rgba(255,255,255,0.95); flex: 1; min-width: 0; white-space: nowrap; }
-    .cgm-ins-time { font-size: .85rem; font-weight: 800; flex-shrink: 0; }
-    .cgm-ins-bar { height: 4px; border-radius: 2px; overflow: hidden; }
-    .cgm-ins-bar-track { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.18); }
-    .cgm-ins-bar-fill { height: 4px; border-radius: 2px; transition: width .4s; }
-    .cgm-ins-status { font-size: .68rem; color: rgba(255,255,255,0.55); }
+    /* insulin stacked rows */
+    .cgm-ins-header { font-size: .72rem; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cgm-ins-time { font-size: 1rem; font-weight: 800; line-height: 1.15; }
+    .cgm-ins-bar-track { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.18); margin-top: 2px; }
+    .cgm-ins-bar-fill { height: 3px; border-radius: 2px; transition: width .4s; }
+    /* cgm events carousel */
+    .cgm-carousel {
+      display: flex; align-items: center; gap: 4px;
+      margin-top: 5px; min-width: 0;
+    }
+    .cgm-carousel-text {
+      flex: 1; font-size: .72rem; color: rgba(255,255,255,0.75);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      min-width: 0;
+    }
+    .cgm-carousel-btn {
+      background: none; border: none; color: rgba(255,255,255,0.5);
+      font-size: .85rem; cursor: pointer; padding: 0 2px; line-height: 1;
+      flex-shrink: 0; transition: color .15s;
+    }
+    .cgm-carousel-btn:hover { color: rgba(255,255,255,0.95); }
+    .cgm-carousel-idx { font-size: .65rem; color: rgba(255,255,255,0.4); flex-shrink: 0; }
     .cgm-main-row { display: flex; align-items: baseline; gap: 6px; line-height: 1; }
     .cgm-pip-btn {
       margin-left: auto; background: rgba(255,255,255,0.15); border: none; color: white;
@@ -2286,6 +2301,13 @@
         <span class="cgm-delta" id="cgm-delta">--</span>
         <span class="cgm-sep">·</span>
         <span class="cgm-meta" id="cgm-meta">CGM 即時血糖</span>
+      </div>
+      <!-- Events carousel -->
+      <div class="cgm-carousel" id="cgm-carousel" style="display:none;">
+        <button class="cgm-carousel-btn" onclick="cgmCarouselNav(-1)">&#8249;</button>
+        <span class="cgm-carousel-text" id="cgm-carousel-text"></span>
+        <span class="cgm-carousel-idx" id="cgm-carousel-idx"></span>
+        <button class="cgm-carousel-btn" onclick="cgmCarouselNav(1)">&#8250;</button>
       </div>
     </div>
     <!-- Right: Insulin panel (populated by updateBasalTimeBar) -->
@@ -4087,6 +4109,7 @@ function updateCGMWidget(entry) {
     } else { hideBanner('hyper'); }
   } else { hideBanner('hyper'); }
   updateBasalTimeBar();
+  buildCgmCarousel();
 }
 
 // ── Push notification helpers ──────────────────────────
@@ -5325,6 +5348,7 @@ function loadDayData() {
   // Load snack sections
   SNACK_SECTIONS.forEach(s => renderSnackSection(s.id, dayData[s.id] || []));
   updateBasalTimeBar();
+  buildCgmCarousel();
 }
 
 function savePeriod(periodId) {
@@ -9570,6 +9594,81 @@ function _insulinBarBlock(last, durationH, color, emoji, labelText) {
     + '</div>'
     + '</div>';
 }
+// ── CGM 輪播事項 ─────────────────────────────────────────────
+var _cgmCarouselItems = [];
+var _cgmCarouselIdx   = 0;
+
+function buildCgmCarousel() {
+  var items = [];
+  var today = new Date(); today.setHours(0,0,0,0);
+
+  // 1. 未完成 todos (有期限的優先，其次無期限)
+  var todos = getTodos ? getTodos() : [];
+  var pending = todos.filter(function(t){ return !t.done; });
+  // sort: with dueDate first (ascending), then no date
+  pending.sort(function(a,b){
+    if (a.dueDate && b.dueDate) return a.dueDate < b.dueDate ? -1 : 1;
+    if (a.dueDate) return -1;
+    if (b.dueDate) return 1;
+    return 0;
+  });
+  pending.slice(0, 5).forEach(function(t) {
+    var icon = t.category === 'health' ? '🩺' : '📋';
+    var txt  = icon + ' ' + t.title;
+    if (t.dueDate) {
+      var d = new Date(t.dueDate + 'T00:00:00');
+      var diff = Math.round((d - today) / 86400000);
+      txt += diff === 0 ? '（今天）' : diff === 1 ? '（明天）' : '（' + (d.getMonth()+1) + '/' + d.getDate() + '）';
+    }
+    items.push(txt);
+  });
+
+  // 2. 複診預約 (未到的)
+  var meds = getMedications ? getMedications() : [];
+  meds.forEach(function(rx) {
+    if (!rx.nextAppointment) return;
+    var d = new Date(rx.nextAppointment + 'T00:00:00');
+    if (d < today) return;
+    var diff = Math.round((d - today) / 86400000);
+    var dateStr = diff === 0 ? '今天' : diff === 1 ? '明天' : (d.getMonth()+1) + '/' + d.getDate();
+    var loc = [rx.apptClinic, rx.apptRoom].filter(Boolean).join(' ');
+    items.push('🏥 複診 ' + dateStr + (loc ? ' · ' + loc : ''));
+  });
+
+  // 3. 領藥提醒 (nextRefill 未到)
+  meds.forEach(function(rx) {
+    if (!rx.nextRefill) return;
+    var d = new Date(rx.nextRefill + 'T00:00:00');
+    var diff = Math.round((d - today) / 86400000);
+    if (diff < 0 || diff > 14) return; // 只顯示 14 天內
+    var dateStr = diff === 0 ? '今天' : diff === 1 ? '明天' : diff + '天後';
+    items.push('💊 領藥 ' + dateStr);
+  });
+
+  _cgmCarouselItems = items;
+  if (_cgmCarouselIdx >= items.length) _cgmCarouselIdx = 0;
+  _renderCgmCarousel();
+}
+
+function _renderCgmCarousel() {
+  var el   = document.getElementById('cgm-carousel');
+  var txt  = document.getElementById('cgm-carousel-text');
+  var idx  = document.getElementById('cgm-carousel-idx');
+  if (!el) return;
+  if (!_cgmCarouselItems.length) { el.style.display = 'none'; return; }
+  el.style.display = 'flex';
+  txt.textContent  = _cgmCarouselItems[_cgmCarouselIdx];
+  idx.textContent  = (_cgmCarouselIdx + 1) + '/' + _cgmCarouselItems.length;
+}
+
+function cgmCarouselNav(dir) {
+  var len = _cgmCarouselItems.length;
+  if (!len) return;
+  _cgmCarouselIdx = (_cgmCarouselIdx + dir + len) % len;
+  _renderCgmCarousel();
+}
+// ─────────────────────────────────────────────────────────────
+
 function updateBasalTimeBar() {
   var bar = document.getElementById('basal-time-bar');
   if (!bar) return;
@@ -9630,33 +9729,29 @@ function updateBasalTimeBar() {
         var onsetMs  = injectMs + onsetMin * 60000;
         var endMs    = onsetMs  + durationH * 3600000;
         if (nowMs >= endMs) return '';
-        var pct, timeStr, statusStr;
+        var pct, timeStr, headerStr;
         if (nowMs < onsetMs) {
           var minsLeft = Math.ceil((onsetMs - nowMs) / 60000);
           pct = Math.max(0, Math.min(100, (1 - (onsetMs - nowMs) / (onsetMin * 60000)) * 100)).toFixed(1);
           timeStr = minsLeft + '分後起效';
-          statusStr = '起效中';
+          headerStr = emoji + ' ' + shortLabel + ' 起效中';
         } else {
           var remainMs = endMs - nowMs;
           var rh = Math.floor(remainMs / 3600000);
           var rm = Math.round((remainMs % 3600000) / 60000);
           pct = (remainMs / (durationH * 3600000) * 100).toFixed(1);
           timeStr = rh > 0 ? (rh + 'h ' + rm + 'm') : (rm + 'm');
-          statusStr = last.site || '';
+          headerStr = emoji + ' ' + shortLabel + (last.site ? ' · ' + last.site : '');
         }
         return '<div class="cgm-insulin-row">'
-          + '<div class="cgm-ins-top">'
-          + '<span style="font-size:.85rem;">' + emoji + '</span>'
-          + '<span class="cgm-ins-label">' + shortLabel + '</span>'
-          + '<span class="cgm-ins-time" style="color:' + color + ';">' + timeStr + '</span>'
-          + '</div>'
-          + (statusStr ? '<div class="cgm-ins-status">' + statusStr + '</div>' : '')
+          + '<div class="cgm-ins-header">' + headerStr + '</div>'
+          + '<div class="cgm-ins-time" style="color:' + color + ';">' + timeStr + '</div>'
           + '<div class="cgm-ins-bar-track"><div class="cgm-ins-bar-fill" style="background:' + color + ';width:' + pct + '%;"></div></div>'
           + '</div>';
       }
       var pr = lastRapid ? _compactInsRow(lastRapid, 3,  '#fb923c', '⚡', '速效') : '';
       var pb = lastBasal ? _compactInsRow(lastBasal, 42, '#c084fc', '💉', '長效') : '';
-      panel.innerHTML = [pr, pb].filter(Boolean).join('');
+      panel.innerHTML = [pr, pb].filter(Boolean).join('<div style="height:1px;background:rgba(255,255,255,0.12);margin:4px 0;"></div>');
     }
   }
 
