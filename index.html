@@ -15,23 +15,55 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     :root {
-      --bg: #f0f4f8;
-      --card: #ffffff;
-      --primary: #3b82f6;
-      --primary-dark: #2563eb;
-      --text: #1e293b;
-      --text-muted: #64748b;
-      --border: #e2e8f0;
-      --normal: #22c55e;
-      --normal-bg: #f0fdf4;
-      --warn: #f59e0b;
-      --warn-bg: #fffbeb;
-      --danger: #ef4444;
-      --danger-bg: #fef2f2;
-      --low: #8b5cf6;
-      --low-bg: #f5f3ff;
+      --bg: #f4f6f9;       --card: #ffffff;
+      --primary: #5b8db8;  --primary-dark: #4a7aa0;
+      --text: #1e2d3d;     --text-muted: #5a7080;
+      --border: #dde3ed;   --input-bg: #ffffff;
+      --normal: #22c55e;   --normal-bg: #f0fdf4;
+      --warn: #f59e0b;     --warn-bg: #fffbeb;
+      --danger: #ef4444;   --danger-bg: #fef2f2;
+      --low: #8b5cf6;      --low-bg: #f5f3ff;
+      --c-morning: #c49a3c;  --c-morning-bg: #fffbf2;
+      --c-noon:    #3a9e72;  --c-noon-bg:    #f0faf5;
+      --c-evening: #c0672a;  --c-evening-bg: #fff6f0;
+      --c-bedtime: #7a6bb5;  --c-bedtime-bg: #f4f0ff;
       --radius: 12px;
       --shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+    body[data-skin="cold-dark"] {
+      --bg: #1a2433;       --card: #243347;
+      --primary: #7baed0;  --primary-dark: #5a9ac0;
+      --text: #c8d8e8;     --text-muted: #8aaec8;
+      --border: #2c3e52;   --input-bg: #1e2d40;
+      --normal: #4ade80;   --normal-bg: #0f2318;
+      --warn: #fbbf24;     --warn-bg: #2a2208;
+      --danger: #f87171;   --danger-bg: #2a1010;
+      --low: #a78bfa;      --low-bg: #1a1630;
+      --c-morning-bg: #2a2510; --c-noon-bg: #0f2318;
+      --c-evening-bg: #2a1508; --c-bedtime-bg: #1a1630;
+      --shadow: 0 2px 12px rgba(0,0,0,0.3);
+    }
+    body[data-skin="warm-light"] {
+      --bg: #faf6f2;       --card: #ffffff;
+      --primary: #b5703a;  --primary-dark: #9a5c2a;
+      --text: #2c1f14;     --text-muted: #7a5a40;
+      --border: #e8d9ca;   --input-bg: #ffffff;
+      --c-morning-bg: #fffbf0; --c-noon-bg: #f2fbf5;
+      --c-evening-bg: #fff5ee; --c-bedtime-bg: #f5f0ff;
+      --shadow: 0 2px 12px rgba(100,60,20,0.09);
+    }
+    body[data-skin="warm-dark"] {
+      --bg: #1e1610;       --card: #2c2018;
+      --primary: #d4925a;  --primary-dark: #c07a40;
+      --text: #e8d8c8;     --text-muted: #b0855a;
+      --border: #3a2a18;   --input-bg: #261c10;
+      --normal: #4ade80;   --normal-bg: #0e2016;
+      --warn: #fbbf24;     --warn-bg: #2a2208;
+      --danger: #f87171;   --danger-bg: #2a1010;
+      --low: #c4b5fd;      --low-bg: #1c1428;
+      --c-morning-bg: #2a2208; --c-noon-bg: #0e2016;
+      --c-evening-bg: #281508; --c-bedtime-bg: #1c1428;
+      --shadow: 0 2px 12px rgba(0,0,0,0.35);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -85,9 +117,31 @@
       #header-version { font-size: 0.62rem; }
     }
 
+    /* ── Skin Switcher ── */
+    #skin-switcher {
+      display:flex; flex-direction:column; align-items:center;
+      justify-content:center; gap:3px;
+    }
+    .sk-dots { display:flex; gap:6px; align-items:center; }
+    .sk-dot {
+      width:14px; height:14px; border-radius:50%;
+      border:2px solid transparent;
+      cursor:pointer; padding:0; outline:none;
+      transition:transform .15s, box-shadow .15s;
+    }
+    .sk-dot.active {
+      box-shadow:0 0 0 2px var(--card), 0 0 0 4px var(--primary);
+      transform:scale(1.2);
+    }
+    .sk-dot:hover:not(.active) { transform:scale(1.12); }
+    #sk-label {
+      font-size:0.58rem; opacity:0.55; letter-spacing:0.3px;
+      color:var(--text-muted); white-space:nowrap;
+    }
+
     /* ── Nav Tabs ── */
     nav {
-      background: white;
+      background: var(--card);
       display: flex;
       border-bottom: 1px solid var(--border);
       position: sticky;
@@ -114,8 +168,8 @@
     nav button .nav-ico { font-size: 1.1rem; line-height: 1.3; }
     /* Dose rounding hint */
     .calc-round-hint { margin: 10px 0; font-size: 0.82rem; border: 1.5px solid var(--border); border-radius: 10px; overflow: hidden; }
-    .crh-title { padding: 7px 12px; background: #f8fafc; font-weight: 700; font-size: 0.84rem; border-bottom: 1px solid var(--border); color: var(--text); }
-    .crh-row { display: flex; align-items: center; gap: 8px; padding: 5px 12px; color: var(--text-muted); border-bottom: 1px solid #f1f5f9; }
+    .crh-title { padding: 7px 12px; background: var(--bg); font-weight: 700; font-size: 0.84rem; border-bottom: 1px solid var(--border); color: var(--text); }
+    .crh-row { display: flex; align-items: center; gap: 8px; padding: 5px 12px; color: var(--text-muted); border-bottom: 1px solid var(--border); }
     .crh-row:last-child { border-bottom: none; }
     .crh-row.crh-active-down   { background: #eff6ff; color: #1d4ed8; font-weight: 700; }
     .crh-row.crh-active-mid    { background: #f5f3ff; color: #6d28d9; font-weight: 700; }
@@ -129,7 +183,7 @@
       border-bottom-color: var(--primary);
       font-weight: 700;
     }
-    nav button:hover { background: #f8fafc; }
+    nav button:hover { background: var(--bg); }
 
     /* ── Page Container ── */
     .page { display: none; padding: 16px; max-width: 560px; margin: 0 auto; }
@@ -137,7 +191,7 @@
 
     /* ── Date Selector ── */
     .date-bar {
-      background: white;
+      background: var(--card);
       border-radius: var(--radius);
       padding: 12px 16px;
       display: flex;
@@ -175,7 +229,7 @@
 
     /* ── Period Card ── */
     .period-card {
-      background: white;
+      background: var(--card);
       border-radius: var(--radius);
       padding: 16px;
       margin-bottom: 12px;
@@ -200,10 +254,10 @@
       position: absolute; width: 5px; left: 0; border-radius: 3px;
       background: rgba(99,102,241,0.45); min-height: 28px;
     }
-    .period-card.morning { border-left-color: #f59e0b; }
-    .period-card.noon    { border-left-color: #10b981; }
-    .period-card.evening { border-left-color: #f97316; }
-    .period-card.bedtime { border-left-color: #6366f1; }
+    .period-card.morning { border-left-color: var(--c-morning); }
+    .period-card.noon    { border-left-color: var(--c-noon); }
+    .period-card.evening { border-left-color: var(--c-evening); }
+    .period-card.bedtime { border-left-color: var(--c-bedtime); }
 
     .period-header {
       display: flex;
@@ -226,10 +280,10 @@
       justify-content: center;
       font-size: 1rem;
     }
-    .morning  .period-icon { background: #fff7ed; }
-    .noon     .period-icon { background: #ecfdf5; }
-    .evening  .period-icon { background: #fff7ed; }
-    .bedtime  .period-icon { background: #eef2ff; }
+    .morning  .period-icon { background: var(--c-morning-bg); }
+    .noon     .period-icon { background: var(--c-noon-bg); }
+    .evening  .period-icon { background: var(--c-evening-bg); }
+    .bedtime  .period-icon { background: var(--c-bedtime-bg); }
 
     .period-time-input {
       display: flex;
@@ -326,7 +380,7 @@
 
     /* ── Supplemental Records (補打 / 補糖) ── */
     .suppl-section {
-      background: white;
+      background: var(--card);
       border-radius: var(--radius);
       padding: 16px;
       margin-bottom: 12px;
@@ -2250,8 +2304,16 @@
 <div id="scroll-track"><div id="scroll-thumb"></div></div>
 
 <header>
-  <!-- 左側留空，用來平衡右側寬度 -->
-  <div></div>
+  <!-- 左側：Skin 切換器 -->
+  <div id="skin-switcher">
+    <div class="sk-dots">
+      <button class="sk-dot" onclick="setSkin('cold-light')" data-sk="cold-light" title="冷色·淺色" style="background:#5b8db8;"></button>
+      <button class="sk-dot" onclick="setSkin('cold-dark')" data-sk="cold-dark" title="冷色·深色" style="background:#243347;border-color:#7baed0;"></button>
+      <button class="sk-dot" onclick="setSkin('warm-light')" data-sk="warm-light" title="暖色·淺色" style="background:#c4844a;"></button>
+      <button class="sk-dot" onclick="setSkin('warm-dark')" data-sk="warm-dark" title="暖色·深色" style="background:#2c2018;border-color:#d4925a;"></button>
+    </div>
+    <div id="sk-label"></div>
+  </div>
   <!-- 中央標題（自動置中） -->
   <div style="text-align:center;">
     <h1>💉 胰島素紀錄表</h1>
@@ -7324,7 +7386,28 @@ function importUserId() {
 // ════════════════════════════════
 //  INIT
 // ════════════════════════════════
+// ── Skin System ──────────────────────────────────────────────────────────
+var SKIN_LABELS = {
+  'cold-light': '冷·淺', 'cold-dark': '冷·深',
+  'warm-light': '暖·淺', 'warm-dark': '暖·深'
+};
+function setSkin(name) {
+  document.body.dataset.skin = name;
+  try { localStorage.setItem('app_skin', name); } catch(e) {}
+  document.querySelectorAll('.sk-dot').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.sk === name);
+  });
+  var lbl = document.getElementById('sk-label');
+  if (lbl) lbl.textContent = SKIN_LABELS[name] || '';
+}
+function initSkin() {
+  var saved = 'cold-light';
+  try { saved = localStorage.getItem('app_skin') || 'cold-light'; } catch(e) {}
+  setSkin(saved);
+}
+
 function init() {
+  initSkin();           // apply saved skin before render
   initSupabase();   // ← 每次載入頁面都自動連線
   buildPeriodCards();
   restoreCardStates();
