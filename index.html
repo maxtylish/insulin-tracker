@@ -9651,7 +9651,10 @@ function _insulinBarBlock(last, durationH, color, emoji, labelText) {
   var injectMs = last.dt.getTime();
   var onsetMs  = injectMs + onsetMin * 60000;
   var endMs    = onsetMs  + durationH * 3600000;
-  if (nowMs >= endMs) return '';
+  var isExpired = nowMs >= endMs;
+  // 過期後仍顯示「已清除」，速效 1.5h、長效 21h 後才真正隱藏
+  var clearWindowMs = Math.min(durationH * 0.5, 24) * 3600000;
+  if (isExpired && (nowMs - endMs) > clearWindowMs) return '';
 
   var injectStr = last.dt.getHours() + ':' + String(last.dt.getMinutes()).padStart(2,'0');
   var onsetDT   = new Date(onsetMs);
@@ -9663,7 +9666,15 @@ function _insulinBarBlock(last, durationH, color, emoji, labelText) {
 
   var statusBadge, metaText, remainText, pct;
 
-  if (nowMs < onsetMs) {
+  if (isExpired) {
+    pct = '0';
+    var clrMins = Math.round((nowMs - endMs) / 60000);
+    var ch = Math.floor(clrMins / 60), cm = clrMins % 60;
+    var clrStr = ch > 0 ? ch + '時' + cm + '分前' : cm + '分鐘前';
+    statusBadge = '<span style="font-size:.7rem;padding:1px 5px;border-radius:10px;background:#94a3b820;color:#94a3b8;font-weight:600;">已清除</span>';
+    metaText = onsetStr + ' 起效 · ' + siteLabel;
+    remainText = '<span style="color:#94a3b8;font-size:.78rem;">' + clrStr + '已清除</span>';
+  } else if (nowMs < onsetMs) {
     var minsLeft = Math.ceil((onsetMs - nowMs) / 60000);
     pct = Math.max(0, Math.min(100, (1 - (onsetMs - nowMs) / (onsetMin * 60000)) * 100)).toFixed(1);
     statusBadge = '<span style="font-size:.7rem;padding:1px 5px;border-radius:10px;background:' + color + '28;color:' + color + ';font-weight:600;">起效中</span>';
@@ -9828,9 +9839,15 @@ function updateBasalTimeBar() {
         var injectMs = last.dt.getTime();
         var onsetMs  = injectMs + onsetMin * 60000;
         var endMs    = onsetMs  + durationH * 3600000;
-        if (nowMs >= endMs) return '';
+        var isExp = nowMs >= endMs;
+        var clrWinMs = Math.min(durationH * 0.5, 24) * 3600000;
+        if (isExp && (nowMs - endMs) > clrWinMs) return '';
         var pct, timeStr, headerStr;
-        if (nowMs < onsetMs) {
+        if (isExp) {
+          pct = '0';
+          timeStr = '已清除';
+          headerStr = emoji + ' ' + shortLabel + (last.site ? ' · ' + last.site : '');
+        } else if (nowMs < onsetMs) {
           var minsLeft = Math.ceil((onsetMs - nowMs) / 60000);
           pct = Math.max(0, Math.min(100, (1 - (onsetMs - nowMs) / (onsetMin * 60000)) * 100)).toFixed(1);
           timeStr = minsLeft + '分後起效';
@@ -9845,7 +9862,7 @@ function updateBasalTimeBar() {
         }
         return '<div class="cgm-insulin-row">'
           + '<div class="cgm-ins-header">' + headerStr + '</div>'
-          + '<div class="cgm-ins-time" style="color:' + color + ';">' + timeStr + '</div>'
+          + '<div class="cgm-ins-time" style="color:' + (isExp ? 'rgba(255,255,255,0.4)' : color) + ';">' + timeStr + '</div>'
           + '<div class="cgm-ins-bar-track"><div class="cgm-ins-bar-fill" style="background:' + color + ';width:' + pct + '%;"></div></div>'
           + '</div>';
       }
