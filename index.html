@@ -2008,16 +2008,38 @@
     .vial-expiry-warn { font-size:.72rem; color:#f59e0b; font-weight:700; margin-top:3px; }
     .vial-expiry-crit { font-size:.72rem; color:#ef4444; font-weight:700; margin-top:3px; }
     /* 停用的胰島素 */
-    .vial-item.vial-inactive { opacity:0.42; }
+    .vial-item.vial-inactive {
+      background: var(--bg);
+      border-left-color: #9ca3af !important;
+      opacity: 0.7;
+    }
+    .vial-item.vial-inactive .vial-name { color: var(--text-muted); }
     .vial-item.vial-inactive .vial-expiry-crit,
-    .vial-item.vial-inactive .vial-expiry-warn { color:var(--text-muted) !important; font-weight:600; }
-    /* 使用中 toggle */
-    .vial-active-toggle { display:flex; align-items:center; gap:4px; cursor:pointer;
-      font-size:.72rem; color:var(--text-muted); font-weight:600; user-select:none;
-      padding:2px 7px; border-radius:20px; border:1px solid var(--border);
-      transition:background .15s, color .15s; }
-    .vial-active-toggle.is-active { background:var(--primary); color:#fff; border-color:var(--primary); }
-    .vial-active-toggle input { display:none; }
+    .vial-item.vial-inactive .vial-expiry-warn,
+    .vial-item.vial-inactive .vial-expiry-ok { color:var(--text-muted) !important; font-weight:500; }
+    /* 停用 badge */
+    .vial-disabled-badge {
+      font-size:.68rem; font-weight:700; padding:1px 7px;
+      border-radius:20px; background:#e5e7eb; color:#6b7280;
+      border:1px solid #d1d5db; letter-spacing:.2px;
+    }
+    body[data-skin='cold-dark'] .vial-disabled-badge,
+    body[data-skin='warm-dark'] .vial-disabled-badge {
+      background:#374151; color:#9ca3af; border-color:#4b5563;
+    }
+    /* 重新啟用 / 停用 按鈕 */
+    .vial-deactivate-btn {
+      font-size:.72rem; padding:3px 10px; border-radius:6px;
+      border:1px solid var(--border); background:var(--card);
+      color:var(--text-muted); cursor:pointer; margin-left:auto;
+    }
+    .vial-deactivate-btn:hover { background:#fee2e2; color:#dc2626; border-color:#fca5a5; }
+    .vial-reactivate-btn {
+      font-size:.72rem; padding:3px 10px; border-radius:6px;
+      border:1px solid var(--primary); background:var(--primary);
+      color:#fff; cursor:pointer; margin-left:auto;
+    }
+    .vial-reactivate-btn:hover { opacity:.85; }
     .vial-actions { display:flex; gap:6px; margin-top:8px; align-items:center; }
     .vial-btn { font-size:.75rem; padding:4px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); cursor:pointer; }
     .vial-btn:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
@@ -9035,18 +9057,20 @@ function _vialItemHTML(v, idx, isEdit) {
       + '<div class="vial-actions">'
       +   '<button class="vial-btn primary" data-vid="' + v.id + '" onclick="saveVial(this.dataset.vid)">💾 儲存</button>'
       +   '<button class="vial-btn" data-vid="' + v.id + '" onclick="cancelEditVial(this.dataset.vid)">取消</button>'
-      +   '<label class="vial-active-toggle' + (v.active === false ? '' : ' is-active') + '" onclick="toggleVialActive(\'' + v.id + '\')" title="' + (v.active === false ? '點擊啟用' : '點擊停用') + '">'
-      +     '<input type="checkbox"' + (v.active === false ? '' : ' checked') + '>'
-      +     (v.active === false ? '⏸ 停用' : '✓ 使用中')
-      +   '</label>'
+      +   (v.active === false
+           ? '<button class="vial-reactivate-btn" data-vid="' + v.id + '" onclick="toggleVialActive(this.dataset.vid)">▶ 重新啟用</button>'
+           : '<button class="vial-deactivate-btn" data-vid="' + v.id + '" onclick="toggleVialActive(this.dataset.vid)">停用</button>')
       + '</div></div>';
   } else {
     var mfgDisp    = v.mfgYM ? v.mfgYM.replace('-', '/') : '—';
     var noteHtml   = v.note ? '<div class="vial-note-view">📝 ' + v.note + '</div>' : '';
     var unopenDisp = unopened ? '📋 未開封到期 ' + unopened : '';
     var inactiveCls = v.active === false ? ' vial-inactive' : '';
+    var inactiveBadge = v.active === false
+      ? ' <span class="vial-disabled-badge">⏸ 已停用</span>' : '';
+    var titleWithBadge = title.replace('</div>', inactiveBadge + '</div>');
     return '<div class="vial-item vtype-' + v.type + inactiveCls + '" id="vial-item-' + v.id + '">'
-      + title
+      + titleWithBadge
       + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:.72rem;margin-bottom:5px;">'
       + '<div><div style="color:var(--text-muted);font-weight:600;">製造日期</div><div>' + mfgDisp + '</div>'
       + (unopenDisp ? '<div style="color:var(--primary);font-size:.68rem;margin-top:3px;">' + unopenDisp + '</div>' : '')
@@ -9060,10 +9084,9 @@ function _vialItemHTML(v, idx, isEdit) {
       + '<div class="vial-actions">'
       +   '<button class="vial-btn" data-vid="' + v.id + '" onclick="editVial(this.dataset.vid)">✏️ 編輯</button>'
       +   '<button class="vial-btn danger" data-vid="' + v.id + '" onclick="deleteVial(this.dataset.vid)">🗑 刪除</button>'
-      +   '<label class="vial-active-toggle' + (v.active === false ? '' : ' is-active') + '" onclick="toggleVialActive(\'' + v.id + '\')" title="' + (v.active === false ? '點擊啟用' : '點擊停用') + '">'
-      +     '<input type="checkbox"' + (v.active === false ? '' : ' checked') + '>'
-      +     (v.active === false ? '⏸ 停用' : '✓ 使用中')
-      +   '</label>'
+      +   (v.active === false
+           ? '<button class="vial-reactivate-btn" data-vid="' + v.id + '" onclick="toggleVialActive(this.dataset.vid)">▶ 重新啟用</button>'
+           : '<button class="vial-deactivate-btn" data-vid="' + v.id + '" onclick="toggleVialActive(this.dataset.vid)">停用</button>')
       + '</div></div>';
   }
 }
