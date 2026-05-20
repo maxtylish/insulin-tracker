@@ -5431,6 +5431,11 @@ function saveDayData() {
     const time    = document.getElementById(p.id + '-time').value;
     const siteSel = document.getElementById(p.id + '-site');
     const site    = siteSel ? siteSel.value : (SITE_DEFAULTS[p.id] || '');
+    // Guard: if this period has no time entered (user didn't touch it),
+    // preserve any existing record that already has real data.
+    // Prevents global save from wiping bedtime (Tresiba) records accidentally.
+    const existing = all[date][p.id];
+    if (!time && existing && existing.time) return;
     all[date][p.id] = {
       time:    (bg || insulin) ? time : '',
       bg, insulin, note, site,
