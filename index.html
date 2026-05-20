@@ -9793,11 +9793,11 @@ function _insulinBarBlock(last, durationH, color, emoji, labelText) {
     metaText = onsetStr + ' 起效 · ' + siteLabel;
     remainText = '<span style="color:#94a3b8;font-size:.78rem;">' + clrStr + '已清除</span>';
   } else if (nowMs < onsetMs) {
-    var minsLeft = Math.ceil((onsetMs - nowMs) / 60000);
+    var minsLeft = Math.min(onsetMin, Math.ceil((onsetMs - nowMs) / 60000));  // cap 防止異常大值
     pct = Math.max(0, Math.min(100, (1 - (onsetMs - nowMs) / (onsetMin * 60000)) * 100)).toFixed(1);
     statusBadge = '<span style="font-size:.7rem;padding:1px 5px;border-radius:10px;background:' + color + '28;color:' + color + ';font-weight:600;">起效中</span>';
     metaText = injectStr + ' 注射 · ' + siteLabel + ' · ' + onsetMin + 'min 後起效';
-    remainText = '<span style="color:#94a3b8;font-size:.78rem;">還有 <b style="color:' + color + '">' + minsLeft + ' 分</b>開始</span>';
+    remainText = '<span style="color:#94a3b8;font-size:.78rem;">還有 <b style="color:' + color + '">' + minsLeft + ' 分</b>（' + siteLabel + '）</span>';
   } else {
     var remainMs = endMs - nowMs;
     var remainH  = remainMs / 3600000;
@@ -9966,10 +9966,10 @@ function updateBasalTimeBar() {
           timeStr = '已清除';
           headerStr = emoji + ' ' + shortLabel + (last.site ? ' · ' + last.site : '');
         } else if (nowMs < onsetMs) {
-          var minsLeft = Math.ceil((onsetMs - nowMs) / 60000);
+          var minsLeft = Math.min(onsetMin, Math.ceil((onsetMs - nowMs) / 60000));  // cap 防止異常大值
           pct = Math.max(0, Math.min(100, (1 - (onsetMs - nowMs) / (onsetMin * 60000)) * 100)).toFixed(1);
           timeStr = minsLeft + '分後起效';
-          headerStr = emoji + ' ' + shortLabel + ' 起效中';
+          headerStr = emoji + ' ' + shortLabel + ' 起效中' + (last.site ? ' · ' + last.site : '');
         } else {
           var remainMs = endMs - nowMs;
           var rh = Math.floor(remainMs / 3600000);
