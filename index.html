@@ -8074,6 +8074,22 @@ function updateCGMPip() {
       iobSubEl.textContent = '\u5df2\u6e05\u9664';
     }
   }
+
+  _updatePipEvents();
+}
+
+function _updatePipEvents() {
+  if (!_pipWin || _pipWin.closed) return;
+  var row = _pipWin.document.getElementById('pip-events-row');
+  var txt = _pipWin.document.getElementById('pip-evt-txt');
+  var evtIdx = _pipWin.document.getElementById('pip-evt-idx');
+  if (!row || !txt || !evtIdx) return;
+  var items = _cgmCarouselItems || [];
+  if (!items.length) { row.style.display = 'none'; return; }
+  row.style.display = 'flex';
+  if (_pipCarouselIdx >= items.length) _pipCarouselIdx = 0;
+  txt.textContent = items[_pipCarouselIdx];
+  evtIdx.textContent = (_pipCarouselIdx + 1) + '/' + items.length;
 }
 
 // ── Apply result to tracker ──
