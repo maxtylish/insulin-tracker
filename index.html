@@ -3777,7 +3777,27 @@ async function loadFromCloud() {
             if (merged.length !== cloudVials.length) syncVialsToCloud(merged); // push merged back
           }
         } else {
-          allDataCache[row.date] = row.data;
+          // Merge cloud into local: prefer whichever period record has actual time data
+          var existing = allDataCache[row.date] || {};
+          var cloudDay = row.data || {};
+          var merged = Object.assign({}, existing);
+          Object.keys(cloudDay).forEach(function(key) {
+            var cv = cloudDay[key];
+            var lv = existing[key];
+            // For period records with time field: prefer the one with real data
+            if (cv && typeof cv === 'object' && !Array.isArray(cv)) {
+              if (cv.time) {
+                merged[key] = cv;  // cloud has real data
+              } else if (lv && lv.time) {
+                merged[key] = lv;  // local has real data, keep it
+              } else {
+                merged[key] = cv;  // neither has time, cloud wins
+              }
+            } else {
+              merged[key] = cv;  // arrays / primitives: cloud wins
+            }
+          });
+          allDataCache[row.date] = merged;
         }
       });
       localStorage.setItem('insulin_records', JSON.stringify(allDataCache));
@@ -9882,16 +9902,8 @@ function updateBasalTimeBar() {
     }
   }
 
-  // ── 下方獨立卡片（胰島素作用狀態）──
-  if (!rows.length) { bar.style.display = 'none'; return; }
-  bar.innerHTML =
-    '<div style="background:var(--card);border-radius:12px;padding:10px 14px;'
-    + 'box-shadow:0 1px 4px rgba(0,0,0,.07);margin-top:0;">'
-    + '<div style="font-size:.78rem;font-weight:700;color:var(--text-muted);'
-    + 'letter-spacing:.3px;margin-bottom:4px;">💊 胰島素作用狀態</div>'
-    + rows.join('<div style="height:1px;background:var(--border);margin:4px 0;"></div>')
-    + '</div>';
-  bar.style.display = '';
+  // ── 下方獨立卡片（胰島素作用狀態）已由上方 CGM widget 顯示，不重複 ──
+  bar.style.display = 'none';
 }
 
 function saveRxModal() {
