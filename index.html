@@ -9855,9 +9855,16 @@ function updateBasalTimeBar() {
     }
   }
 
-  // ── 下方獨立卡片（隱藏，已整合進 CGM widget）──
+  // ── 下方獨立卡片（胰島素作用狀態）──
   if (!rows.length) { bar.style.display = 'none'; return; }
-  bar.style.display = 'none';
+  bar.innerHTML =
+    '<div style="background:var(--card);border-radius:12px;padding:10px 14px;'
+    + 'box-shadow:0 1px 4px rgba(0,0,0,.07);margin-top:0;">'
+    + '<div style="font-size:.78rem;font-weight:700;color:var(--text-muted);'
+    + 'letter-spacing:.3px;margin-bottom:4px;">💊 胰島素作用狀態</div>'
+    + rows.join('<div style="height:1px;background:var(--border);margin:4px 0;"></div>')
+    + '</div>';
+  bar.style.display = '';
 }
 
 function saveRxModal() {
