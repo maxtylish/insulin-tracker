@@ -1602,9 +1602,30 @@
     .cgm-widget {
       background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%);
       color: white; border-radius: 14px; padding: 14px 18px;
-      display: flex; flex-direction: column; align-items: flex-start;
+      display: flex; flex-direction: row; align-items: stretch;
       margin-bottom: 12px; box-shadow: 0 4px 16px rgba(30,64,175,0.3);
+      gap: 0;
     }
+    .cgm-left { display: flex; flex-direction: column; align-items: flex-start; flex-shrink: 0; }
+    .cgm-divider {
+      width: 1px; background: rgba(255,255,255,0.18); margin: 0 14px; flex-shrink: 0; align-self: stretch;
+    }
+    .cgm-insulin-panel {
+      flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 0; min-width: 0;
+    }
+    .cgm-insulin-row {
+      display: flex; flex-direction: column; gap: 3px; padding: 4px 0;
+    }
+    .cgm-insulin-row + .cgm-insulin-row {
+      border-top: 1px solid rgba(255,255,255,0.13); margin-top: 2px; padding-top: 6px;
+    }
+    .cgm-ins-top { display: flex; align-items: center; gap: 5px; }
+    .cgm-ins-label { font-size: .78rem; font-weight: 700; color: rgba(255,255,255,0.95); flex: 1; min-width: 0; white-space: nowrap; }
+    .cgm-ins-time { font-size: .85rem; font-weight: 800; flex-shrink: 0; }
+    .cgm-ins-bar { height: 4px; border-radius: 2px; overflow: hidden; }
+    .cgm-ins-bar-track { height: 4px; border-radius: 2px; background: rgba(255,255,255,0.18); }
+    .cgm-ins-bar-fill { height: 4px; border-radius: 2px; transition: width .4s; }
+    .cgm-ins-status { font-size: .68rem; color: rgba(255,255,255,0.55); }
     .cgm-main-row { display: flex; align-items: baseline; gap: 6px; line-height: 1; }
     .cgm-pip-btn {
       margin-left: auto; background: rgba(255,255,255,0.15); border: none; color: white;
@@ -2254,16 +2275,22 @@
 
   <!-- CGM Real-time Widget -->
   <div class="cgm-widget" id="cgm-widget" style="display:none">
-    <div class="cgm-main-row">
-      <span class="cgm-value" id="cgm-value">---</span>
-      <span class="cgm-trend" id="cgm-trend">→</span>
-      <button class="cgm-pip-btn" id="cgm-pip-btn" onclick="openCGMPip()" title="浮動視窗（常駐最上層）">⊡</button>
+    <!-- Left: BG number -->
+    <div class="cgm-left">
+      <div class="cgm-main-row">
+        <span class="cgm-value" id="cgm-value">---</span>
+        <span class="cgm-trend" id="cgm-trend">→</span>
+        <button class="cgm-pip-btn" id="cgm-pip-btn" onclick="openCGMPip()" title="浮動視窗（常駐最上層）">⊡</button>
+      </div>
+      <div class="cgm-sub-row">
+        <span class="cgm-delta" id="cgm-delta">--</span>
+        <span class="cgm-sep">·</span>
+        <span class="cgm-meta" id="cgm-meta">CGM 即時血糖</span>
+      </div>
     </div>
-    <div class="cgm-sub-row">
-      <span class="cgm-delta" id="cgm-delta">--</span>
-      <span class="cgm-sep">·</span>
-      <span class="cgm-meta" id="cgm-meta">CGM 即時血糖</span>
-    </div>
+    <!-- Right: Insulin panel (populated by updateBasalTimeBar) -->
+    <div class="cgm-divider" id="cgm-ins-divider" style="display:none;"></div>
+    <div class="cgm-insulin-panel" id="cgm-insulin-panel" style="display:none;"></div>
   </div>
 
   <!-- Hypo Prediction Warning -->
@@ -9584,18 +9611,58 @@ function updateBasalTimeBar() {
   var basalHTML = lastBasal ? _insulinBarBlock(lastBasal, 42, '#8b5cf6', '💉', '長效 Tresiba')   : '';
 
   var rows = [rapidHTML, basalHTML].filter(Boolean);
+
+  // ── CGM widget 右側 insulin panel ──
+  var panel = document.getElementById('cgm-insulin-panel');
+  var divider = document.getElementById('cgm-ins-divider');
+  if (panel) {
+    if (!rows.length) {
+      panel.style.display = 'none';
+      if (divider) divider.style.display = 'none';
+    } else {
+      panel.style.display = '';
+      if (divider) divider.style.display = '';
+      // Build compact rows for dark-blue background
+      function _compactInsRow(last, durationH, color, emoji, shortLabel) {
+        var nowMs    = Date.now();
+        var onsetMin = (SITE_ALARM_MAP[last.site] && SITE_ALARM_MAP[last.site].def) || 20;
+        var injectMs = last.dt.getTime();
+        var onsetMs  = injectMs + onsetMin * 60000;
+        var endMs    = onsetMs  + durationH * 3600000;
+        if (nowMs >= endMs) return '';
+        var pct, timeStr, statusStr;
+        if (nowMs < onsetMs) {
+          var minsLeft = Math.ceil((onsetMs - nowMs) / 60000);
+          pct = Math.max(0, Math.min(100, (1 - (onsetMs - nowMs) / (onsetMin * 60000)) * 100)).toFixed(1);
+          timeStr = minsLeft + '分後起效';
+          statusStr = '起效中';
+        } else {
+          var remainMs = endMs - nowMs;
+          var rh = Math.floor(remainMs / 3600000);
+          var rm = Math.round((remainMs % 3600000) / 60000);
+          pct = (remainMs / (durationH * 3600000) * 100).toFixed(1);
+          timeStr = rh > 0 ? (rh + 'h ' + rm + 'm') : (rm + 'm');
+          statusStr = last.site || '';
+        }
+        return '<div class="cgm-insulin-row">'
+          + '<div class="cgm-ins-top">'
+          + '<span style="font-size:.85rem;">' + emoji + '</span>'
+          + '<span class="cgm-ins-label">' + shortLabel + '</span>'
+          + '<span class="cgm-ins-time" style="color:' + color + ';">' + timeStr + '</span>'
+          + '</div>'
+          + (statusStr ? '<div class="cgm-ins-status">' + statusStr + '</div>' : '')
+          + '<div class="cgm-ins-bar-track"><div class="cgm-ins-bar-fill" style="background:' + color + ';width:' + pct + '%;"></div></div>'
+          + '</div>';
+      }
+      var pr = lastRapid ? _compactInsRow(lastRapid, 3,  '#fb923c', '⚡', '速效') : '';
+      var pb = lastBasal ? _compactInsRow(lastBasal, 42, '#c084fc', '💉', '長效') : '';
+      panel.innerHTML = [pr, pb].filter(Boolean).join('');
+    }
+  }
+
+  // ── 下方獨立卡片（隱藏，已整合進 CGM widget）──
   if (!rows.length) { bar.style.display = 'none'; return; }
-
-  // 每列之間加分隔線
-  var rowsHTML = rows.join('<div style="height:1px;background:var(--border);margin:0 2px;"></div>');
-
-  bar.style.display = '';
-  bar.style.background = 'var(--card)';
-  bar.style.border = '1px solid var(--border)';
-  bar.style.borderRadius = '12px';
-  bar.style.padding = '4px 12px';
-  bar.innerHTML = '<div style="font-size:.7rem;font-weight:700;letter-spacing:.05em;color:var(--text-muted);text-transform:uppercase;padding:4px 0 2px;">胰島素作用狀態</div>'
-    + rowsHTML;
+  bar.style.display = 'none';
 }
 
 function saveRxModal() {
