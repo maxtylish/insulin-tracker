@@ -8959,7 +8959,17 @@ function toggleVialActive(id) {
   var arr = getInsulinVials();
   var v   = arr.find(function(x){ return x.id === id; });
   if (!v) return;
-  v.active = (v.active === false) ? true : false;  // 切換（預設 true=使用中）
+  var willDeactivate = (v.active !== false);  // 目前是使用中 → 即將停用
+  if (willDeactivate) {
+    var def = INSULIN_VIAL_DEFS[v.type] || { label: v.type };
+    var confirmed = confirm(
+      '確定停用「' + def.label + '」？\n\n'
+      + '停用後此胰島素將不再顯示到期提醒。\n'
+      + '可隨時點「⏸ 停用」重新啟用。'
+    );
+    if (!confirmed) return;
+  }
+  v.active = willDeactivate ? false : true;
   _saveVialsToStorage(arr);
   _rerenderVialItem(id);
   checkInsulinExpiry();
