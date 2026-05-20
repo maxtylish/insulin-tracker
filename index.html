@@ -7927,12 +7927,13 @@ function _buildPipStyle(tKey) {
     '.pip-right { display:flex; flex-direction:column; align-items:center; flex-shrink:0; min-width:44px; }',
     '.pip-iob-val { font-size:0.95rem; font-weight:900; font-variant-numeric:tabular-nums; }',
     '.pip-iob-lbl { font-size:0.55rem; color:' + t.sub + '; margin-top:1px; letter-spacing:0.3px; }',
-    '.pip-events { display:flex; align-items:center; gap:2px; padding:3px 0 0; border-top:1px solid ' + t.sub + '55; margin-top:3px; flex-shrink:0; }',
+    '.pip-bottom { display:flex; align-items:center; gap:0; padding-top:4px; border-top:1px solid ' + t.sub + '44; flex-shrink:0; }',
+    '.pip-dots  { display:flex; gap:4px; align-items:center; flex-shrink:0; }',
+    '.pip-dot   { width:7px; height:7px; border-radius:50%; cursor:pointer; flex-shrink:0; }',
+    '.pip-dot-sep { width:1px; height:10px; background:' + t.sub + '55; margin:0 6px; flex-shrink:0; }',
+    '.pip-evt-btn { background:none; border:none; color:' + t.normal + '; font-size:0.85rem; cursor:pointer; padding:0 2px; line-height:1; flex-shrink:0; font-weight:700; }',
     '.pip-evt-txt { flex:1; font-size:0.65rem; font-weight:600; color:' + t.text + '; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }',
-    '.pip-evt-btn { background:none; border:none; color:' + t.normal + '; font-size:0.85rem; cursor:pointer; padding:0 3px; line-height:1; flex-shrink:0; font-weight:700; }',
-    '.pip-evt-idx { font-size:0.58rem; color:' + t.sub + '; flex-shrink:0; opacity:0.7; }',
-    '.pip-dots  { display:flex; gap:4px; justify-content:flex-start; position:relative; z-index:10; }',
-    '.pip-dot   { width:7px; height:7px; border-radius:50%; cursor:pointer; flex-shrink:0; pointer-events:all !important; }',
+    '.pip-evt-idx { font-size:0.58rem; color:' + t.sub + '; flex-shrink:0; margin-left:2px; }',
     '.pip-dot.sel { box-shadow:0 0 0 1.5px ' + t.bg + ', 0 0 0 3px ' + t.ring + '; }',
     '.cgm-status-low    { color:' + t.low    + '; }',
     '.cgm-status-normal { color:' + t.normal + '; }',
@@ -7962,13 +7963,14 @@ function _buildPipHTML(tKey) {
       '<span id="pip-iob-sub" class="pip-iob-lbl" style="margin-top:2px;"></span>' +
     '</div>' +
   '</div>' +
-  '<div class="pip-events" id="pip-events-row" style="display:none;">' +
-    '<button class="pip-evt-btn" data-pipnav="-1">&#8249;</button>' +
+  '<div class="pip-bottom">' +
+    '<div class="pip-dots">' + dots + '</div>' +
+    '<div class="pip-dot-sep"></div>' +
+    '<button class="pip-evt-btn" id="pip-evt-prev" data-pipnav="-1">&#8249;</button>' +
     '<span class="pip-evt-txt" id="pip-evt-txt"></span>' +
     '<span class="pip-evt-idx" id="pip-evt-idx"></span>' +
-    '<button class="pip-evt-btn" data-pipnav="1">&#8250;</button>' +
-  '</div>' +
-  '<div class="pip-dots">' + dots + '</div>';
+    '<button class="pip-evt-btn" id="pip-evt-next" data-pipnav="1">&#8250;</button>' +
+  '</div>';
 }
 
 async function openCGMPip() {
@@ -8092,16 +8094,24 @@ function updateCGMPip() {
 function _updatePipEvents() {
   if (!_pipWin || _pipWin.closed) return;
   buildCgmCarousel();  // ensure fresh data before rendering
-  var row = _pipWin.document.getElementById('pip-events-row');
-  var txt = _pipWin.document.getElementById('pip-evt-txt');
+  var txt    = _pipWin.document.getElementById('pip-evt-txt');
   var evtIdx = _pipWin.document.getElementById('pip-evt-idx');
-  if (!row || !txt || !evtIdx) return;
+  var prev   = _pipWin.document.getElementById('pip-evt-prev');
+  var next   = _pipWin.document.getElementById('pip-evt-next');
+  if (!txt || !evtIdx) return;
   var items = _cgmCarouselItems || [];
-  row.style.display = 'flex';
-  if (!items.length) { txt.textContent = '無待辦事項'; evtIdx.textContent = ''; return; }
+  if (!items.length) {
+    txt.textContent = '無待辦事項';
+    evtIdx.textContent = '';
+    if (prev) prev.style.display = 'none';
+    if (next) next.style.display = 'none';
+    return;
+  }
+  if (prev) prev.style.display = '';
+  if (next) next.style.display = '';
   if (_pipCarouselIdx >= items.length) _pipCarouselIdx = 0;
   txt.textContent = items[_pipCarouselIdx];
-  evtIdx.textContent = (_pipCarouselIdx + 1) + '/' + items.length;
+  evtIdx.textContent = items.length > 1 ? (_pipCarouselIdx + 1) + '/' + items.length : '';
 }
 
 // ── Apply result to tracker ──
