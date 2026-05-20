@@ -8087,6 +8087,7 @@ function updateCGMPip() {
 
 function _updatePipEvents() {
   if (!_pipWin || _pipWin.closed) return;
+  buildCgmCarousel();  // ensure fresh data before rendering
   var row = _pipWin.document.getElementById('pip-events-row');
   var txt = _pipWin.document.getElementById('pip-evt-txt');
   var evtIdx = _pipWin.document.getElementById('pip-evt-idx');
