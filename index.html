@@ -2007,7 +2007,18 @@
     .vial-expiry-ok   { font-size:.72rem; color:#22c55e; font-weight:600; margin-top:3px; }
     .vial-expiry-warn { font-size:.72rem; color:#f59e0b; font-weight:700; margin-top:3px; }
     .vial-expiry-crit { font-size:.72rem; color:#ef4444; font-weight:700; margin-top:3px; }
-    .vial-actions { display:flex; gap:6px; margin-top:8px; }
+    /* 停用的胰島素 */
+    .vial-item.vial-inactive { opacity:0.42; }
+    .vial-item.vial-inactive .vial-expiry-crit,
+    .vial-item.vial-inactive .vial-expiry-warn { color:var(--text-muted) !important; font-weight:600; }
+    /* 使用中 toggle */
+    .vial-active-toggle { display:flex; align-items:center; gap:4px; cursor:pointer;
+      font-size:.72rem; color:var(--text-muted); font-weight:600; user-select:none;
+      padding:2px 7px; border-radius:20px; border:1px solid var(--border);
+      transition:background .15s, color .15s; }
+    .vial-active-toggle.is-active { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .vial-active-toggle input { display:none; }
+    .vial-actions { display:flex; gap:6px; margin-top:8px; align-items:center; }
     .vial-btn { font-size:.75rem; padding:4px 10px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); cursor:pointer; }
     .vial-btn:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
     .vial-btn.danger { border-color:#ef4444; color:#ef4444; }
@@ -8944,6 +8955,17 @@ function cancelEditVial(id) {
   delete _vialEditIds[id]; _rerenderVialItem(id);
 }
 
+function toggleVialActive(id) {
+  var arr = getInsulinVials();
+  var v   = arr.find(function(x){ return x.id === id; });
+  if (!v) return;
+  v.active = (v.active === false) ? true : false;  // 切換（預設 true=使用中）
+  _saveVialsToStorage(arr);
+  _rerenderVialItem(id);
+  checkInsulinExpiry();
+  showToast(v.active === false ? '⏸ 已停用此胰島素' : '✅ 已恢復使用中');
+}
+
 function deleteVial(id) {
   if (!confirm('確定刪除這支胰島素紀錄？')) return;
   var allArr = getInsulinVials();
@@ -9003,12 +9025,17 @@ function _vialItemHTML(v, idx, isEdit) {
       + '<div class="vial-actions">'
       +   '<button class="vial-btn primary" data-vid="' + v.id + '" onclick="saveVial(this.dataset.vid)">💾 儲存</button>'
       +   '<button class="vial-btn" data-vid="' + v.id + '" onclick="cancelEditVial(this.dataset.vid)">取消</button>'
+      +   '<label class="vial-active-toggle' + (v.active === false ? '' : ' is-active') + '" onclick="toggleVialActive(\'' + v.id + '\')" title="' + (v.active === false ? '點擊啟用' : '點擊停用') + '">'
+      +     '<input type="checkbox"' + (v.active === false ? '' : ' checked') + '>'
+      +     (v.active === false ? '⏸ 停用' : '✓ 使用中')
+      +   '</label>'
       + '</div></div>';
   } else {
     var mfgDisp    = v.mfgYM ? v.mfgYM.replace('-', '/') : '—';
     var noteHtml   = v.note ? '<div class="vial-note-view">📝 ' + v.note + '</div>' : '';
     var unopenDisp = unopened ? '📋 未開封到期 ' + unopened : '';
-    return '<div class="vial-item vtype-' + v.type + '" id="vial-item-' + v.id + '">'
+    var inactiveCls = v.active === false ? ' vial-inactive' : '';
+    return '<div class="vial-item vtype-' + v.type + inactiveCls + '" id="vial-item-' + v.id + '">'
       + title
       + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:.72rem;margin-bottom:5px;">'
       + '<div><div style="color:var(--text-muted);font-weight:600;">製造日期</div><div>' + mfgDisp + '</div>'
@@ -9023,6 +9050,10 @@ function _vialItemHTML(v, idx, isEdit) {
       + '<div class="vial-actions">'
       +   '<button class="vial-btn" data-vid="' + v.id + '" onclick="editVial(this.dataset.vid)">✏️ 編輯</button>'
       +   '<button class="vial-btn danger" data-vid="' + v.id + '" onclick="deleteVial(this.dataset.vid)">🗑 刪除</button>'
+      +   '<label class="vial-active-toggle' + (v.active === false ? '' : ' is-active') + '" onclick="toggleVialActive(\'' + v.id + '\')" title="' + (v.active === false ? '點擊啟用' : '點擊停用') + '">'
+      +     '<input type="checkbox"' + (v.active === false ? '' : ' checked') + '>'
+      +     (v.active === false ? '⏸ 停用' : '✓ 使用中')
+      +   '</label>'
       + '</div></div>';
   }
 }
@@ -9214,6 +9245,7 @@ function checkInsulinExpiry() {
   var arr = getInsulinVials(); var today = new Date(); today.setHours(0,0,0,0);
   var alerts = [];
   arr.forEach(function(v) {
+    if (v.active === false) return;    // 停用的胰島素不計入到期提醒
     if (!v.expDate) return;
     var def = INSULIN_VIAL_DEFS[v.type] || { label: v.type };
     var exp = new Date(v.expDate); exp.setHours(0,0,0,0);
