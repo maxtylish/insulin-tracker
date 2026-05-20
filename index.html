@@ -9604,7 +9604,7 @@ function buildCgmCarousel() {
 
   // 1. 未完成 todos (有期限的優先，其次無期限)
   var todos = getTodos ? getTodos() : [];
-  var pending = todos.filter(function(t){ return !t.done; });
+  var pending = todos.filter(function(t){ return !t.completed; });
   // sort: with dueDate first (ascending), then no date
   pending.sort(function(a,b){
     if (a.dueDate && b.dueDate) return a.dueDate < b.dueDate ? -1 : 1;
