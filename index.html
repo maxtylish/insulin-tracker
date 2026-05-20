@@ -7974,9 +7974,10 @@ async function openCGMPip() {
     return;
   }
   try {
-    _pipWin = await window.documentPictureInPicture.requestWindow({ width: 290, height: 95 });
+    _pipWin = await window.documentPictureInPicture.requestWindow({ width: 290, height: 120 });
     if (btn) btn.classList.add('active');
     if (_pipHistory.length < 5) await fetchPipHistory();
+    buildCgmCarousel();
     _renderPipContent(_pipThemeKey);
     updateCGMPip();
     _pipWin.addEventListener('pagehide', function() {
@@ -8085,8 +8086,8 @@ function _updatePipEvents() {
   var evtIdx = _pipWin.document.getElementById('pip-evt-idx');
   if (!row || !txt || !evtIdx) return;
   var items = _cgmCarouselItems || [];
-  if (!items.length) { row.style.display = 'none'; return; }
   row.style.display = 'flex';
+  if (!items.length) { txt.textContent = '無待辦事項'; evtIdx.textContent = ''; return; }
   if (_pipCarouselIdx >= items.length) _pipCarouselIdx = 0;
   txt.textContent = items[_pipCarouselIdx];
   evtIdx.textContent = (_pipCarouselIdx + 1) + '/' + items.length;
