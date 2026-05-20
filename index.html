@@ -2291,7 +2291,7 @@
   </div>
 
   <!-- Basal Insulin Remaining Time -->
-  <div id="basal-time-bar" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:8px 14px;font-size:.82rem;color:#166534;margin-bottom:8px;"></div>
+  <div id="basal-time-bar" style="display:none;margin-bottom:8px;"></div>
 
   <!-- Mini CGM Chart -->
   <div class="mini-cgm-card" id="mini-cgm-card" style="display:none;">
@@ -7759,27 +7759,33 @@ var PIP_THEMES = {
 
 // ── IOB calculation for PiP ──────────────────────────────────────────────────
 function calcIOBRemainingMins() {
-  // Returns minutes until all NovoRapid IOB clears (max remaining across active injections)
+  // Match updateBasalTimeBar logic: onset + 3h duration, search 2 days back
   var now = Date.now();
-  var todayData = getAllData()[todayStr()] || {};
-  var END_HOURS = 4.5;
+  var all = getAllData();
+  var today = todayStr();
+  var DURATION_H = 3;
   var maxRemainMs = 0;
-  function checkInj(timeStr, dose) {
-    if (!timeStr || !(parseFloat(dose) > 0)) return;
-    var injMs = new Date(todayStr() + 'T' + timeStr + ':00').getTime();
-    var clearMs = injMs + END_HOURS * 3600000;
-    var remain = clearMs - now;
+  function checkInj(dateStr, timeStr, siteKey) {
+    if (!timeStr) return;
+    var injMs   = new Date(dateStr + 'T' + timeStr + ':00').getTime();
+    var onsetMin = (SITE_ALARM_MAP[siteKey] && SITE_ALARM_MAP[siteKey].def) || 20;
+    var endMs   = injMs + onsetMin * 60000 + DURATION_H * 3600000;
+    var remain  = endMs - now;
     if (remain > maxRemainMs) maxRemainMs = remain;
   }
-  PERIODS.forEach(function(p) {
-    if (p.id === 'bedtime') return; // skip Tresiba
-    var rec = todayData[p.id];
-    if (rec) checkInj(rec.time, rec.insulin);
-  });
-  SNACK_SECTIONS.forEach(function(s) {
-    (todayData[s.id] || []).forEach(function(sk) { checkInj(sk.time, sk.dose); });
-  });
-  (todayData.corrections || []).forEach(function(rec) { checkInj(rec.time, rec.dose); });
+  for (var i = 0; i < 2; i++) {
+    var d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() - i);
+    var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    var day = all[ds] || {};
+    ['morning','noon','evening'].forEach(function(pid) {
+      var rec = day[pid];
+      if (rec && rec.insulin && rec.time)
+        checkInj(ds, rec.time, rec.site || SITE_DEFAULTS[pid] || '');
+    });
+    (day.corrections || []).forEach(function(r) {
+      if (r.dose && r.time) checkInj(ds, r.time, r.site || '');
+    });
+  }
   return Math.max(0, Math.round(maxRemainMs / 60000));
 }
 
@@ -7991,7 +7997,7 @@ function updateCGMPip() {
   var iobSubEl = _pipWin.document.getElementById('pip-iob-sub');
   var iobBarEl = _pipWin.document.getElementById('pip-iob-bar');
   var remMins  = calcIOBRemainingMins();
-  var pct      = Math.min(100, Math.round(remMins / (4.5 * 60) * 100));
+  var pct      = Math.min(100, Math.round(remMins / (3 * 60) * 100));
   if (iobValEl) {
     iobValEl.textContent = iob > 0.05 ? iob.toFixed(1) + 'U' : '0U';
     iobValEl.className = 'pip-iob-val ' + colorCls;
@@ -9486,12 +9492,9 @@ function refreshRxDrugEditor() {
 
 // 速效胰島素作用時間條（考慮施打部位起效延遲）
 // 起效延遲：肚子 15min、手臂 20min、大腿 30min（來自 SITE_ALARM_MAP）
-// 作用持續：起效後 3 小時
-// 產生單一胰島素作用條 HTML（速效 or 長效共用）
-function _insulinBarBlock(last, durationH, opts) {
-  // opts: { pendingBg, pendingBorder, pendingColor, pendingTrack, pendingFill,
-  //         activeBg,  activeBorder,  activeColor,  activeTrack,  activeFill,
-  //         pendingEmoji, activeEmoji, label }
+// 作用持續：起效後 3 小時（速效）/ 42 小時（長效）
+// color: hex 色碼；emoji: 圖示；labelText: 顯示名稱
+function _insulinBarBlock(last, durationH, color, emoji, labelText) {
   var nowMs    = Date.now();
   var onsetMin = (SITE_ALARM_MAP[last.site] && SITE_ALARM_MAP[last.site].def) || 20;
   var injectMs = last.dt.getTime();
@@ -9504,28 +9507,42 @@ function _insulinBarBlock(last, durationH, opts) {
   var onsetStr  = onsetDT.getHours() + ':' + String(onsetDT.getMinutes()).padStart(2,'0');
   var siteLabel = last.site || '未知部位';
 
+  // 淡化背景色（28 = alpha ~16%）
+  var trackColor = color + '28';
+
+  var statusBadge, metaText, remainText, pct;
+
   if (nowMs < onsetMs) {
     var minsLeft = Math.ceil((onsetMs - nowMs) / 60000);
-    var pct = Math.max(0, Math.min(100, (1 - (onsetMs - nowMs) / (onsetMin * 60000)) * 100)).toFixed(1);
-    return '<div style="background:' + opts.pendingBg + ';border:1px solid ' + opts.pendingBorder + ';border-radius:8px;padding:7px 12px;color:' + opts.pendingColor + ';font-size:.82rem;">'
-      + opts.pendingEmoji + ' <b>' + opts.label + '</b> 起效中（' + injectStr + ' 打 ' + siteLabel + '，' + onsetMin + 'min 後）還有 <strong>' + minsLeft + ' 分鐘</strong>開始'
-      + '<div style="margin-top:5px;height:4px;border-radius:2px;background:' + opts.pendingTrack + ';">'
-      + '<div style="height:4px;border-radius:2px;background:' + opts.pendingFill + ';width:' + pct + '%"></div></div>'
-      + '</div>';
+    pct = Math.max(0, Math.min(100, (1 - (onsetMs - nowMs) / (onsetMin * 60000)) * 100)).toFixed(1);
+    statusBadge = '<span style="font-size:.7rem;padding:1px 5px;border-radius:10px;background:' + color + '28;color:' + color + ';font-weight:600;">起效中</span>';
+    metaText = injectStr + ' 注射 · ' + siteLabel + ' · ' + onsetMin + 'min 後起效';
+    remainText = '<span style="color:#94a3b8;font-size:.78rem;">還有 <b style="color:' + color + '">' + minsLeft + ' 分</b>開始</span>';
   } else {
     var remainMs = endMs - nowMs;
     var remainH  = remainMs / 3600000;
     var rh = Math.floor(remainH);
     var rm = Math.round((remainH - rh) * 60);
-    var pct2 = (remainMs / (durationH * 3600000) * 100).toFixed(1);
-    return '<div style="background:' + opts.activeBg + ';border:1px solid ' + opts.activeBorder + ';border-radius:8px;padding:7px 12px;color:' + opts.activeColor + ';font-size:.82rem;">'
-      + opts.activeEmoji + ' <b>' + opts.label + '</b> 作用中（' + onsetStr + ' 起效 · ' + siteLabel + '）剩餘 <strong>' + rh + 'h ' + rm + 'm</strong>'
-      + '<div style="margin-top:5px;height:4px;border-radius:2px;background:' + opts.activeTrack + ';">'
-      + '<div style="height:4px;border-radius:2px;background:' + opts.activeFill + ';width:' + pct2 + '%"></div></div>'
-      + '</div>';
+    pct = (remainMs / (durationH * 3600000) * 100).toFixed(1);
+    statusBadge = '<span style="font-size:.7rem;padding:1px 5px;border-radius:10px;background:' + color + '28;color:' + color + ';font-weight:600;">作用中</span>';
+    metaText = onsetStr + ' 起效 · ' + siteLabel;
+    remainText = '<b style="color:' + color + ';font-size:.85rem;">' + rh + 'h ' + rm + 'm</b>';
   }
-}
 
+  return '<div style="display:flex;flex-direction:column;gap:4px;padding:8px 0;">'
+    + '<div style="display:flex;align-items:center;gap:6px;">'
+    + '<span style="font-size:1rem;">' + emoji + '</span>'
+    + '<span style="font-weight:700;font-size:.84rem;color:var(--text);">' + labelText + '</span>'
+    + '&nbsp;' + statusBadge
+    + '<span style="flex:1;"></span>'
+    + remainText
+    + '</div>'
+    + '<div style="font-size:.75rem;color:var(--text-muted);padding-left:2px;">' + metaText + '</div>'
+    + '<div style="height:6px;border-radius:3px;background:' + trackColor + ';overflow:hidden;">'
+    + '<div style="height:6px;border-radius:3px;background:' + color + ';width:' + pct + '%;transition:width .4s;"></div>'
+    + '</div>'
+    + '</div>';
+}
 function updateBasalTimeBar() {
   var bar = document.getElementById('basal-time-bar');
   if (!bar) return;
@@ -9560,35 +9577,25 @@ function updateBasalTimeBar() {
       basalCandidates.push({ dt: new Date(ds2 + 'T' + rec2.time + ':00'), site: rec2.site || SITE_DEFAULTS.bedtime || '' });
   }
 
-  var rapidOpts = {
-    pendingBg: '#fefce8', pendingBorder: '#fde68a', pendingColor: '#92400e',
-    pendingTrack: '#fde68a', pendingFill: '#f59e0b', pendingEmoji: '⏳',
-    activeBg: '#eff6ff', activeBorder: '#bfdbfe', activeColor: '#1e40af',
-    activeTrack: '#dbeafe', activeFill: '#3b82f6', activeEmoji: '⚡',
-    label: '速效'
-  };
-  var basalOpts = {
-    pendingBg: '#f0fdf4', pendingBorder: '#bbf7d0', pendingColor: '#14532d',
-    pendingTrack: '#bbf7d0', pendingFill: '#22c55e', pendingEmoji: '⏳',
-    activeBg: '#f0fdf4', activeBorder: '#bbf7d0', activeColor: '#14532d',
-    activeTrack: '#bbf7d0', activeFill: '#22c55e', activeEmoji: '💉',
-    label: '長效 Tresiba'
-  };
-
   var lastRapid = rapidCandidates.length ? rapidCandidates.reduce(function(a,b){ return a.dt > b.dt ? a : b; }) : null;
   var lastBasal = basalCandidates.length ? basalCandidates.reduce(function(a,b){ return a.dt > b.dt ? a : b; }) : null;
 
-  var rapidHTML = lastRapid ? _insulinBarBlock(lastRapid, 3,  rapidOpts) : '';
-  var basalHTML = lastBasal ? _insulinBarBlock(lastBasal, 42, basalOpts) : '';
+  var rapidHTML = lastRapid ? _insulinBarBlock(lastRapid, 3,  '#f97316', '⚡', '速效 NovoRapid') : '';
+  var basalHTML = lastBasal ? _insulinBarBlock(lastBasal, 42, '#8b5cf6', '💉', '長效 Tresiba')   : '';
 
-  var combined = [rapidHTML, basalHTML].filter(Boolean).join('<div style="height:6px;"></div>');
-  if (!combined) { bar.style.display = 'none'; return; }
+  var rows = [rapidHTML, basalHTML].filter(Boolean);
+  if (!rows.length) { bar.style.display = 'none'; return; }
+
+  // 每列之間加分隔線
+  var rowsHTML = rows.join('<div style="height:1px;background:var(--border);margin:0 2px;"></div>');
 
   bar.style.display = '';
-  bar.style.background = 'transparent';
-  bar.style.border = 'none';
-  bar.style.padding = '0';
-  bar.innerHTML = combined;
+  bar.style.background = 'var(--card)';
+  bar.style.border = '1px solid var(--border)';
+  bar.style.borderRadius = '12px';
+  bar.style.padding = '4px 12px';
+  bar.innerHTML = '<div style="font-size:.7rem;font-weight:700;letter-spacing:.05em;color:var(--text-muted);text-transform:uppercase;padding:4px 0 2px;">胰島素作用狀態</div>'
+    + rowsHTML;
 }
 
 function saveRxModal() {
