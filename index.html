@@ -8094,25 +8094,73 @@ function updateCGMPip() {
 
 function _updatePipEvents() {
   if (!_pipWin || _pipWin.closed) return;
-  buildCgmCarousel();  // ensure fresh data before rendering
   var txt    = _pipWin.document.getElementById('pip-evt-txt');
   var evtIdx = _pipWin.document.getElementById('pip-evt-idx');
   var prev   = _pipWin.document.getElementById('pip-evt-prev');
   var next   = _pipWin.document.getElementById('pip-evt-next');
-  if (!txt || !evtIdx) return;
-  var items = _cgmCarouselItems || [];
-  if (!items.length) {
-    txt.textContent = '無待辦事項';
-    evtIdx.textContent = '';
-    if (prev) prev.style.display = 'none';
-    if (next) next.style.display = 'none';
-    return;
+  if (!txt) return;
+
+  // 直接讀資料，不依賴 _cgmCarouselItems（避免跨呼叫時序問題）
+  try {
+    var items = [];
+    var today = new Date(); today.setHours(0,0,0,0);
+
+    // 未完成 todos
+    var todos = getTodos ? getTodos() : [];
+    todos.filter(function(t){ return !t.completed; })
+      .sort(function(a,b){
+        if (a.dueDate && b.dueDate) return a.dueDate < b.dueDate ? -1 : 1;
+        if (a.dueDate) return -1; if (b.dueDate) return 1; return 0;
+      })
+      .slice(0,5).forEach(function(t){
+        var icon = t.category === 'health' ? '🩺' : '📋';
+        var label = icon + ' ' + t.title;
+        if (t.dueDate) {
+          var d = new Date(t.dueDate + 'T00:00:00');
+          var diff = Math.round((d - today) / 86400000);
+          label += diff === 0 ? '（今天）' : diff === 1 ? '（明天）' : '（' + (d.getMonth()+1) + '/' + d.getDate() + '）';
+        }
+        items.push(label);
+      });
+
+    // 複診 & 領藥
+    var meds = getMedications ? getMedications() : [];
+    meds.forEach(function(rx){
+      if (rx.nextAppointment) {
+        var d = new Date(rx.nextAppointment + 'T00:00:00');
+        if (d >= today) {
+          var diff = Math.round((d - today) / 86400000);
+          var ds = diff === 0 ? '今天' : diff === 1 ? '明天' : (d.getMonth()+1) + '/' + d.getDate();
+          var loc = [rx.apptClinic, rx.apptRoom].filter(Boolean).join(' ');
+          items.push('🏥 複診 ' + ds + (loc ? ' · ' + loc : ''));
+        }
+      }
+      if (rx.nextRefill) {
+        var d2 = new Date(rx.nextRefill + 'T00:00:00');
+        var diff2 = Math.round((d2 - today) / 86400000);
+        if (diff2 >= 0 && diff2 <= 14)
+          items.push('💊 領藥 ' + (diff2 === 0 ? '今天' : diff2 === 1 ? '明天' : diff2 + '天後'));
+      }
+    });
+
+    if (!items.length) {
+      txt.textContent = '無待辦事項';
+      if (evtIdx) evtIdx.textContent = '';
+      if (prev) prev.style.visibility = 'hidden';
+      if (next) next.style.visibility = 'hidden';
+      return;
+    }
+    if (prev) prev.style.visibility = '';
+    if (next) next.style.visibility = '';
+    if (_pipCarouselIdx >= items.length) _pipCarouselIdx = 0;
+    txt.textContent = items[_pipCarouselIdx];
+    if (evtIdx) evtIdx.textContent = items.length > 1 ? (_pipCarouselIdx + 1) + '/' + items.length : '';
+    // 同步 pip carousel items 供 _pipNavEvent 使用
+    _cgmCarouselItems = items;
+  } catch(e) {
+    txt.textContent = '—';
+    console.warn('_updatePipEvents error:', e);
   }
-  if (prev) prev.style.display = '';
-  if (next) next.style.display = '';
-  if (_pipCarouselIdx >= items.length) _pipCarouselIdx = 0;
-  txt.textContent = items[_pipCarouselIdx];
-  evtIdx.textContent = items.length > 1 ? (_pipCarouselIdx + 1) + '/' + items.length : '';
 }
 
 // ── Apply result to tracker ──
