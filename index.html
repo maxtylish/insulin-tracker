@@ -7792,6 +7792,7 @@ function buildRoundHint(rawDose) {
 var _pipWin = null;
 var _pipHistory = [];  // [{sgv, date}] last 60 readings (~5h)
 var _pipThemeKey = (function() { try { return localStorage.getItem('pip_theme') || 'white'; } catch(e) { return 'white'; } })();
+var _pipCarouselIdx = 0;      // PiP event carousel current index
 
 var PIP_THEMES = {
   white:  { bg:'#ffffff', text:'#111111', sub:'#999999', ring:'#333333',
