@@ -2100,8 +2100,13 @@
     .vlf-btn-home.active   { background:#2563eb; color:#fff; }
     .vlf-btn-rental.active { background:#dc2626; color:#fff; }
     .vlf-btn-carry.active  { background:#16a34a; color:#fff; }
+    .vlf-btn-disabled { border-color:#94a3b8; color:#64748b; }
+    .vlf-btn-disabled.active { background:#64748b; color:#fff; }
     body[data-skin='cold-dark'] .vlf-btn,
     body[data-skin='warm-dark'] .vlf-btn { background:var(--card); }
+    .vlf-hide-row { display:flex; align-items:center; gap:5px; margin-left:auto; font-size:.72rem; color:var(--text-muted); cursor:pointer; user-select:none; white-space:nowrap; }
+    .vlf-hide-row input[type='checkbox'] { width:15px; height:15px; cursor:pointer; accent-color:var(--primary); }
+    .vlf-hide-row.dimmed { opacity:.4; pointer-events:none; }
     /* ── 地點左邊框 ── */
     .vloc-home   { border-left:5px solid #2563eb !important; padding-left:8px; }
     .vloc-rental { border-left:5px solid #dc2626 !important; padding-left:8px; }
@@ -3080,11 +3085,24 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.24.2</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.24.3</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.24.3 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.24.3</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">停用 Filter + 隱藏已停用</span>
+        </div>
+        <ul class="cl-list">
+          <li>【庫存管理】Filter 新增「⏸ 停用」按鈕，點選後僅顯示已停用的胰島素</li>
+          <li>Filter 列右側新增「隱藏已停用」勾選框，勾選後在任何地點 filter 下都不顯示已停用項目；切換至停用 filter 時勾選框自動變灰無效</li>
+        </ul>
+      </div>
 
       <!-- v2.24.2 -->
       <div class="cl-item">
@@ -8709,7 +8727,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.24.2';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.24.3';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -9154,7 +9172,8 @@ var INSULIN_VIAL_DEFS = {
 };
 
 var _vialEditIds = {};
-var _vialLocFilter = null;  // null=全部, 'home'|'rental'|'carry'
+var _vialLocFilter = null;  // null=全部, 'home'|'rental'|'carry'|'disabled'
+var _vialHideDisabled = false;
 
 function calcVialExpDate(openDateStr, days) {
   if (!openDateStr || !days) return '';
@@ -9737,20 +9756,32 @@ function setVialLocFilter(loc) {
   renderInsulinVials();
 }
 
+function toggleHideDisabled(el) {
+  _vialHideDisabled = el.checked;
+  renderInsulinVials();
+}
+
 function _vialFilterBtnsHTML() {
   var btns = [
-    ['all',    '全部',    'all'],
-    ['home',   '住家',  'home'],
-    ['rental', '租屋', 'rental'],
-    ['carry',  '隨身',  'carry']
+    ['all',      '全部',    'all'],
+    ['home',     '住家',    'home'],
+    ['rental',   '租屋',    'rental'],
+    ['carry',    '隨身',    'carry'],
+    ['disabled', '⏸ 停用', 'disabled']
   ];
   var cur = _vialLocFilter || 'all';
+  var isDisabledFilter = cur === 'disabled';
+  var hideDimmed = isDisabledFilter ? ' dimmed' : '';
   return '<div class="vial-loc-filters">'
     + btns.map(function(b) {
       var active = cur === b[0] ? ' active' : '';
       return '<button class="vlf-btn vlf-btn-' + b[2] + active + '"'
         + ' onclick="setVialLocFilter(\'' + b[0] + '\')">' + b[1] + '</button>';
     }).join('')
+    + '<label class="vlf-hide-row' + hideDimmed + '">'
+    +   '<input type="checkbox"' + (_vialHideDisabled ? ' checked' : '')
+    +     ' onchange="toggleHideDisabled(this)"> 隱藏已停用'
+    + '</label>'
     + '</div>';
 }
 
@@ -9758,9 +9789,19 @@ function renderInsulinVials() {
   var el = document.getElementById('insulin-vial-list'); if (!el) return;
   var arr = getInsulinVials();
   if (arr.length === 0) { el.innerHTML = '<div class="suppl-empty">尚無紀錄，請點上方「＋ 新增」按鈕</div>'; return; }
-  var filtered = _vialLocFilter
-    ? arr.filter(function(v){ return (v.location || 'home') === _vialLocFilter; })
-    : arr;
+  var filtered;
+  if (_vialLocFilter === 'disabled') {
+    filtered = arr.filter(function(v){ return v.active === false; });
+  } else if (_vialLocFilter) {
+    filtered = arr.filter(function(v){
+      return (v.location || 'home') === _vialLocFilter
+        && (!_vialHideDisabled || v.active !== false);
+    });
+  } else {
+    filtered = _vialHideDisabled
+      ? arr.filter(function(v){ return v.active !== false; })
+      : arr;
+  }
   var typeCounts = {};
   var rows = filtered.map(function(v) {
     typeCounts[v.type] = (typeCounts[v.type] || 0) + 1;
