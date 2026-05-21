@@ -385,6 +385,39 @@
     .field-input-wrap input.bg-low    { border-color: var(--low);    }
 
     /* ── Supplemental Records (補打 / 補糖) ── */
+    /* ── 今日記錄 左書籤版面 ── */
+    .today-layout { display:flex; gap:0; align-items:flex-start; margin-bottom:12px; }
+    .today-bookmarks { display:flex; flex-direction:column; gap:4px; flex-shrink:0; padding:2px 0; }
+    .today-bm-btn {
+      width:46px; min-height:58px;
+      background:var(--card); border:1px solid var(--border);
+      border-right:2px solid var(--card); border-radius:10px 0 0 10px;
+      cursor:pointer; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:3px;
+      font-size:.68rem; font-weight:700; color:var(--text-muted);
+      transition:all .15s; padding:6px 2px; line-height:1.2;
+      box-shadow:-1px 0 3px rgba(0,0,0,.06);
+    }
+    .today-bm-btn .bm-icon { font-size:1.05rem; line-height:1; }
+    .today-bm-btn.active {
+      background:var(--primary); color:#fff;
+      border-color:var(--primary); border-right-color:var(--card);
+      box-shadow:-2px 0 6px rgba(99,102,241,.25);
+      z-index:1; position:relative; margin-right:-1px;
+    }
+    .today-bm-btn.active.bm-suppl { background:#0891b2; border-color:#0891b2; border-right-color:var(--card); }
+    body[data-skin='cold-dark'] .today-bm-btn,
+    body[data-skin='warm-dark'] .today-bm-btn { border-right-color:var(--card); }
+    .today-content {
+      flex:1; min-width:0;
+      background:var(--card); border-radius:0 var(--radius) var(--radius) 0;
+      border:1px solid var(--border); padding:14px 12px;
+      box-shadow:var(--shadow);
+    }
+    /* 在 today-content 裡的 period-card 去掉多餘外殼 */
+    .today-content .period-card { box-shadow:none; border-radius:0; margin-bottom:0; background:transparent; }
+    /* 在 today-content 裡的 suppl-section 去掉多餘外殼 */
+    .today-content .suppl-section { box-shadow:none; border-radius:0; padding:0; margin:0; background:transparent; }
     /* ── 補打/補糖 Tab ── */
     .suppl-tab-wrap { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid var(--border); gap:8px; flex-wrap:wrap; }
     .suppl-tabs { display:flex; gap:4px; background:var(--bg); border-radius:20px; padding:3px; }
@@ -2560,37 +2593,44 @@
     <button class="date-nav-btn" onclick="changeDate(1)">›</button>
   </div>
 
-  <!-- Collapse / Expand all -->
-  <div style="display:flex;gap:8px;margin-bottom:6px;padding:0 2px;">
-    <button onclick="expandAllCards()"
-      style="flex:1;padding:6px 0;font-size:.78rem;font-weight:600;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);cursor:pointer;">
-      ▾ 全部展開
-    </button>
-    <button onclick="collapseAllCards()"
-      style="flex:1;padding:6px 0;font-size:.78rem;font-weight:600;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);cursor:pointer;">
-      ▸ 全部收合
-    </button>
-  </div>
-
-  <!-- Period Cards -->
-  <div id="period-cards"></div>
-
-  <!-- ── 補打 / 補糖 活頁 ── -->
-  <div class="suppl-section" id="suppl-tab-section">
-    <div class="suppl-tab-wrap">
-      <div class="suppl-tabs">
-        <button class="suppl-tab-btn active" id="tab-btn-corrections" onclick="switchSupplTab('corrections')">💉 補打</button>
-        <button class="suppl-tab-btn tab-carb"  id="tab-btn-carbs"       onclick="switchSupplTab('carbs')">🍬 補糖</button>
+  <!-- ── 左書籤 + 內容 ── -->
+  <div class="today-layout">
+    <nav class="today-bookmarks" id="today-bookmarks">
+      <button class="today-bm-btn active" onclick="switchTodayPanel('morning')">
+        <span class="bm-icon">🌅</span>早
+      </button>
+      <button class="today-bm-btn" onclick="switchTodayPanel('noon')">
+        <span class="bm-icon">☀️</span>中
+      </button>
+      <button class="today-bm-btn" onclick="switchTodayPanel('evening')">
+        <span class="bm-icon">🌆</span>晚
+      </button>
+      <button class="today-bm-btn" onclick="switchTodayPanel('bedtime')">
+        <span class="bm-icon">🌙</span>睡前
+      </button>
+      <button class="today-bm-btn bm-suppl" onclick="switchTodayPanel('suppl')">
+        <span class="bm-icon">💊</span>補充
+      </button>
+    </nav>
+    <div class="today-content">
+      <div id="period-cards"></div>
+      <div class="suppl-section" id="suppl-tab-section" style="display:none">
+        <div class="suppl-tab-wrap">
+          <div class="suppl-tabs">
+            <button class="suppl-tab-btn active" id="tab-btn-corrections" onclick="switchSupplTab('corrections')">💉 補打</button>
+            <button class="suppl-tab-btn tab-carb" id="tab-btn-carbs" onclick="switchSupplTab('carbs')">🍬 補糖</button>
+          </div>
+          <div class="suppl-tab-actions" id="suppl-tab-actions">
+            <button class="suppl-add-btn" onclick="addSupplRow('corrections')">＋ 新增補打</button>
+          </div>
+        </div>
+        <div id="corrections-panel">
+          <div id="corrections-list"></div>
+        </div>
+        <div id="carbs-panel" style="display:none">
+          <div id="carbs-list"></div>
+        </div>
       </div>
-      <div class="suppl-tab-actions" id="suppl-tab-actions">
-        <button class="suppl-add-btn" onclick="addSupplRow('corrections')">＋ 新增補打</button>
-      </div>
-    </div>
-    <div id="corrections-panel">
-      <div id="corrections-list"></div>
-    </div>
-    <div id="carbs-panel" style="display:none">
-      <div id="carbs-list"></div>
     </div>
   </div>
 
@@ -3082,11 +3122,25 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.26.0</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.27.0</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.27.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.27.0</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">今日記錄左書籤版面</span>
+        </div>
+        <ul class="cl-list">
+          <li>【今日記錄】改為左側書籤導覽（早 / 中 / 晚 / 睡前 / 補充），一次只顯示一個區塊，大幅縮短頁面長度</li>
+          <li>移除「全部展開/收合」按鈕，由書籤切換取代</li>
+          <li>補充 Tab 整合補打/補糖活頁，點書籤即可進入</li>
+        </ul>
+      </div>
 
       <!-- v2.26.0 -->
       <div class="cl-item">
@@ -7270,6 +7324,25 @@ async function autoFillCorrBG(idx) {
 }
 
 var _supplActiveTab = 'corrections';
+var _todayActivePanel = 'morning';
+
+function switchTodayPanel(panel) {
+  _todayActivePanel = panel;
+  // 更新書籤 active 狀態
+  var btns = document.querySelectorAll('.today-bm-btn');
+  var panels = ['morning','noon','evening','bedtime','suppl'];
+  btns.forEach(function(btn, i) {
+    btn.classList.toggle('active', panels[i] === panel);
+  });
+  // 顯示/隱藏 period cards
+  ['morning','noon','evening','bedtime'].forEach(function(id) {
+    var card = document.getElementById('card-' + id);
+    if (card) card.style.display = (panel === id) ? '' : 'none';
+  });
+  // 顯示/隱藏 補充區塊
+  var supplEl = document.getElementById('suppl-tab-section');
+  if (supplEl) supplEl.style.display = (panel === 'suppl') ? '' : 'none';
+}
 
 function switchSupplTab(tab) {
   _supplActiveTab = tab;
@@ -7863,6 +7936,7 @@ function init() {
   initSupabase();   // ← 每次載入頁面都自動連線
   buildPeriodCards();
   restoreCardStates();
+  switchTodayPanel(_todayActivePanel);
   var today = todayStr();
   statAnchor = today;
   document.getElementById('todayDate').value    = today;
@@ -8810,7 +8884,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.26.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.27.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
