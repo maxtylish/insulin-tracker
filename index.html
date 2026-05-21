@@ -4088,6 +4088,7 @@ function updatePeriodSaveBtnState(periodId) {
 // ══════════════════════════════════════════
 let cgmPollTimer = null;
 let cgmTimeTicker = null;   // 1-min ticker to refresh "X 分鐘前"
+let _insCountdownTimer = null; // 1-sec ticker for rapid insulin countdown
 let cgmChart = null;
 
 function nsHeaders() {
@@ -4932,12 +4933,15 @@ function _tickCGMTime() {
 }
 
 function startCGMPolling() {
-  if (cgmPollTimer)  clearInterval(cgmPollTimer);
-  if (cgmTimeTicker) clearInterval(cgmTimeTicker);
+  if (cgmPollTimer)       clearInterval(cgmPollTimer);
+  if (cgmTimeTicker)      clearInterval(cgmTimeTicker);
+  if (_insCountdownTimer) clearInterval(_insCountdownTimer);
   if (!settings.nsUrl) return;
-  pollCGM();                                        // immediate
-  cgmPollTimer  = setInterval(pollCGM,      5 * 60000); // every 5 min
-  cgmTimeTicker = setInterval(_tickCGMTime, 60000);     // refresh label every 1 min
+  pollCGM();                                             // immediate
+  cgmPollTimer        = setInterval(pollCGM,            5 * 60000); // every 5 min
+  cgmTimeTicker       = setInterval(_tickCGMTime,       60000);     // refresh label every 1 min
+  _insCountdownTimer  = setInterval(updateBasalTimeBar, 1000);      // 1-sec rapid countdown
+  updateBasalTimeBar();                                              // immediate
 }
 
 // Called when user focuses a BG input — auto-fill from CGM if empty
@@ -7969,6 +7973,7 @@ var _pipHistory = [];  // [{sgv, date}] last 60 readings (~5h)
 var _pipThemeKey = (function() { try { return localStorage.getItem('pip_theme') || 'white'; } catch(e) { return 'white'; } })();
 var _pipCarouselIdx = 0;      // PiP event carousel current index
 var _pipLastRapid = null;     // last rapid injection {dt, site} for PiP display
+var _pipLastBasal = null;     // last basal injection {dt, site} for PiP display
 
 var PIP_THEMES = {
   white:   { bg:'#ffffff', text:'#111111', sub:'#888888', ring:'#444444',
@@ -8309,15 +8314,42 @@ function _updatePipEvents() {
         if (_pnow >= _pendMs) {
           _pItem = _pLabel + ' 作用結束';
         } else if (_pnow < _ponMs) {
-          var _pmLeft = Math.ceil((_ponMs - _pnow) / 60000);
-          _pItem = _pLabel + ' ' + _pmLeft + '分後起效';
+          var _psecs = Math.ceil((_ponMs - _pnow) / 1000);
+          var _pom = Math.floor(_psecs / 60), _pos = _psecs % 60;
+          _pItem = _pLabel + ' ' + _pom + 'm' + String(_pos).padStart(2,'0') + 's 後起效';
         } else {
           var _premMs = _pendMs - _pnow;
-          var _prh = Math.floor(_premMs / 3600000);
-          var _prm = Math.round((_premMs % 3600000) / 60000);
-          _pItem = _pLabel + ' 剩' + (_prh > 0 ? _prh + 'h' + _prm + 'm' : _prm + 'm');
+          var _prs = Math.ceil(_premMs / 1000);
+          var _prh = Math.floor(_prs / 3600);
+          var _prm = Math.floor((_prs % 3600) / 60);
+          var _prss = _prs % 60;
+          _pItem = _pLabel + ' 剩' + (_prh > 0 ? _prh + 'h' + _prm + 'm' : _prm + 'm') + String(_prss).padStart(2,'0') + 's';
         }
         items.push(_pItem);
+      }
+    }
+
+    // 長效胸島素剰餘時間（Tresiba 42h）
+    if (_pipLastBasal) {
+      var _bnow   = Date.now();
+      var _bonMin = (SITE_ALARM_MAP[_pipLastBasal.site] && SITE_ALARM_MAP[_pipLastBasal.site].def) || 60;
+      var _binjMs = _pipLastBasal.dt.getTime();
+      var _bonMs  = _binjMs + _bonMin * 60000;
+      var _bendMs = _bonMs  + 42 * 3600000;
+      if (_bnow < _bendMs) {
+        var _bSite  = _pipLastBasal.site || '';
+        var _bLabel = '💉 長效' + (_bSite ? ' · ' + _bSite : '');
+        var _bItem;
+        if (_bnow < _bonMs) {
+          var _bmLeft = Math.ceil((_bonMs - _bnow) / 60000);
+          _bItem = _bLabel + ' ' + _bmLeft + '分後起效';
+        } else {
+          var _bremMs = _bendMs - _bnow;
+          var _brh = Math.floor(_bremMs / 3600000);
+          var _brm = Math.round((_bremMs % 3600000) / 60000);
+          _bItem = _bLabel + ' 剩' + _brh + 'h' + _brm + 'm';
+        }
+        items.push(_bItem);
       }
     }
 
@@ -10059,6 +10091,7 @@ function updateBasalTimeBar() {
   var lastRapid = rapidCandidates.length ? rapidCandidates.reduce(function(a,b){ return a.dt > b.dt ? a : b; }) : null;
   _pipLastRapid = lastRapid;  // share with PiP display
   var lastBasal = basalCandidates.length ? basalCandidates.reduce(function(a,b){ return a.dt > b.dt ? a : b; }) : null;
+  _pipLastBasal = lastBasal;  // share with PiP display
 
   var rapidHTML = lastRapid ? _insulinBarBlock(lastRapid, 3,  '#f97316', '⚡', '速效 NovoRapid') : '';
   var basalHTML = lastBasal ? _insulinBarBlock(lastBasal, 42, '#8b5cf6', '💉', '長效 Tresiba')   : '';
@@ -10091,16 +10124,31 @@ function updateBasalTimeBar() {
           timeStr = durationH <= 4 ? '作用結束' : '已清除';
           headerStr = emoji + ' ' + shortLabel + (last.site ? ' · ' + last.site : '');
         } else if (nowMs < onsetMs) {
-          var minsLeft = Math.ceil((onsetMs - nowMs) / 60000);
+          var secsToOnset = Math.ceil((onsetMs - nowMs) / 1000);
           pct = Math.max(0, Math.min(100, (1 - (onsetMs - nowMs) / (onsetMin * 60000)) * 100)).toFixed(1);
-          timeStr = minsLeft + '分後起效';
+          if (durationH <= 4) {
+            var _om = Math.floor(secsToOnset / 60), _os = secsToOnset % 60;
+            timeStr = _om + 'm' + String(_os).padStart(2,'0') + 's 後起效';
+          } else {
+            timeStr = Math.ceil(secsToOnset / 60) + '分後起效';
+          }
           headerStr = emoji + ' ' + shortLabel + (last.site ? ' · ' + last.site : '');
         } else {
           var remainMs = endMs - nowMs;
-          var rh = Math.floor(remainMs / 3600000);
-          var rm = Math.round((remainMs % 3600000) / 60000);
+          if (durationH <= 4) {
+            var remSecs = Math.ceil(remainMs / 1000);
+            var _rh = Math.floor(remSecs / 3600);
+            var _rm = Math.floor((remSecs % 3600) / 60);
+            var _rs = remSecs % 60;
+            timeStr = _rh > 0
+              ? (_rh + 'h' + _rm + 'm' + String(_rs).padStart(2,'0') + 's')
+              : (_rm + 'm' + String(_rs).padStart(2,'0') + 's');
+          } else {
+            var rh = Math.floor(remainMs / 3600000);
+            var rm = Math.round((remainMs % 3600000) / 60000);
+            timeStr = rh > 0 ? (rh + 'h' + rm + 'm') : (rm + 'm');
+          }
           pct = (remainMs / (durationH * 3600000) * 100).toFixed(1);
-          timeStr = rh > 0 ? (rh + 'h' + rm + 'm') : (rm + 'm');
           headerStr = emoji + ' ' + shortLabel + ' 起效中' + (last.site ? ' · ' + last.site : '');
         }
         return '<div class="cgm-insulin-row">'
@@ -10111,7 +10159,13 @@ function updateBasalTimeBar() {
       }
       var pr = lastRapid ? _compactInsRow(lastRapid, 3,  '#fb923c', '⚡', '速效') : '';
       var pb = lastBasal ? _compactInsRow(lastBasal, 42, '#c084fc', '💉', '長效') : '';
-      panel.innerHTML = [pr, pb].filter(Boolean).join('<div style="height:1px;background:rgba(255,255,255,0.12);margin:4px 0;"></div>');
+      // 當沒有速效作用中，顯示「無速效作用中」 placeholder
+      var prFinal = pr || ('<div class="cgm-insulin-row" style="opacity:.42;">'
+        + '<div class="cgm-ins-header">⚡ 速效</div>'
+        + '<div class="cgm-ins-time" style="font-size:.74rem;color:rgba(255,255,255,0.35);">無作用中</div>'
+        + '<div class="cgm-ins-bar-track"><div class="cgm-ins-bar-fill" style="background:#fb923c;width:0%;"></div></div>'
+        + '</div>');
+      panel.innerHTML = [prFinal, pb].filter(Boolean).join('<div style="height:1px;background:rgba(255,255,255,0.12);margin:4px 0;"></div>');
     }
   }
 
