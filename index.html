@@ -3149,11 +3149,23 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.29.2</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.29.3</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.29.3 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.29.3</span>
+          <span class="cl-date">2026-05-22</span>
+          <span class="cl-tag">推播通知 5 秒自動關閉</span>
+        </div>
+        <ul class="cl-list">
+          <li>【通知】血糖推播通知改為 5 秒後自動關閉（原本需手動關閉）</li>
+        </ul>
+      </div>
 
       <!-- v2.29.2 -->
       <div class="cl-item">
@@ -5124,7 +5136,7 @@ async function sendPushNotif(key, title, body, urgent) {
       tag: 'bg-alert-' + key,
       renotify: true,
       vibrate: urgent ? [300,100,300,100,500] : [200,100,200],
-      requireInteraction: true,
+      requireInteraction: false,
       data: { url: '/insulin-tracker/', key: key },
       actions: [
         { action: 'snooze',  title: '稍後通知' },
@@ -5132,7 +5144,18 @@ async function sendPushNotif(key, title, body, urgent) {
       ]
     };
     reg.showNotification(title, opts);
-  } catch(e) { try { new Notification(title, { body: body }); } catch(e2) {} }
+    setTimeout(async function() {
+      try {
+        var notifs = await reg.getNotifications({ tag: 'bg-alert-' + key });
+        notifs.forEach(function(n) { n.close(); });
+      } catch(e) {}
+    }, 5000);
+  } catch(e) {
+    try {
+      var _n = new Notification(title, { body: body });
+      setTimeout(function() { try { _n.close(); } catch(e) {} }, 5000);
+    } catch(e2) {}
+  }
 }
 
 function checkAndNotify(entry) {
@@ -9038,7 +9061,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.29.2';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.29.3';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
