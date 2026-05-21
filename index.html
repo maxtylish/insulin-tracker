@@ -2048,6 +2048,32 @@
     .vial-btn.danger { border-color:#ef4444; color:#ef4444; }
     .vial-btn.danger:hover { background:#ef4444; color:#fff; }
     .vial-btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
+    /* ── Vial redesign v2.21.0 ── */
+    .vial-row { border-bottom:1px solid var(--border); padding:10px 2px; }
+    .vial-row:last-child { border-bottom:none; }
+    .vial-row-top { display:flex; align-items:center; justify-content:space-between; gap:6px; }
+    .vial-row-left { display:flex; align-items:center; gap:6px; flex:1; min-width:0; overflow:hidden; }
+    .vial-type-name { font-size:.84rem; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .vial-loc-tag { font-size:.67rem; font-weight:700; padding:2px 7px; border-radius:6px; background:var(--bg); color:var(--text-muted); border:1px solid var(--border); white-space:nowrap; flex-shrink:0; }
+    .vial-row-right { display:flex; align-items:center; gap:4px; flex-shrink:0; }
+    .vial-status-toggle { font-size:.67rem; font-weight:700; padding:3px 8px; border-radius:8px; border:none; cursor:pointer; white-space:nowrap; }
+    .vial-status-toggle.active  { background:#dcfce7; color:#15803d; }
+    .vial-status-toggle.inactive { background:#f1f5f9; color:#94a3b8; }
+    body[data-skin='cold-dark'] .vial-status-toggle.active,
+    body[data-skin='warm-dark'] .vial-status-toggle.active  { background:#14532d; color:#86efac; }
+    body[data-skin='cold-dark'] .vial-status-toggle.inactive,
+    body[data-skin='warm-dark'] .vial-status-toggle.inactive { background:#334155; color:#64748b; }
+    .vial-icon-btn { font-size:.78rem; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); cursor:pointer; }
+    .vial-icon-btn:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .vial-icon-btn.danger { border-color:#ef4444; color:#ef4444; }
+    .vial-icon-btn.danger:hover { background:#ef4444; color:#fff; }
+    .vial-row-badge { margin-top:5px; }
+    .vial-inactive-row .vial-type-name { opacity:.5; }
+    .vial-inactive-row .vial-loc-tag  { opacity:.4; }
+    .vial-row-edit { padding:12px 6px 8px; border-bottom:1px solid var(--border); background:var(--bg); border-radius:10px; margin:4px 0; }
+    .vial-edit-2col { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+    .vial-edit-label { font-size:.67rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:3px; }
+    .vial-edit-select { font-size:.8rem; padding:5px 8px; border:1px solid var(--border); border-radius:6px; background:var(--card); color:var(--text); width:100%; box-sizing:border-box; }
     .supply-qty-ctrl { display: flex; align-items: center; gap: 4px; }
     .qty-btn {
       width: 28px; height: 28px; border-radius: 8px; border: 1px solid var(--border);
@@ -2689,8 +2715,7 @@
       <h3 style="margin:0;">💉 胰島素管理</h3>
       <div style="display:flex;gap:6px;">
         <button class="suppl-add-btn" onclick="manualSyncVials(this)" title="同步胰島素資料到雲端">🔄</button>
-        <button class="suppl-add-btn" onclick="addInsulinVial('novorapid')">＋ 速效</button>
-        <button class="suppl-add-btn" onclick="addInsulinVial('tresiba')">＋ 長效</button>
+        <button class="suppl-add-btn" onclick="addInsulinVial()">＋ 新增</button>
       </div>
     </div>
     <div id="insulin-vial-list"></div>
@@ -3000,11 +3025,26 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.20.0</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.21.0</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.21.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.21.0</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">胰島素庫存管理整合重設計</span>
+        </div>
+        <ul class="cl-list">
+          <li>【庫存管理】每支/瓶新增「地點」欄位（住家／租屋／隨身），編輯時以下拉選單選擇</li>
+          <li>【庫存管理】胰島素類型改為編輯表單內下拉選單，新增時統一使用「＋ 新增」按鈕</li>
+          <li>【庫存管理】瀏覽列改為緊湊 row 設計：色點＋類型名＋地點 tag＋到期日提示＋狀態 toggle＋操作按鈕</li>
+          <li>【庫存管理】使用中／停用改為可直接點擊的 badge toggle，免進入編輯模式</li>
+        </ul>
+      </div>
 
       <!-- v2.20.0 -->
       <div class="cl-item">
@@ -8497,7 +8537,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.20.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.21.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -9040,10 +9080,10 @@ async function manualSyncVials(btn) {
   showToast('✅ 胰島素資料已同步');
 }
 
-function addInsulinVial(type) {
+function addInsulinVial() {
   var arr = getInsulinVials();
   var id  = 'v' + Date.now().toString(36);
-  arr.push({ id: id, type: type, mfgYM: '', serialNo: '', openDate: '', expDate: '', note: '' });
+  arr.push({ id: id, type: 'novorapid', location: 'home', mfgYM: '', serialNo: '', openDate: '', expDate: '', note: '' });
   _saveVialsToStorage(arr);
   _vialEditIds[id] = true;
   renderInsulinVials();
@@ -9057,6 +9097,10 @@ function saveVial(id) {
   var arr = getInsulinVials();
   var v   = arr.find(function(x){ return x.id === id; });
   if (!v) return;
+  // Read type + location first (they affect def)
+  var typeEl = document.getElementById('vial-type-' + id);
+  if (typeEl) v.type = typeEl.value;
+  v.location = (document.getElementById('vial-loc-' + id) || {}).value || 'home';
   var def     = INSULIN_VIAL_DEFS[v.type] || {};
   var openVal = (document.getElementById('vial-open-'   + id) || {}).value || '';
   var expVal  = (document.getElementById('vial-exp-'    + id) || {}).value || '';
@@ -9126,24 +9170,35 @@ function _vialExpiryBadge(expStr) {
 }
 
 function _vialItemHTML(v, idx, isEdit) {
-  var def      = INSULIN_VIAL_DEFS[v.type] || { label: v.type, openExpDays: 0, shelfMonths: 29, url: null };
-  var exp      = v.expDate || (v.openDate ? calcVialExpDate(v.openDate, def.openExpDays) : '');
-  var badge    = _vialExpiryBadge(exp);
-  var unopened = calcUnopenedExpYM(v.mfgYM, def.shelfMonths);
-  var nameLink = def.url
-    ? ' <a href="' + def.url + '" target="_blank" rel="noopener" style="font-size:.72rem;color:var(--primary);text-decoration:none;">藥品說明 ↗</a>'
-    : '';
-  var dot   = '<span class="vial-color-dot" style="background:' + def.color + ';"></span>';
-  var title = '<div class="vial-name">' + dot + def.label + ' #' + idx + nameLink + '</div>';
+  var LOC_LABELS = { home: '住家', rental: '租屋', carry: '隨身' };
+  var def        = INSULIN_VIAL_DEFS[v.type] || { label: v.type, openExpDays: 0, shelfMonths: 29, url: null, color: '#888' };
+  var loc        = v.location || 'home';
+  var locLabel   = LOC_LABELS[loc] || loc;
+  var exp        = v.expDate || (v.openDate ? calcVialExpDate(v.openDate, def.openExpDays) : '');
+  var badge      = _vialExpiryBadge(exp);
+  var dot        = '<span class="vial-color-dot" style="background:' + def.color + ';flex-shrink:0;"></span>';
+  var inactiveCls = v.active === false ? ' vial-inactive-row' : '';
 
   if (isEdit) {
+    var unopened     = calcUnopenedExpYM(v.mfgYM, def.shelfMonths);
     var unopenedHtml = unopened
       ? '<div style="font-size:.72rem;font-weight:700;color:var(--primary);margin-top:4px;">📋 未開封到期</div>'
       + '<div style="font-size:.8rem;font-weight:700;color:var(--text);">' + unopened + '</div>'
       + '<div style="font-size:.6rem;color:var(--text-muted);">保存期限 ' + def.shelfMonths + ' 個月</div>'
       : '<div style="font-size:.6rem;color:var(--text-muted);margin-top:4px;">保存期限 ' + def.shelfMonths + ' 個月</div>';
-    return '<div class="vial-item vtype-' + v.type + '" id="vial-item-' + v.id + '">'
-      + title
+    var locOpts  = [['home','住家'],['rental','租屋'],['carry','隨身']].map(function(p){
+      return '<option value="' + p[0] + '"' + (loc === p[0] ? ' selected' : '') + '>' + p[1] + '</option>';
+    }).join('');
+    var typeOpts = Object.keys(INSULIN_VIAL_DEFS).map(function(k){
+      return '<option value="' + k + '"' + (v.type === k ? ' selected' : '') + '>' + INSULIN_VIAL_DEFS[k].label + '</option>';
+    }).join('');
+    return '<div class="vial-row vial-row-edit' + inactiveCls + '" id="vial-item-' + v.id + '">'
+      + '<div class="vial-edit-2col">'
+      +   '<div><div class="vial-edit-label">📍 地點</div>'
+      +   '<select id="vial-loc-' + v.id + '" class="vial-edit-select">' + locOpts + '</select></div>'
+      +   '<div><div class="vial-edit-label">💉 胰島素類型</div>'
+      +   '<select id="vial-type-' + v.id + '" class="vial-edit-select">' + typeOpts + '</select></div>'
+      + '</div>'
       + '<div class="vial-4col">'
       + '<div class="vial-date-col"><span class="vial-date-label">製造日期</span>'
       +   '<input type="month" class="vial-date-input" id="vial-mfg-' + v.id + '" value="' + v.mfgYM + '"'
@@ -9168,32 +9223,25 @@ function _vialItemHTML(v, idx, isEdit) {
            : '<button class="vial-deactivate-btn" data-vid="' + v.id + '" onclick="toggleVialActive(this.dataset.vid)">停用</button>')
       + '</div></div>';
   } else {
-    var mfgDisp    = v.mfgYM ? v.mfgYM.replace('-', '/') : '—';
-    var noteHtml   = v.note ? '<div class="vial-note-view">📝 ' + v.note + '</div>' : '';
-    var unopenDisp = unopened ? '📋 未開封到期 ' + unopened : '';
-    var inactiveCls = v.active === false ? ' vial-inactive' : '';
-    var inactiveBadge = v.active === false
-      ? ' <span class="vial-disabled-badge">⏸ 已停用</span>' : '';
-    var titleWithBadge = title.replace('</div>', inactiveBadge + '</div>');
-    return '<div class="vial-item vtype-' + v.type + inactiveCls + '" id="vial-item-' + v.id + '">'
-      + titleWithBadge
-      + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;font-size:.72rem;margin-bottom:5px;">'
-      + '<div><div style="color:var(--text-muted);font-weight:600;">製造日期</div><div>' + mfgDisp + '</div>'
-      + (unopenDisp ? '<div style="color:var(--primary);font-size:.68rem;margin-top:3px;">' + unopenDisp + '</div>' : '')
+    var noteHtml = v.note ? '<div class="vial-note-view">📝 ' + v.note + '</div>' : '';
+    return '<div class="vial-row' + inactiveCls + '" id="vial-item-' + v.id + '">'
+      + '<div class="vial-row-top">'
+      +   '<div class="vial-row-left">'
+      +     dot
+      +     '<span class="vial-type-name">' + def.label + '</span>'
+      +     '<span class="vial-loc-tag">' + locLabel + '</span>'
+      +   '</div>'
+      +   '<div class="vial-row-right">'
+      +     '<button class="vial-status-toggle ' + (v.active === false ? 'inactive' : 'active')
+      +       '" data-vid="' + v.id + '" onclick="toggleVialActive(this.dataset.vid)">'
+      +       (v.active === false ? '⏸ 停用' : '✅ 使用中') + '</button>'
+      +     '<button class="vial-icon-btn" data-vid="' + v.id + '" onclick="editVial(this.dataset.vid)" title="編輯">✏️</button>'
+      +     '<button class="vial-icon-btn danger" data-vid="' + v.id + '" onclick="deleteVial(this.dataset.vid)" title="刪除">🗑</button>'
+      +   '</div>'
       + '</div>'
-      + '<div><div style="color:var(--text-muted);font-weight:600;">製造序號</div><div>' + (v.serialNo||'—') + '</div></div>'
-      + '<div><div style="color:var(--text-muted);font-weight:600;">開封日期</div><div>' + (v.openDate||'—') + '</div></div>'
-      + '<div><div style="color:var(--text-muted);font-weight:600;">失效日期</div><div>' + (exp||'—') + '</div></div>'
-      + '</div>'
-      + badge
+      + (badge ? '<div class="vial-row-badge">' + badge + '</div>' : '')
       + noteHtml
-      + '<div class="vial-actions">'
-      +   '<button class="vial-btn" data-vid="' + v.id + '" onclick="editVial(this.dataset.vid)">✏️ 編輯</button>'
-      +   '<button class="vial-btn danger" data-vid="' + v.id + '" onclick="deleteVial(this.dataset.vid)">🗑 刪除</button>'
-      +   (v.active === false
-           ? '<button class="vial-reactivate-btn" data-vid="' + v.id + '" onclick="toggleVialActive(this.dataset.vid)">▶ 重新啟用</button>'
-           : '<button class="vial-deactivate-btn" data-vid="' + v.id + '" onclick="toggleVialActive(this.dataset.vid)">停用</button>')
-      + '</div></div>';
+      + '</div>';
   }
 }
 
@@ -9401,7 +9449,7 @@ function checkInsulinExpiry() {
 function renderInsulinVials() {
   var el = document.getElementById('insulin-vial-list'); if (!el) return;
   var arr = getInsulinVials();
-  if (arr.length === 0) { el.innerHTML = '<div class="suppl-empty">尚無紀錄，請點上方按鈕新增</div>'; return; }
+  if (arr.length === 0) { el.innerHTML = '<div class="suppl-empty">尚無紀錄，請點上方「＋ 新增」按鈕</div>'; return; }
   var typeCounts = {};
   el.innerHTML = arr.map(function(v) {
     typeCounts[v.type] = (typeCounts[v.type] || 0) + 1;
