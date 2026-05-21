@@ -385,6 +385,13 @@
     .field-input-wrap input.bg-low    { border-color: var(--low);    }
 
     /* ── Supplemental Records (補打 / 補糖) ── */
+    /* ── 補打/補糖 Tab ── */
+    .suppl-tab-wrap { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid var(--border); gap:8px; flex-wrap:wrap; }
+    .suppl-tabs { display:flex; gap:4px; background:var(--bg); border-radius:20px; padding:3px; }
+    .suppl-tab-btn { padding:5px 18px; font-size:.83rem; font-weight:700; background:none; border:none; border-radius:16px; cursor:pointer; color:var(--text-muted); transition:all .15s; white-space:nowrap; }
+    .suppl-tab-btn.active { background:var(--primary); color:#fff; box-shadow:0 1px 4px rgba(0,0,0,.15); }
+    .suppl-tab-btn.active.tab-carb { background:#d97706; }
+    .suppl-tab-actions { display:flex; gap:6px; flex-shrink:0; }
     .suppl-section {
       background: var(--card);
       border-radius: var(--radius);
@@ -2568,33 +2575,23 @@
   <!-- Period Cards -->
   <div id="period-cards"></div>
 
-  <!-- ── 補打記錄 ── -->
-  <div class="suppl-section" id="corrections-section">
-    <div class="suppl-header">
-      <div class="suppl-title">
-        💉 補打記錄
-        <span class="suppl-tag tag-correction">修正劑量</span>
+  <!-- ── 補打 / 補糖 活頁 ── -->
+  <div class="suppl-section" id="suppl-tab-section">
+    <div class="suppl-tab-wrap">
+      <div class="suppl-tabs">
+        <button class="suppl-tab-btn active" id="tab-btn-corrections" onclick="switchSupplTab('corrections')">💉 補打</button>
+        <button class="suppl-tab-btn tab-carb"  id="tab-btn-carbs"       onclick="switchSupplTab('carbs')">🍬 補糖</button>
       </div>
-      <div class="suppl-btn-group">
+      <div class="suppl-tab-actions" id="suppl-tab-actions">
         <button class="suppl-add-btn" onclick="addSupplRow('corrections')">＋ 新增補打</button>
       </div>
     </div>
-    <div id="corrections-list"></div>
-  </div>
-
-  <!-- ── 補糖記錄 ── -->
-  <div class="suppl-section" id="carb-section">
-    <div class="suppl-header">
-      <div class="suppl-title">
-        🍬 補糖記錄
-        <span class="suppl-tag tag-carb">低血糖補充</span>
-      </div>
-      <div class="suppl-btn-group">
-        <button class="suppl-add-btn suppl-calc-btn" onclick="openCarbCalc()">🍬 估算</button>
-        <button class="suppl-add-btn" onclick="addSupplRow('carbs')">＋ 新增補糖</button>
-      </div>
+    <div id="corrections-panel">
+      <div id="corrections-list"></div>
     </div>
-    <div id="carbs-list"></div>
+    <div id="carbs-panel" style="display:none">
+      <div id="carbs-list"></div>
+    </div>
   </div>
 
   <button class="save-btn" onclick="saveDayData()">💾 儲存今日紀錄</button>
@@ -3085,11 +3082,25 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.25.3</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.26.0</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.26.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.26.0</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">補打/補糖活頁 Tab</span>
+        </div>
+        <ul class="cl-list">
+          <li>【今日紀錄】補打與補糖合併為單一活頁區塊，頂部 Tab 切換（💉 補打 / 🍬 補糖），頁面長度縮短</li>
+          <li>切換 Tab 後右側按鈕自動對應（補打：＋新增補打；補糖：🍬估算＋＋新增補糖）</li>
+          <li>呼叫新增補打/補糖時自動跳至對應 Tab，不需手動切換</li>
+        </ul>
+      </div>
 
       <!-- v2.25.3 -->
       <div class="cl-item">
@@ -7258,6 +7269,24 @@ async function autoFillCorrBG(idx) {
   }
 }
 
+var _supplActiveTab = 'corrections';
+
+function switchSupplTab(tab) {
+  _supplActiveTab = tab;
+  var isCorr = tab === 'corrections';
+  document.getElementById('tab-btn-corrections').classList.toggle('active', isCorr);
+  document.getElementById('tab-btn-carbs').classList.toggle('active', !isCorr);
+  document.getElementById('corrections-panel').style.display = isCorr ? '' : 'none';
+  document.getElementById('carbs-panel').style.display       = isCorr ? 'none' : '';
+  var act = document.getElementById('suppl-tab-actions');
+  if (isCorr) {
+    act.innerHTML = '<button class="suppl-add-btn" onclick="addSupplRow(\'corrections\')">＋ 新增補打</button>';
+  } else {
+    act.innerHTML = '<button class="suppl-add-btn suppl-calc-btn" onclick="openCarbCalc()">🍬 估算</button>'
+      + '<button class="suppl-add-btn" onclick="addSupplRow(\'carbs\')">＋ 新增補糖</button>';
+  }
+}
+
 function renderSupplList(type, items) {
   var listEl = document.getElementById(type + '-list');
   if (!listEl) return;
@@ -7554,6 +7583,9 @@ function collectSupplRows(type) {
 }
 
 function addSupplRow(type) {
+  // 自動切換到對應 Tab
+  if (type === 'corrections' && _supplActiveTab !== 'corrections') switchSupplTab('corrections');
+  if (type === 'carbs'       && _supplActiveTab !== 'carbs')       switchSupplTab('carbs');
   var current = collectSupplRows(type);
   current.push({});
   renderSupplList(type, current);
@@ -8778,7 +8810,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.25.3';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.26.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
