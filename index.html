@@ -2057,10 +2057,13 @@
     .vial-loc-tag { font-size:.67rem; font-weight:700; padding:2px 7px; border-radius:6px; background:var(--bg); color:var(--text-muted); border:1px solid var(--border); white-space:nowrap; flex-shrink:0; }
     .vial-row-right { display:flex; align-items:center; gap:4px; flex-shrink:0; }
     .vial-status-toggle { font-size:.67rem; font-weight:700; padding:3px 8px; border-radius:8px; border:none; cursor:pointer; white-space:nowrap; }
-    .vial-status-toggle.active  { background:#dcfce7; color:#15803d; }
+    .vial-status-toggle.sealed  { background:#e0f2fe; color:#0369a1; }
+    .vial-status-toggle.opened  { background:#dcfce7; color:#15803d; }
     .vial-status-toggle.inactive { background:#f1f5f9; color:#94a3b8; }
-    body[data-skin='cold-dark'] .vial-status-toggle.active,
-    body[data-skin='warm-dark'] .vial-status-toggle.active  { background:#14532d; color:#86efac; }
+    body[data-skin='cold-dark'] .vial-status-toggle.sealed,
+    body[data-skin='warm-dark'] .vial-status-toggle.sealed  { background:#0c4a6e; color:#7dd3fc; }
+    body[data-skin='cold-dark'] .vial-status-toggle.opened,
+    body[data-skin='warm-dark'] .vial-status-toggle.opened  { background:#14532d; color:#86efac; }
     body[data-skin='cold-dark'] .vial-status-toggle.inactive,
     body[data-skin='warm-dark'] .vial-status-toggle.inactive { background:#334155; color:#64748b; }
     .vial-icon-btn { font-size:.78rem; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); cursor:pointer; }
@@ -2079,7 +2082,8 @@
     .vial-sum-cell { display:flex; align-items:center; justify-content:center; gap:0; }
     .vial-sum-num { font-size:1.1rem; font-weight:800; color:var(--text); line-height:1; }
     .vial-sum-num.zero { color:var(--text-muted); font-weight:400; }
-    .vial-sum-unit { font-size:.64rem; color:var(--text-muted); margin-left:2px; align-self:flex-end; margin-bottom:1px; }
+    .vial-sum-unit  { font-size:.64rem; color:var(--text-muted); margin-left:2px; align-self:flex-end; margin-bottom:1px; }
+    .vial-sum-break { font-size:.62rem; color:var(--text-muted); margin-left:4px; white-space:nowrap; }
     .vial-edit-2col { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
     .vial-edit-label { font-size:.67rem; color:var(--text-muted); font-weight:700; text-transform:uppercase; margin-bottom:3px; }
     .vial-edit-select { font-size:.8rem; padding:5px 8px; border:1px solid var(--border); border-radius:6px; background:var(--card); color:var(--text); width:100%; box-sizing:border-box; }
@@ -3034,11 +3038,38 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.21.1</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.22.0</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.22.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.22.0</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">三態庫存分類</span>
+        </div>
+        <ul class="cl-list">
+          <li>【庫存分類】胰島素狀態改為三態：📦 未拆封（冰箱備用）/ 💉 已拆封（使用中）/ ⏸ 已停用（扣出庫存）</li>
+          <li>未拆封以 mfgYM 保存期限判斷、已拆封以 expDate 判斷，過期自動停用；手動停用適用損壞丟棄</li>
+          <li>【庫存總覽】每格支數後顯示 💉N 📦N 分項，一眼看出幾支在用、幾支備用</li>
+        </ul>
+      </div>
+
+      <!-- v2.21.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.21.2</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">過期自動停用</span>
+        </div>
+        <ul class="cl-list">
+          <li>【庫存管理】進入管理頁時自動偵測過期胰島素並標為停用：有開封到期日者以 expDate 判斷；僅有製造年月的未開封瓶以保存期限月底判斷</li>
+          <li>自動停用後顯示 toast 提示，庫存總覽摘要同步更新（過期支數不再計入有效庫存）</li>
+        </ul>
+      </div>
 
       <!-- v2.21.1 -->
       <div class="cl-item">
@@ -8558,7 +8589,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.21.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.22.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -9166,7 +9197,7 @@ function toggleVialActive(id) {
   _saveVialsToStorage(arr);
   _rerenderVialItem(id);
   checkInsulinExpiry();
-  showToast(v.active === false ? '⏸ 已停用此胰島素' : '✅ 已恢復使用中');
+  showToast(v.active === false ? '⏸ 已停用此胰島素' : (v.openDate ? '💉 已恢復（已拆封）' : '📦 已恢復（未拆封）'));
 }
 
 function deleteVial(id) {
@@ -9244,7 +9275,9 @@ function _vialItemHTML(v, idx, isEdit) {
            : '<button class="vial-deactivate-btn" data-vid="' + v.id + '" onclick="toggleVialActive(this.dataset.vid)">停用</button>')
       + '</div></div>';
   } else {
-    var noteHtml = v.note ? '<div class="vial-note-view">📝 ' + v.note + '</div>' : '';
+    var noteHtml  = v.note ? '<div class="vial-note-view">📝 ' + v.note + '</div>' : '';
+    var statusCls = v.active === false ? 'inactive' : (v.openDate ? 'opened' : 'sealed');
+    var statusTxt = v.active === false ? '⏸ 已停用' : (v.openDate ? '💉 已拆封' : '📦 未拆封');
     return '<div class="vial-row' + inactiveCls + '" id="vial-item-' + v.id + '">'
       + '<div class="vial-row-top">'
       +   '<div class="vial-row-left">'
@@ -9253,9 +9286,9 @@ function _vialItemHTML(v, idx, isEdit) {
       +     '<span class="vial-loc-tag">' + locLabel + '</span>'
       +   '</div>'
       +   '<div class="vial-row-right">'
-      +     '<button class="vial-status-toggle ' + (v.active === false ? 'inactive' : 'active')
-      +       '" data-vid="' + v.id + '" onclick="toggleVialActive(this.dataset.vid)">'
-      +       (v.active === false ? '⏸ 停用' : '✅ 使用中') + '</button>'
+      +     '<button class="vial-status-toggle ' + statusCls
+      +       + '" data-vid="' + v.id + '" onclick="toggleVialActive(this.dataset.vid)">'
+      +       statusTxt + '</button>'
       +     '<button class="vial-icon-btn" data-vid="' + v.id + '" onclick="editVial(this.dataset.vid)" title="編輯">✏️</button>'
       +     '<button class="vial-icon-btn danger" data-vid="' + v.id + '" onclick="deleteVial(this.dataset.vid)" title="刪除">🗑</button>'
       +   '</div>'
@@ -9449,6 +9482,36 @@ async function deleteRxGCalEvents(rx) {
   if (rx.gcalApptEventId)   await gcalDelete(rx.gcalApptEventId);
 }
 
+function _autoDisableExpiredVials() {
+  var arr    = getInsulinVials();
+  var today  = new Date(); today.setHours(0, 0, 0, 0);
+  var changed = false;
+  arr.forEach(function(v) {
+    if (v.active === false) return;   // 已停用，跳過
+    // 有開封到期日 → 以 expDate 判斷
+    if (v.expDate) {
+      var exp = new Date(v.expDate + 'T00:00:00');
+      if (exp < today) { v.active = false; changed = true; return; }
+    }
+    // 無 expDate 但有製造年月 → 以未開封保存期限判斷
+    if (!v.expDate && v.mfgYM) {
+      var def = INSULIN_VIAL_DEFS[v.type] || { shelfMonths: 29 };
+      var shelfYM = calcUnopenedExpYM(v.mfgYM, def.shelfMonths); // "YYYY/MM"
+      if (shelfYM) {
+        var parts = shelfYM.split('/');
+        // 保存期限到該月底（下個月第 0 天 = 該月最後一天）
+        var shelfEnd = new Date(parseInt(parts[0]), parseInt(parts[1]), 0);
+        if (shelfEnd < today) { v.active = false; changed = true; return; }
+      }
+    }
+  });
+  if (changed) {
+    _saveVialsToStorage(arr);
+    showToast('⏸ 已自動停用過期胰島素');
+  }
+  return changed;
+}
+
 function checkInsulinExpiry() {
   var arr = getInsulinVials(); var today = new Date(); today.setHours(0,0,0,0);
   var alerts = [];
@@ -9471,11 +9534,13 @@ function _vialSummaryHTML(arr) {
   var locs  = [['home','住家'],['rental','租屋'],['carry','隨身']];
   var types = Object.keys(INSULIN_VIAL_DEFS);
   // 計算各地點+類型的有效支數（active !== false）
-  var counts = {};
+  var counts = {}, openedC = {}, sealedC = {};
   arr.forEach(function(v) {
     if (v.active === false) return;
     var key = (v.location || 'home') + ':' + v.type;
     counts[key] = (counts[key] || 0) + 1;
+    if (v.openDate) { openedC[key] = (openedC[key] || 0) + 1; }
+    else            { sealedC[key] = (sealedC[key] || 0) + 1; }
   });
   // 欄位標頭（各類型）
   var headerCols = types.map(function(t) {
@@ -9488,10 +9553,19 @@ function _vialSummaryHTML(arr) {
   // 各地點的列
   var rows = locs.map(function(loc) {
     var cells = types.map(function(t) {
-      var n = counts[loc[0] + ':' + t] || 0;
+      var key = loc[0] + ':' + t;
+      var n   = counts[key]  || 0;
+      var nO  = openedC[key] || 0;
+      var nS  = sealedC[key] || 0;
+      var brk = n > 0
+        ? '<span class="vial-sum-break">'
+          + (nO > 0 ? '💉' + nO : '') + (nO > 0 && nS > 0 ? ' ' : '') + (nS > 0 ? '📦' + nS : '')
+          + '</span>'
+        : '';
       return '<div class="vial-sum-cell">'
         + '<span class="vial-sum-num' + (n === 0 ? ' zero' : '') + '">' + n + '</span>'
         + '<span class="vial-sum-unit">支</span>'
+        + brk
         + '</div>';
     }).join('');
     return '<div class="vial-sum-row">'
@@ -9522,6 +9596,7 @@ function renderManagePage() {
   initRxDefaults();
   renderSupplyList();
   renderPrescriptionList();
+  _autoDisableExpiredVials();   // 過期自動停用（在 render 前執行）
   renderInsulinVials();
   checkInsulinExpiry();
   restoreSectionStates();
