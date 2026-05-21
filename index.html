@@ -2053,8 +2053,8 @@
     .vial-btn.danger:hover { background:#ef4444; color:#fff; }
     .vial-btn.primary { background:var(--primary); color:#fff; border-color:var(--primary); }
     /* ── Vial redesign v2.21.0 ── */
-    .vial-row { border-bottom:1px solid var(--border); padding:10px 2px; }
-    .vial-row:last-child { border-bottom:none; }
+    .vial-row { padding:10px 10px; background:var(--card); border-radius:10px; margin-bottom:6px; border:1px solid var(--border); }
+    .vial-row:last-child { margin-bottom:0; }
     .vial-row-top { display:flex; align-items:center; justify-content:space-between; gap:6px; }
     .vial-row-left { display:flex; align-items:center; gap:6px; flex:1; min-width:0; overflow:hidden; }
     .vial-type-name { font-size:.84rem; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -2093,19 +2093,29 @@
     .vial-loc-filters { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
     .vlf-btn { font-size:.72rem; font-weight:700; padding:5px 13px; border-radius:20px; border:2px solid; cursor:pointer; background:var(--card); transition:background .15s,color .15s; }
     .vlf-btn-all    { border-color:var(--primary); color:var(--primary); }
-    .vlf-btn-home   { border-color:#0ea5e9; color:#0ea5e9; }
-    .vlf-btn-rental { border-color:#f59e0b; color:#b45309; }
-    .vlf-btn-carry  { border-color:#10b981; color:#059669; }
+    .vlf-btn-home   { border-color:#2563eb; color:#2563eb; }
+    .vlf-btn-rental { border-color:#dc2626; color:#dc2626; }
+    .vlf-btn-carry  { border-color:#16a34a; color:#16a34a; }
     .vlf-btn-all.active    { background:var(--primary); color:#fff; }
-    .vlf-btn-home.active   { background:#0ea5e9; color:#fff; }
-    .vlf-btn-rental.active { background:#f59e0b; color:#fff; }
-    .vlf-btn-carry.active  { background:#10b981; color:#fff; }
+    .vlf-btn-home.active   { background:#2563eb; color:#fff; }
+    .vlf-btn-rental.active { background:#dc2626; color:#fff; }
+    .vlf-btn-carry.active  { background:#16a34a; color:#fff; }
     body[data-skin='cold-dark'] .vlf-btn,
     body[data-skin='warm-dark'] .vlf-btn { background:var(--card); }
     /* ── 地點左邊框 ── */
-    .vloc-home   { border-left:4px solid #0ea5e9 !important; padding-left:8px; }
-    .vloc-rental { border-left:4px solid #f59e0b !important; padding-left:8px; }
-    .vloc-carry  { border-left:4px solid #10b981 !important; padding-left:8px; }
+    .vloc-home   { border-left:5px solid #2563eb !important; padding-left:8px; }
+    .vloc-rental { border-left:5px solid #dc2626 !important; padding-left:8px; }
+    .vloc-carry  { border-left:5px solid #16a34a !important; padding-left:8px; }
+    /* 淡底色輔助辨識 */
+    .vloc-home   { background:#eff6ff !important; }
+    .vloc-rental { background:#fff1f2 !important; }
+    .vloc-carry  { background:#f0fdf4 !important; }
+    body[data-skin='cold-dark'] .vloc-home,
+    body[data-skin='warm-dark'] .vloc-home   { background:#1e3a5f !important; }
+    body[data-skin='cold-dark'] .vloc-rental,
+    body[data-skin='warm-dark'] .vloc-rental { background:#3f1515 !important; }
+    body[data-skin='cold-dark'] .vloc-carry,
+    body[data-skin='warm-dark'] .vloc-carry  { background:#14301e !important; }
     .vial-summary { background:var(--bg); border-radius:8px; padding:8px 10px; margin-bottom:10px; border:1px solid var(--border); }
     .vial-sum-header { display:grid; grid-template-columns:38px repeat(var(--sum-cols,2),1fr); gap:4px; margin-bottom:4px; }
     .vial-sum-col-label { font-size:.64rem; font-weight:700; color:var(--text-muted); text-align:center; text-transform:uppercase; display:flex; align-items:center; justify-content:center; gap:3px; }
@@ -3070,11 +3080,24 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.24.1</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.24.2</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.24.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.24.2</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">地點色彩對比 + 卡片間隔</span>
+        </div>
+        <ul class="cl-list">
+          <li>【庫存管理】地點顏色改為高對比配色：住家=深藍、租屋=紅、隨身=綠，三色互不相近</li>
+          <li>每個胰島素 row 改為卡片式（圓角、淡色背景底色、邊框），視覺上明顯分隔不再黏在一起</li>
+        </ul>
+      </div>
 
       <!-- v2.24.1 -->
       <div class="cl-item">
@@ -8686,7 +8709,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.24.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.24.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
