@@ -3149,11 +3149,23 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.29.1</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.29.2</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.29.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.29.2</span>
+          <span class="cl-date">2026-05-22</span>
+          <span class="cl-tag">長效標籤簡化</span>
+        </div>
+        <ul class="cl-list">
+          <li>【CGM】長效胰島素標籤「長效峰值」改為「長效」</li>
+        </ul>
+      </div>
 
       <!-- v2.29.1 -->
       <div class="cl-item">
@@ -9026,7 +9038,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.29.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.29.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -10875,7 +10887,7 @@ function updateBasalTimeBar() {
           + '</div>';
       }
       var pr = lastRapid ? _compactInsRow(lastRapid, 3,  '#fb923c', '⚡', '速效') : '';
-      var pb = lastBasal ? _compactInsRow(lastBasal, 12, '#c084fc', '💉', '長效峰值') : '';
+      var pb = lastBasal ? _compactInsRow(lastBasal, 12, '#c084fc', '💉', '長效') : '';
       // 當沒有速效作用中，顯示「無速效作用中」 placeholder
       var prFinal = pr || ('<div class="cgm-insulin-row" style="opacity:.42;">'
         + '<div class="cgm-ins-header">⚡ 速效</div>'
