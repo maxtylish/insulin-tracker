@@ -3085,11 +3085,23 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.25.1</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.25.2</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.25.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.25.2</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">PIP fallback 修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【修正】開啟浮動視窗報錯：舊版 localStorage 殘留的主題 key（如 white/black）在換用莫蘭迪後找不到對應定義，fallback 已更新為 mstone</li>
+        </ul>
+      </div>
 
       <!-- v2.25.1 -->
       <div class="cl-item">
@@ -8441,7 +8453,7 @@ async function fetchPipHistory() {
 }
 
 function _buildPipStyle(tKey) {
-  var t = PIP_THEMES[tKey] || PIP_THEMES.white;
+  var t = PIP_THEMES[tKey] || PIP_THEMES.mstone;
   return [
     '* { margin:0; padding:0; box-sizing:border-box; }',
     'body { background:' + t.bg + '; color:' + t.text + ';',
@@ -8564,7 +8576,7 @@ function updateCGMPip() {
   var deltaEl = document.getElementById('cgm-delta');
   var metaEl  = document.getElementById('cgm-meta');
   if (!valEl) return;
-  var t = PIP_THEMES[_pipThemeKey] || PIP_THEMES.white;
+  var t = PIP_THEMES[_pipThemeKey] || PIP_THEMES.mstone;
 
   // BG value + trend
   var colorCls = (valEl.className.match(/cgm-status-\w+/) || [''])[0];
@@ -8756,7 +8768,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.25.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.25.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
