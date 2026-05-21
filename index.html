@@ -2057,6 +2057,16 @@
     .vial-loc-tag { font-size:.67rem; font-weight:700; padding:2px 7px; border-radius:6px; background:var(--bg); color:var(--text-muted); border:1px solid var(--border); white-space:nowrap; flex-shrink:0; }
     .vial-row-right { display:flex; align-items:center; gap:4px; flex-shrink:0; }
     .vial-status-toggle { font-size:.67rem; font-weight:700; padding:3px 8px; border-radius:8px; border:none; cursor:pointer; white-space:nowrap; }
+    .vial-status-sel { font-size:.67rem; font-weight:700; padding:3px 6px; border-radius:8px; cursor:pointer; white-space:nowrap; border:1px solid transparent; -webkit-appearance:none; appearance:none; outline:none; }
+    .vial-status-sel.sealed   { background:#e0f2fe; color:#0369a1; border-color:#bae6fd; }
+    .vial-status-sel.opened   { background:#dcfce7; color:#15803d; border-color:#bbf7d0; }
+    .vial-status-sel.inactive { background:#f1f5f9; color:#94a3b8; border-color:#e2e8f0; }
+    body[data-skin='cold-dark'] .vial-status-sel.sealed,
+    body[data-skin='warm-dark'] .vial-status-sel.sealed   { background:#0c4a6e; color:#7dd3fc; border-color:#0c4a6e; }
+    body[data-skin='cold-dark'] .vial-status-sel.opened,
+    body[data-skin='warm-dark'] .vial-status-sel.opened   { background:#14532d; color:#86efac; border-color:#14532d; }
+    body[data-skin='cold-dark'] .vial-status-sel.inactive,
+    body[data-skin='warm-dark'] .vial-status-sel.inactive { background:#334155; color:#64748b; border-color:#334155; }
     .vial-status-toggle.sealed  { background:#e0f2fe; color:#0369a1; }
     .vial-status-toggle.opened  { background:#dcfce7; color:#15803d; }
     .vial-status-toggle.inactive { background:#f1f5f9; color:#94a3b8; }
@@ -3038,11 +3048,25 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.22.1</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.23.0</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.23.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.23.0</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">狀態三選一下拉</span>
+        </div>
+        <ul class="cl-list">
+          <li>【庫存管理】狀態改為行內三選一下拉：📦 未拆封 / 💉 已拆封 / ⏸ 已停用，免進編輯模式即可切換</li>
+          <li>切換已拆封且無開封日時自動帶入今天日期並計算到期日；切換未拆封時清除開封相關日期</li>
+          <li>狀態改變後即時更新庫存總覽摘要</li>
+        </ul>
+      </div>
 
       <!-- v2.22.1 -->
       <div class="cl-item">
@@ -8602,7 +8626,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.22.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.23.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -9234,6 +9258,34 @@ function _vialExpiryBadge(expStr) {
   return '<span class="vial-expiry-ok">✅ 開封後還有 ' + diff + ' 天</span>';
 }
 
+function onVialStatusChange(id, val) {
+  var arr = getInsulinVials();
+  var v   = arr.find(function(x){ return x.id === id; });
+  if (!v) return;
+  var today = new Date().toISOString().slice(0, 10);
+  var def   = INSULIN_VIAL_DEFS[v.type] || {};
+  if (val === 'sealed') {
+    v.active   = true;
+    v.openDate = '';
+    v.expDate  = '';           // 清除開封後到期；未開封到期由 mfgYM 計算
+  } else if (val === 'opened') {
+    v.active = true;
+    if (!v.openDate) {         // 沒有開封日 → 預設今天，並自動算到期日
+      v.openDate = today;
+      if (def.openExpDays) v.expDate = calcVialExpDate(today, def.openExpDays);
+    }
+  } else {                     // disabled
+    v.active = false;
+  }
+  _saveVialsToStorage(arr);
+  renderInsulinVials();        // 同步更新庫存摘要
+  checkInsulinExpiry();
+  var msg = val === 'sealed' ? '📦 已設為未拆封'
+          : val === 'opened' ? '💉 已設為已拆封'
+          : '⏸ 已停用';
+  showToast(msg);
+}
+
 function _vialItemHTML(v, idx, isEdit) {
   var LOC_LABELS = { home: '住家', rental: '租屋', carry: '隨身' };
   var def        = INSULIN_VIAL_DEFS[v.type] || { label: v.type, openExpDays: 0, shelfMonths: 29, url: null, color: '#888' };
@@ -9290,7 +9342,6 @@ function _vialItemHTML(v, idx, isEdit) {
   } else {
     var noteHtml  = v.note ? '<div class="vial-note-view">📝 ' + v.note + '</div>' : '';
     var statusCls = v.active === false ? 'inactive' : (v.openDate ? 'opened' : 'sealed');
-    var statusTxt = v.active === false ? '⏸ 已停用' : (v.openDate ? '💉 已拆封' : '📦 未拆封');
     return '<div class="vial-row' + inactiveCls + '" id="vial-item-' + v.id + '">'
       + '<div class="vial-row-top">'
       +   '<div class="vial-row-left">'
@@ -9299,9 +9350,12 @@ function _vialItemHTML(v, idx, isEdit) {
       +     '<span class="vial-loc-tag">' + locLabel + '</span>'
       +   '</div>'
       +   '<div class="vial-row-right">'
-      +     '<button class="vial-status-toggle ' + statusCls
-      +       + '" data-vid="' + v.id + '" onclick="toggleVialActive(this.dataset.vid)">'
-      +       statusTxt + '</button>'
+      +     '<select class="vial-status-sel ' + statusCls + '" data-vid="' + v.id + '"'
+      +       ' onchange="onVialStatusChange(this.dataset.vid, this.value)">'
+      +       '<option value="sealed"'  + (!v.openDate && v.active !== false ? ' selected' : '') + '>📦 未拆封</option>'
+      +       '<option value="opened"'  + (v.openDate  && v.active !== false ? ' selected' : '') + '>💉 已拆封</option>'
+      +       '<option value="disabled"' + (v.active === false               ? ' selected' : '') + '>⏸ 已停用</option>'
+      +     '</select>'
       +     '<button class="vial-icon-btn" data-vid="' + v.id + '" onclick="editVial(this.dataset.vid)" title="編輯">✏️</button>'
       +     '<button class="vial-icon-btn danger" data-vid="' + v.id + '" onclick="deleteVial(this.dataset.vid)" title="刪除">🗑</button>'
       +   '</div>'
