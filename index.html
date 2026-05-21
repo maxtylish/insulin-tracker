@@ -2055,6 +2055,7 @@
     .vial-row-left { display:flex; align-items:center; gap:6px; flex:1; min-width:0; overflow:hidden; }
     .vial-type-name { font-size:.84rem; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .vial-loc-tag { font-size:.67rem; font-weight:700; padding:2px 7px; border-radius:6px; background:var(--bg); color:var(--text-muted); border:1px solid var(--border); white-space:nowrap; flex-shrink:0; }
+    .vial-serial-inline { font-size:.64rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:80px; }
     .vial-row-right { display:flex; align-items:center; gap:4px; flex-shrink:0; }
     .vial-status-toggle { font-size:.67rem; font-weight:700; padding:3px 8px; border-radius:8px; border:none; cursor:pointer; white-space:nowrap; }
     .vial-status-sel { font-size:.67rem; font-weight:700; padding:3px 6px; border-radius:8px; cursor:pointer; white-space:nowrap; border:1px solid transparent; -webkit-appearance:none; appearance:none; outline:none; }
@@ -2084,6 +2085,23 @@
     .vial-inactive-row .vial-type-name { opacity:.5; }
     .vial-inactive-row .vial-loc-tag  { opacity:.4; }
     .vial-row-edit { padding:12px 6px 8px; border-bottom:1px solid var(--border); background:var(--bg); border-radius:10px; margin:4px 0; }
+    /* ── 地點 filter ── */
+    .vial-loc-filters { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+    .vlf-btn { font-size:.72rem; font-weight:700; padding:5px 13px; border-radius:20px; border:2px solid; cursor:pointer; background:var(--card); transition:background .15s,color .15s; }
+    .vlf-btn-all    { border-color:var(--primary); color:var(--primary); }
+    .vlf-btn-home   { border-color:#0ea5e9; color:#0ea5e9; }
+    .vlf-btn-rental { border-color:#f59e0b; color:#b45309; }
+    .vlf-btn-carry  { border-color:#10b981; color:#059669; }
+    .vlf-btn-all.active    { background:var(--primary); color:#fff; }
+    .vlf-btn-home.active   { background:#0ea5e9; color:#fff; }
+    .vlf-btn-rental.active { background:#f59e0b; color:#fff; }
+    .vlf-btn-carry.active  { background:#10b981; color:#fff; }
+    body[data-skin='cold-dark'] .vlf-btn,
+    body[data-skin='warm-dark'] .vlf-btn { background:var(--card); }
+    /* ── 地點左邊框 ── */
+    .vloc-home   { border-left:4px solid #0ea5e9 !important; padding-left:8px; }
+    .vloc-rental { border-left:4px solid #f59e0b !important; padding-left:8px; }
+    .vloc-carry  { border-left:4px solid #10b981 !important; padding-left:8px; }
     .vial-summary { background:var(--bg); border-radius:8px; padding:8px 10px; margin-bottom:10px; border:1px solid var(--border); }
     .vial-sum-header { display:grid; grid-template-columns:38px repeat(var(--sum-cols,2),1fr); gap:4px; margin-bottom:4px; }
     .vial-sum-col-label { font-size:.64rem; font-weight:700; color:var(--text-muted); text-align:center; text-transform:uppercase; display:flex; align-items:center; justify-content:center; gap:3px; }
@@ -3048,11 +3066,37 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.23.0</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.24.0</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.24.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.24.0</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">地點 Filter + 色彩邊框</span>
+        </div>
+        <ul class="cl-list">
+          <li>【庫存管理】新增地點過濾按鈕（全部 / 住家 / 租屋 / 隨身），點選後僅顯示該地點的胰島素</li>
+          <li>每支胰島素 row 依地點顯示左側色彩邊框：住家=藍、租屋=橙、隨身=綠，一眼識別</li>
+        </ul>
+      </div>
+
+      <!-- v2.23.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.23.1</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">類型下拉顏色 + 序號顯示</span>
+        </div>
+        <ul class="cl-list">
+          <li>【庫存管理】胰島素類型下拉選項加入顏色 emoji（🟠 速效 / 🟢 長效），輔助防止選錯</li>
+          <li>【庫存管理】瀏覽列地點 tag 右側顯示製造序號（若有填寫）</li>
+        </ul>
+      </div>
 
       <!-- v2.23.0 -->
       <div class="cl-item">
@@ -8626,7 +8670,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.23.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.24.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -9065,12 +9109,13 @@ async function checkAndNotifyLowSupplies() {
 //  INSULIN VIAL MANAGEMENT
 // ══════════════════════════════════════════
 var INSULIN_VIAL_DEFS = {
-  novorapid: { label: 'NovoRapid 速效', color: '#F5A623', openExpDays: 28, shelfMonths: 29,
+  novorapid: { label: 'NovoRapid 速效', color: '#F5A623', dot: '🟠', openExpDays: 28, shelfMonths: 29,
                url: 'https://www.ktgh.com.tw/Medicament_tbDrug_Look.asp?CatID=65&ModuleType=&NewsID=1547&Ordid=30119' },
-  tresiba:   { label: 'Tresiba 長效',   color: '#7FFF00', openExpDays: 56, shelfMonths: 29, url: null }
+  tresiba:   { label: 'Tresiba 長效',   color: '#7FFF00', dot: '🟢', openExpDays: 56, shelfMonths: 29, url: null }
 };
 
 var _vialEditIds = {};
+var _vialLocFilter = null;  // null=全部, 'home'|'rental'|'carry'
 
 function calcVialExpDate(openDateStr, days) {
   if (!openDateStr || !days) return '';
@@ -9307,9 +9352,10 @@ function _vialItemHTML(v, idx, isEdit) {
       return '<option value="' + p[0] + '"' + (loc === p[0] ? ' selected' : '') + '>' + p[1] + '</option>';
     }).join('');
     var typeOpts = Object.keys(INSULIN_VIAL_DEFS).map(function(k){
-      return '<option value="' + k + '"' + (v.type === k ? ' selected' : '') + '>' + INSULIN_VIAL_DEFS[k].label + '</option>';
+      var d = INSULIN_VIAL_DEFS[k];
+      return '<option value="' + k + '"' + (v.type === k ? ' selected' : '') + '>' + (d.dot ? d.dot + ' ' : '') + d.label + '</option>';
     }).join('');
-    return '<div class="vial-row vial-row-edit' + inactiveCls + '" id="vial-item-' + v.id + '">'
+    return '<div class="vial-row vial-row-edit vloc-' + loc + inactiveCls + '" id="vial-item-' + v.id + '">'
       + '<div class="vial-edit-2col">'
       +   '<div><div class="vial-edit-label">📍 地點</div>'
       +   '<select id="vial-loc-' + v.id + '" class="vial-edit-select">' + locOpts + '</select></div>'
@@ -9342,12 +9388,13 @@ function _vialItemHTML(v, idx, isEdit) {
   } else {
     var noteHtml  = v.note ? '<div class="vial-note-view">📝 ' + v.note + '</div>' : '';
     var statusCls = v.active === false ? 'inactive' : (v.openDate ? 'opened' : 'sealed');
-    return '<div class="vial-row' + inactiveCls + '" id="vial-item-' + v.id + '">'
+    return '<div class="vial-row vloc-' + loc + inactiveCls + '" id="vial-item-' + v.id + '">'
       + '<div class="vial-row-top">'
       +   '<div class="vial-row-left">'
       +     dot
       +     '<span class="vial-type-name">' + def.label + '</span>'
       +     '<span class="vial-loc-tag">' + locLabel + '</span>'
+      +     (v.serialNo ? '<span class="vial-serial-inline">' + v.serialNo + '</span>' : '')
       +   '</div>'
       +   '<div class="vial-row-right">'
       +     '<select class="vial-status-sel ' + statusCls + '" data-vid="' + v.id + '"'
@@ -9646,16 +9693,42 @@ function _vialSummaryHTML(arr) {
     + '</div>';
 }
 
+function setVialLocFilter(loc) {
+  _vialLocFilter = (loc === 'all') ? null : loc;
+  renderInsulinVials();
+}
+
+function _vialFilterBtnsHTML() {
+  var btns = [
+    ['all',    '全部',    'all'],
+    ['home',   '住家',  'home'],
+    ['rental', '租屋', 'rental'],
+    ['carry',  '隨身',  'carry']
+  ];
+  var cur = _vialLocFilter || 'all';
+  return '<div class="vial-loc-filters">'
+    + btns.map(function(b) {
+      var active = cur === b[0] ? ' active' : '';
+      return '<button class="vlf-btn vlf-btn-' + b[2] + active + '"'
+        + ' onclick="setVialLocFilter(\'' + b[0] + '\')">' + b[1] + '</button>';
+    }).join('')
+    + '</div>';
+}
+
 function renderInsulinVials() {
   var el = document.getElementById('insulin-vial-list'); if (!el) return;
   var arr = getInsulinVials();
   if (arr.length === 0) { el.innerHTML = '<div class="suppl-empty">尚無紀錄，請點上方「＋ 新增」按鈕</div>'; return; }
+  var filtered = _vialLocFilter
+    ? arr.filter(function(v){ return (v.location || 'home') === _vialLocFilter; })
+    : arr;
   var typeCounts = {};
-  var rows = arr.map(function(v) {
+  var rows = filtered.map(function(v) {
     typeCounts[v.type] = (typeCounts[v.type] || 0) + 1;
     return _vialItemHTML(v, typeCounts[v.type], !!_vialEditIds[v.id]);
   }).join('');
-  el.innerHTML = _vialSummaryHTML(arr) + rows;
+  var emptyNote = filtered.length === 0 ? '<div class="suppl-empty">此地點無胰島素紀錄</div>' : '';
+  el.innerHTML = _vialSummaryHTML(arr) + _vialFilterBtnsHTML() + emptyNote + rows;
 }
 
 function renderManagePage() {
