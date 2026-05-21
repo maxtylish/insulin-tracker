@@ -1997,7 +1997,7 @@
     .vial-name { font-size:.88rem; font-weight:700; color:var(--text); margin-bottom:8px; display:flex; align-items:center; gap:6px; }
     .vial-name a { color:var(--primary); text-decoration:none; font-size:.78rem; font-weight:500; }
     .vial-name a:hover { text-decoration:underline; }
-    .vial-4col  { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-bottom:6px; }
+    .vial-4col  { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; margin-bottom:8px; }
     .vial-item.vtype-novorapid { border-left:4px solid #F5A623; padding-left:10px; }
     .vial-item.vtype-tresiba   { border-left:4px solid #7FFF00; padding-left:10px; }
     .vial-color-dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:5px; vertical-align:middle; flex-shrink:0; }
@@ -3038,11 +3038,24 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.22.0</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.22.1</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.22.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.22.1</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">手機版編輯表單修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【修正】胰島素編輯表單日期欄位從 4 欄改為 2 欄，解決手機版超出外框問題</li>
+          <li>欄位順序調整：製造日期 / 開封日期（第一行）→ 失效日期 / 製造序號（第二行），製造序號位於開封日期正下方</li>
+        </ul>
+      </div>
 
       <!-- v2.22.0 -->
       <div class="cl-item">
@@ -8589,7 +8602,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.22.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.22.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -9256,14 +9269,14 @@ function _vialItemHTML(v, idx, isEdit) {
       +   '<input type="month" class="vial-date-input" id="vial-mfg-' + v.id + '" value="' + v.mfgYM + '"'
       +   ' data-vid="' + v.id + '" onchange="_onVialMfgEdit(this.dataset.vid)">'
       +   '<div id="vial-unopen-' + v.id + '">' + unopenedHtml + '</div></div>'
-      + '<div class="vial-date-col"><span class="vial-date-label">製造序號</span>'
-      +   '<input type="text" class="vial-date-input" id="vial-serial-' + v.id + '" value="' + (v.serialNo||'') + '" placeholder="選填" style="font-size:.75rem;"></div>'
       + '<div class="vial-date-col"><span class="vial-date-label">開封日期</span>'
       +   '<input type="date" class="vial-date-input" id="vial-open-' + v.id + '" value="' + v.openDate + '"'
       +   ' data-vid="' + v.id + '" onchange="_onVialOpenEdit(this.dataset.vid)"></div>'
       + '<div class="vial-date-col"><span class="vial-date-label">失效日期<span style="font-size:.6rem;color:var(--text-muted);">（自動）</span></span>'
       +   '<input type="date" class="vial-date-input" id="vial-exp-' + v.id + '" value="' + exp + '"'
       +   ' data-vid="' + v.id + '" onchange="_onVialExpEdit(this.dataset.vid)"></div>'
+      + '<div class="vial-date-col"><span class="vial-date-label">製造序號</span>'
+      +   '<input type="text" class="vial-date-input" id="vial-serial-' + v.id + '" value="' + (v.serialNo||'') + '" placeholder="選填" style="font-size:.75rem;"></div>'
       + '</div>'
       + '<div id="vial-badge-' + v.id + '" style="margin:4px 0 2px;">' + badge + '</div>'
       + '<textarea class="vial-note-input" id="vial-note-' + v.id + '" placeholder="備註（顏色標記、儲存位置…）">' + (v.note||'') + '</textarea>'
