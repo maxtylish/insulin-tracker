@@ -3000,11 +3000,24 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.18.1</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.19.0</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.19.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.19.0</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">PiP 電池 / IOB 計算修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【PiP 電池】修正 calcIOBRemainingMins() 誤納入未來施打時間，導致電池永遠顯示 100%</li>
+          <li>【PiP 電池】電池下方剩餘時間改為精簡格式（如 1h47m），無速效作用中時留空</li>
+        </ul>
+      </div>
 
       <!-- v2.18.1 -->
       <div class="cl-item">
@@ -8060,6 +8073,7 @@ function calcIOBRemainingMins() {
   function checkInj(dateStr, timeStr, siteKey) {
     if (!timeStr) return;
     var injMs   = new Date(dateStr + 'T' + timeStr + ':00').getTime();
+    if (injMs > now) return;  // 過濾未來施打時間，避免剩餘時間計算錯誤
     var onsetMin = (SITE_ALARM_MAP[siteKey] && SITE_ALARM_MAP[siteKey].def) || 20;
     var endMs   = injMs + onsetMin * 60000 + DURATION_H * 3600000;
     var remain  = endMs - now;
@@ -8319,7 +8333,14 @@ function updateCGMPip() {
         (fillW > 0 ? '<rect x="2" y="2" width="' + fillW + '" height="7" rx="1.5" fill="' + batColor + '"/>' : '') +
       '</svg>';
   }
-  if (iobSubEl) { iobSubEl.textContent = ''; }  // PiP 只顯示 IOB 值與電池條
+  if (iobSubEl) {
+    if (remMins > 0) {
+      var _irh = Math.floor(remMins / 60), _irm = remMins % 60;
+      iobSubEl.textContent = _irh > 0 ? _irh + 'h' + _irm + 'm' : _irm + 'm';
+    } else {
+      iobSubEl.textContent = '';
+    }
+  }
 
   _updatePipEvents();
 }
@@ -8459,7 +8480,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.18.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.19.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
