@@ -2998,11 +2998,44 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.16.0</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.18.0</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.18.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.18.0</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">PiP 簡化 / 長效峰值倒數</span>
+        </div>
+        <ul class="cl-list">
+          <li>【長效顯示】CGM 面板長效由 42h 改為「12小時峰值窗口」倒數；到期後顯示「峰值結束」</li>
+          <li>【PiP 視窗】IOB 區塊移除剩餘時間文字，只保留數值（3.0U）與電池條</li>
+          <li>【PiP 輪播】移除速效起效倒數與長效剩餘項目；輪播專注顯示重要待辦與複診資訊</li>
+        </ul>
+      </div>
+
+      <!-- v2.17.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.17.0</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">速效倒數 / PiP 同步 / 顯示修正 / 效能</span>
+        </div>
+        <ul class="cl-list">
+          <li>【速效倒數】三段式邏輯：起效前「Xm Ys 後起效」/ 起效中「XhYmZZs」剩餘 / 結束「作用結束」；長效維持分鐘精度</li>
+          <li>【速效倒數】修正 rapidCandidates 納入未來施打時間導致顯示異常的問題</li>
+          <li>【速效倒數】移除錯誤的 Math.min(onsetMin) cap，改為精確秒數，每秒更新</li>
+          <li>【CGM Panel】無速效作用中時顯示「⚡ 速效 · 無作用中」placeholder</li>
+          <li>【PiP 視窗】速效起效狀態加入事件輪播（秒數精度）</li>
+          <li>【PiP 視窗】長效 Tresiba 剩餘時間加入事件輪播（如「💉 長效 · 右大腿 剩37h29m」）</li>
+          <li>【效能】新增 1 秒 _insCountdownTimer 專責更新胰島素倒數，與 CGM poll（5min）分離</li>
+          <li>【Service Worker】cache v5 → v6，強制清除舊快取</li>
+        </ul>
+      </div>
 
       <!-- v2.16.0 -->
       <div class="cl-item">
@@ -8272,16 +8305,7 @@ function updateCGMPip() {
         (fillW > 0 ? '<rect x="2" y="2" width="' + fillW + '" height="7" rx="1.5" fill="' + batColor + '"/>' : '') +
       '</svg>';
   }
-  if (iobSubEl) {
-    if (remMins > 0) {
-      var rh = Math.floor(remMins / 60), rm = remMins % 60;
-      iobSubEl.textContent = rh > 0
-        ? '\u5269' + rh + '\u6642' + rm + '\u5206'
-        : '\u5269' + rm + '\u5206\u9418';
-    } else {
-      iobSubEl.textContent = '\u5df2\u6e05\u9664';
-    }
-  }
+  if (iobSubEl) { iobSubEl.textContent = ''; }  // PiP 只顯示 IOB 值與電池條
 
   _updatePipEvents();
 }
@@ -8298,60 +8322,6 @@ function _updatePipEvents() {
   try {
     var items = [];
     var today = new Date(); today.setHours(0,0,0,0);
-
-    // 速效胰島素起效倒數（三段式：待起效 / 起效中 / 作用結束）
-    if (_pipLastRapid) {
-      var _pnow    = Date.now();
-      var _ponMin  = (SITE_ALARM_MAP[_pipLastRapid.site] && SITE_ALARM_MAP[_pipLastRapid.site].def) || 20;
-      var _pinjMs  = _pipLastRapid.dt.getTime();
-      var _ponMs   = _pinjMs + _ponMin * 60000;
-      var _pendMs  = _ponMs  + 3 * 3600000;
-      var _pclrMs  = 1.5 * 3600000;
-      if (!(_pnow >= _pendMs && (_pnow - _pendMs) > _pclrMs)) {
-        var _pSite = _pipLastRapid.site || '';
-        var _pLabel = '⚡ 速效' + (_pSite ? ' · ' + _pSite : '');
-        var _pItem;
-        if (_pnow >= _pendMs) {
-          _pItem = _pLabel + ' 作用結束';
-        } else if (_pnow < _ponMs) {
-          var _psecs = Math.ceil((_ponMs - _pnow) / 1000);
-          var _pom = Math.floor(_psecs / 60), _pos = _psecs % 60;
-          _pItem = _pLabel + ' ' + _pom + 'm' + String(_pos).padStart(2,'0') + 's 後起效';
-        } else {
-          var _premMs = _pendMs - _pnow;
-          var _prs = Math.ceil(_premMs / 1000);
-          var _prh = Math.floor(_prs / 3600);
-          var _prm = Math.floor((_prs % 3600) / 60);
-          var _prss = _prs % 60;
-          _pItem = _pLabel + ' 剩' + (_prh > 0 ? _prh + 'h' + _prm + 'm' : _prm + 'm') + String(_prss).padStart(2,'0') + 's';
-        }
-        items.push(_pItem);
-      }
-    }
-
-    // 長效胸島素剰餘時間（Tresiba 42h）
-    if (_pipLastBasal) {
-      var _bnow   = Date.now();
-      var _bonMin = (SITE_ALARM_MAP[_pipLastBasal.site] && SITE_ALARM_MAP[_pipLastBasal.site].def) || 60;
-      var _binjMs = _pipLastBasal.dt.getTime();
-      var _bonMs  = _binjMs + _bonMin * 60000;
-      var _bendMs = _bonMs  + 42 * 3600000;
-      if (_bnow < _bendMs) {
-        var _bSite  = _pipLastBasal.site || '';
-        var _bLabel = '💉 長效' + (_bSite ? ' · ' + _bSite : '');
-        var _bItem;
-        if (_bnow < _bonMs) {
-          var _bmLeft = Math.ceil((_bonMs - _bnow) / 60000);
-          _bItem = _bLabel + ' ' + _bmLeft + '分後起效';
-        } else {
-          var _bremMs = _bendMs - _bnow;
-          var _brh = Math.floor(_bremMs / 3600000);
-          var _brm = Math.round((_bremMs % 3600000) / 60000);
-          _bItem = _bLabel + ' 剩' + _brh + 'h' + _brm + 'm';
-        }
-        items.push(_bItem);
-      }
-    }
 
     // 未完成 todos
     var todos = getTodos ? getTodos() : [];
@@ -8475,7 +8445,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.16.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.18.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -10121,7 +10091,7 @@ function updateBasalTimeBar() {
         var pct, timeStr, headerStr;
         if (isExp) {
           pct = '0';
-          timeStr = durationH <= 4 ? '作用結束' : '已清除';
+          timeStr = durationH <= 4 ? '作用結束' : '峰值結束';
           headerStr = emoji + ' ' + shortLabel + (last.site ? ' · ' + last.site : '');
         } else if (nowMs < onsetMs) {
           var secsToOnset = Math.ceil((onsetMs - nowMs) / 1000);
@@ -10158,7 +10128,7 @@ function updateBasalTimeBar() {
           + '</div>';
       }
       var pr = lastRapid ? _compactInsRow(lastRapid, 3,  '#fb923c', '⚡', '速效') : '';
-      var pb = lastBasal ? _compactInsRow(lastBasal, 42, '#c084fc', '💉', '長效') : '';
+      var pb = lastBasal ? _compactInsRow(lastBasal, 12, '#c084fc', '💉', '長效峰值') : '';
       // 當沒有速效作用中，顯示「無速效作用中」 placeholder
       var prFinal = pr || ('<div class="cgm-insulin-row" style="opacity:.42;">'
         + '<div class="cgm-ins-header">⚡ 速效</div>'
