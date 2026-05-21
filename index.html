@@ -1704,14 +1704,31 @@
       color: white; border-radius: 14px; padding: 14px 18px;
       display: flex; flex-direction: row; align-items: stretch;
       margin-bottom: 12px; box-shadow: 0 4px 16px rgba(30,64,175,0.3);
-      gap: 0;
+      gap: 0; position: relative; overflow: hidden; transition: box-shadow 0.5s ease;
     }
-    .cgm-left { display: flex; flex-direction: column; align-items: flex-start; flex-shrink: 0; }
+    /* ── CGM BG-status diagonal overlay ── */
+    .cgm-status-bg {
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none; z-index: 0;
+      clip-path: polygon(48% 0%, 100% 0%, 100% 100%, 22% 100%);
+      transition: background 0.6s ease, opacity 0.6s ease;
+      background: transparent; opacity: 0;
+    }
+    .cgm-widget[data-bg-status="low"]    .cgm-status-bg { background: rgba(167,139,250,0.22); opacity: 1; }
+    .cgm-widget[data-bg-status="normal"] .cgm-status-bg { background: rgba(134,239,172,0.17); opacity: 1; }
+    .cgm-widget[data-bg-status="warn"]   .cgm-status-bg { background: rgba(252,211,77,0.20);  opacity: 1; }
+    .cgm-widget[data-bg-status="high"]   .cgm-status-bg { background: rgba(252,165,165,0.24); opacity: 1; }
+    .cgm-widget[data-bg-status="low"]    { box-shadow: 0 4px 24px rgba(139,92,246,0.44); }
+    .cgm-widget[data-bg-status="normal"] { box-shadow: 0 4px 24px rgba(34,197,94,0.38); }
+    .cgm-widget[data-bg-status="warn"]   { box-shadow: 0 4px 24px rgba(245,158,11,0.44); }
+    .cgm-widget[data-bg-status="high"]   { box-shadow: 0 4px 24px rgba(239,68,68,0.44); }
+    .cgm-left { display: flex; flex-direction: column; align-items: flex-start; flex-shrink: 0; position: relative; z-index: 1; }
     .cgm-divider {
-      width: 1px; background: rgba(255,255,255,0.18); margin: 0 14px; flex-shrink: 0; align-self: stretch;
+      width: 1px; background: rgba(255,255,255,0.18); margin: 0 14px; flex-shrink: 0; align-self: stretch; position: relative; z-index: 1;
     }
     .cgm-insulin-panel {
-      flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 0; min-width: 0;
+      flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 0; min-width: 0; position: relative; z-index: 1;
     }
     .cgm-insulin-row {
       display: flex; flex-direction: column; gap: 3px; padding: 4px 0;
@@ -2513,6 +2530,8 @@
 
   <!-- CGM Real-time Widget -->
   <div class="cgm-widget" id="cgm-widget" style="display:none">
+    <!-- BG status diagonal overlay -->
+    <div class="cgm-status-bg" id="cgm-status-bg"></div>
     <!-- Left: BG number -->
     <div class="cgm-left">
       <div class="cgm-main-row">
@@ -3122,11 +3141,24 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.27.3</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.28.0</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.28.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.28.0</span>
+          <span class="cl-date">2026-05-22</span>
+          <span class="cl-tag">CGM 血糖狀態色彩背景</span>
+        </div>
+        <ul class="cl-list">
+          <li>【CGM】血糖數值框新增斜向色塊背景，依血糖狀態（低/正常/警戒/高）呈現對應顏色</li>
+          <li>【CGM】外框陰影同步反映血糖狀態色（低=紫、正常=綠、警戒=琥珀、高=紅）</li>
+        </ul>
+      </div>
 
       <!-- v2.27.3 -->
       <div class="cl-item">
@@ -4655,6 +4687,7 @@ function updateCGMWidget(entry) {
 
   var result = classifyBG(sgv);
   var colorClass = result ? 'cgm-status-' + result.cls : '';
+  widget.dataset.bgStatus = result ? result.cls : 'none';
   var valEl = document.getElementById('cgm-value');
   valEl.textContent = sgv;
   valEl.className = 'cgm-value ' + colorClass;
@@ -8933,7 +8966,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.27.3';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.28.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
