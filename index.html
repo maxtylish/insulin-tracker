@@ -3085,11 +3085,24 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.25.0</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.25.1</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.25.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.25.1</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">PIP 視窗 莫蘭迪配色</span>
+        </div>
+        <ul class="cl-list">
+          <li>【PiP 視窗】全面換用莫蘭迪配色，提供 8 款主題：淺色系（粉 / 石 / 藍 / 綠 / 霧）＋深色系（夜 / 煙 / 茶），點底部色點切換</li>
+          <li>預設主題改為「莫蘭迪石」，風格低飽和、柔和易讀</li>
+        </ul>
+      </div>
 
       <!-- v2.25.0 -->
       <div class="cl-item">
@@ -8291,36 +8304,38 @@ function buildRoundHint(rawDose) {
 // ── Document Picture-in-Picture (floating CGM window) ──────────────────────
 var _pipWin = null;
 var _pipHistory = [];  // [{sgv, date}] last 60 readings (~5h)
-var _pipThemeKey = (function() { try { return localStorage.getItem('pip_theme') || 'white'; } catch(e) { return 'white'; } })();
+var _pipThemeKey = (function() { try { return localStorage.getItem('pip_theme') || 'mstone'; } catch(e) { return 'mstone'; } })();
 var _pipCarouselIdx = 0;      // PiP event carousel current index
 var _pipLastRapid = null;     // last rapid injection {dt, site} for PiP display
 var _pipLastBasal = null;     // last basal injection {dt, site} for PiP display
 
 var PIP_THEMES = {
-  white:   { bg:'#ffffff', text:'#111111', sub:'#888888', ring:'#444444',
-             low:'#7c3aed', normal:'#16a34a', warn:'#d97706', high:'#dc2626',
-             spark:'#16a34a', band:'rgba(0,0,0,0.07)', dot:'#9ca3af', label:'白色' },
-  black:   { bg:'#111111', text:'#f0f0f0', sub:'#777777', ring:'#dddddd',
-             low:'#a78bfa', normal:'#4ade80', warn:'#fbbf24', high:'#f87171',
-             spark:'#4ade80', band:'rgba(255,255,255,0.07)', dot:'#374151', label:'黑色' },
-  crimson: { bg:'#1c0505', text:'#fecdd3', sub:'#a06070', ring:'#f87171',
-             low:'#c4b5fd', normal:'#6ee7b7', warn:'#fcd34d', high:'#fda4af',
-             spark:'#fda4af', band:'rgba(255,255,255,0.07)', dot:'#991b1b', label:'深紅' },
-  sunset:  { bg:'#1a0800', text:'#fde8d0', sub:'#9a6a4a', ring:'#fb923c',
-             low:'#c4b5fd', normal:'#6ee7b7', warn:'#fcd34d', high:'#f87171',
-             spark:'#fb923c', band:'rgba(255,255,255,0.07)', dot:'#dc2626', label:'夕陽' },
-  amber:   { bg:'#1a1000', text:'#fef3c7', sub:'#937f3a', ring:'#fbbf24',
-             low:'#c4b5fd', normal:'#86efac', warn:'#fde68a', high:'#f87171',
-             spark:'#fbbf24', band:'rgba(255,255,255,0.07)', dot:'#92400e', label:'琥珀' },
-  forest:  { bg:'#0a1a0e', text:'#dcfce7', sub:'#4d7a5a', ring:'#86efac',
-             low:'#c4b5fd', normal:'#4ade80', warn:'#fbbf24', high:'#f87171',
-             spark:'#4ade80', band:'rgba(255,255,255,0.05)', dot:'#15803d', label:'深綠' },
-  navy:    { bg:'#0f172a', text:'#e2e8f0', sub:'#64748b', ring:'#94a3b8',
-             low:'#c4b5fd', normal:'#6ee7b7', warn:'#fcd34d', high:'#fca5a5',
-             spark:'#6ee7b7', band:'rgba(255,255,255,0.05)', dot:'#1d4ed8', label:'深藍' },
-  violet:  { bg:'#0d0520', text:'#ede9fe', sub:'#7060a0', ring:'#a78bfa',
-             low:'#fda4af', normal:'#6ee7b7', warn:'#fcd34d', high:'#f87171',
-             spark:'#a78bfa', band:'rgba(255,255,255,0.06)', dot:'#7c3aed', label:'紫羅蘭' }
+  // ── 莫蘭迪淺色系 ──────────────────────────────────
+  mpink:  { bg:'#ede0db', text:'#3d2f2a', sub:'#a08880', ring:'#806058',
+            low:'#7a5c8c', normal:'#4e7a5c', warn:'#9c7840', high:'#9c5050',
+            spark:'#7a9082', band:'rgba(61,47,42,0.09)', dot:'#c8a8a0', label:'莫蘭迪粉' },
+  mstone: { bg:'#dcd8d0', text:'#36322c', sub:'#90887c', ring:'#6e6860',
+            low:'#706080', normal:'#507060', warn:'#907850', high:'#905050',
+            spark:'#708078', band:'rgba(54,50,44,0.09)', dot:'#b0a898', label:'莫蘭迪石' },
+  mblue:  { bg:'#d4d8de', text:'#2c3040', sub:'#7a8090', ring:'#5a6878',
+            low:'#6868a0', normal:'#407870', warn:'#887848', high:'#886060',
+            spark:'#6080a0', band:'rgba(44,48,64,0.09)', dot:'#9aa0b0', label:'莫蘭迪藍' },
+  msage:  { bg:'#d4dbd4', text:'#2a3428', sub:'#728070', ring:'#527060',
+            low:'#6870a0', normal:'#3a7858', warn:'#8a7848', high:'#8a5050',
+            spark:'#5a8870', band:'rgba(42,52,40,0.09)', dot:'#9ab5a0', label:'莫蘭迪綠' },
+  mfog:   { bg:'#dcd8e4', text:'#30283c', sub:'#8880a0', ring:'#6860a0',
+            low:'#8870b8', normal:'#4a7868', warn:'#9a8050', high:'#9a5858',
+            spark:'#7870b0', band:'rgba(48,40,60,0.09)', dot:'#a8a0c0', label:'莫蘭迪霧' },
+  // ── 莫蘭迪深色系 ──────────────────────────────────
+  mnight: { bg:'#28242e', text:'#c8c0d4', sub:'#706878', ring:'#9088a8',
+            low:'#9888c8', normal:'#70a890', warn:'#b89868', high:'#c07878',
+            spark:'#8898c8', band:'rgba(255,255,255,0.07)', dot:'#504858', label:'莫蘭迪夜' },
+  msmoke: { bg:'#20282e', text:'#bcc4cc', sub:'#607080', ring:'#8090a0',
+            low:'#8888c0', normal:'#60a090', warn:'#a89060', high:'#b87070',
+            spark:'#7090b8', band:'rgba(255,255,255,0.07)', dot:'#404858', label:'莫蘭迪煙' },
+  mtea:   { bg:'#2a2420', text:'#ccc4b8', sub:'#807060', ring:'#a09080',
+            low:'#a08ab0', normal:'#70a880', warn:'#c0a060', high:'#c07860',
+            spark:'#a09070', band:'rgba(255,255,255,0.07)', dot:'#504038', label:'莫蘭迪茶' }
 };
 
 // ── IOB calculation for PiP ──────────────────────────────────────────────────
@@ -8741,7 +8756,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.25.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.25.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
