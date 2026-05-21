@@ -2569,7 +2569,7 @@
   <div class="mini-cgm-card" id="mini-cgm-card" style="display:none;">
     <div class="mini-cgm-header" style="display:flex;align-items:center;justify-content:space-between;">
       <button onclick="switchMiniCgmMode(-1)" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--text-muted);padding:0 4px;">‹</button>
-      <span id="miniCgmTitle">📈 近5小時血糖</span>
+      <span id="miniCgmTitle">📈 近1小時血糖</span>
       <button onclick="switchMiniCgmMode(1)" style="background:none;border:none;font-size:1.1rem;cursor:pointer;color:var(--text-muted);padding:0 4px;">›</button>
     </div>
     <canvas id="miniCgmChart" height="90"></canvas>
@@ -3122,11 +3122,23 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.27.1</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.27.2</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.27.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.27.2</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">Mini CGM 近1小時預設</span>
+        </div>
+        <ul class="cl-list">
+          <li>【CGM 圖表】新增「近1小時血糖」模式，設為預設；切換順序：1小時 › 5小時 › 今日（‹ › 雙向切換）</li>
+        </ul>
+      </div>
 
       <!-- v2.27.1 -->
       <div class="cl-item">
@@ -5489,10 +5501,12 @@ async function renderCGMDayChart(dateStr) {
   });
 }
 let miniCgmChart = null;
-let miniChartMode = '5h'; // '5h' | 'today'
+let miniChartMode = '1h'; // '1h' | '5h' | 'today'
 function switchMiniCgmMode(dir) {
-  // toggle between 5h and today
-  miniChartMode = miniChartMode === '5h' ? 'today' : '5h';
+  const order = ['1h', '5h', 'today'];
+  var idx = order.indexOf(miniChartMode);
+  idx = (idx + (dir >= 0 ? 1 : -1) + order.length) % order.length;
+  miniChartMode = order[idx];
   renderMiniCGMChart();
 }
 async function renderMiniCGMChart() {
@@ -5508,7 +5522,12 @@ async function renderMiniCGMChart() {
   // Filter by mode
   const titleEl = document.getElementById('miniCgmTitle');
   let entries = allEntries;
-  if (miniChartMode === '5h') {
+  if (miniChartMode === '1h') {
+    const cutoff = Date.now() - 1 * 60 * 60 * 1000;
+    entries = allEntries.filter(e => (e.date || 0) >= cutoff);
+    if (!entries.length) entries = allEntries.slice(-12); // fallback 最近12筆
+    if (titleEl) titleEl.textContent = '📈 近1小時血糖';
+  } else if (miniChartMode === '5h') {
     const cutoff = Date.now() - 5 * 60 * 60 * 1000;
     entries = allEntries.filter(e => (e.date || 0) >= cutoff);
     if (!entries.length) entries = allEntries; // fallback
@@ -8902,7 +8921,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.27.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.27.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
