@@ -3122,11 +3122,23 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.27.2</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.27.3</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.27.3 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.27.3</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">長效起效倒數秒精度</span>
+        </div>
+        <ul class="cl-list">
+          <li>【胰島素狀態】長效待起效倒數改為秒精度（XmYYs 後起效），與速效一致</li>
+        </ul>
+      </div>
 
       <!-- v2.27.2 -->
       <div class="cl-item">
@@ -8921,7 +8933,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.27.2';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.27.3';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -10553,11 +10565,12 @@ function _insulinBarBlock(last, durationH, color, emoji, labelText) {
     metaText = onsetStr + ' 起效 · ' + siteLabel;
     remainText = '<span style="color:#94a3b8;font-size:.78rem;">' + clrStr + _expLabel + '</span>';
   } else if (nowMs < onsetMs) {
-    var minsLeft = Math.ceil((onsetMs - nowMs) / 60000);
+    var secsToOnset1 = Math.ceil((onsetMs - nowMs) / 1000);
+    var _om1 = Math.floor(secsToOnset1 / 60), _os1 = secsToOnset1 % 60;
     pct = Math.max(0, Math.min(100, (1 - (onsetMs - nowMs) / (onsetMin * 60000)) * 100)).toFixed(1);
     statusBadge = '<span style="font-size:.7rem;padding:1px 5px;border-radius:10px;background:' + color + '28;color:' + color + ';font-weight:600;">待起效</span>';
     metaText = injectStr + ' 注射 · ' + siteLabel + ' · ' + onsetMin + 'min 後起效';
-    remainText = '<span style="color:#94a3b8;font-size:.78rem;">還有 <b style="color:' + color + '">' + minsLeft + ' 分</b>後起效</span>';
+    remainText = '<span style="color:#94a3b8;font-size:.78rem;">還有 <b style="color:' + color + '">' + _om1 + 'm' + String(_os1).padStart(2,'0') + 's</b> 後起效</span>';
   } else {
     var remainMs = endMs - nowMs;
     var remainH  = remainMs / 3600000;
@@ -10740,7 +10753,8 @@ function updateBasalTimeBar() {
             var _om = Math.floor(secsToOnset / 60), _os = secsToOnset % 60;
             timeStr = _om + 'm' + String(_os).padStart(2,'0') + 's 後起效';
           } else {
-            timeStr = Math.ceil(secsToOnset / 60) + '分後起效';
+            var _bom = Math.floor(secsToOnset / 60), _bos = secsToOnset % 60;
+            timeStr = _bom + 'm' + String(_bos).padStart(2,'0') + 's 後起效';
           }
           headerStr = emoji + ' ' + shortLabel + (last.site ? ' · ' + last.site : '');
         } else {
