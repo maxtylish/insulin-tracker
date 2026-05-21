@@ -1704,7 +1704,7 @@
       color: white; border-radius: 14px; padding: 14px 18px;
       display: flex; flex-direction: row; align-items: stretch;
       margin-bottom: 12px; box-shadow: 0 4px 16px rgba(30,64,175,0.3);
-      gap: 0; position: relative; transition: box-shadow 0.5s ease;
+      gap: 0; position: relative; overflow: hidden; transition: box-shadow 0.5s ease;
     }
     /* ── CGM BG-status diagonal overlay (gradient, left-side, fades right) ── */
     .cgm-status-bg {
@@ -1739,7 +1739,7 @@
     }
     /* insulin stacked rows */
     .cgm-ins-header { font-size: .72rem; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .cgm-ins-time { font-size: .92rem; font-weight: 800; line-height: 1.15; white-space: nowrap; }
+    .cgm-ins-time { font-size: .92rem; font-weight: 800; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .cgm-ins-bar-track { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.18); margin-top: 2px; }
     .cgm-ins-bar-fill { height: 3px; border-radius: 2px; transition: width .4s; }
     /* cgm events carousel */
@@ -3142,11 +3142,24 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.28.1</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.28.2</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.28.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.28.2</span>
+          <span class="cl-date">2026-05-22</span>
+          <span class="cl-tag">CGM widget 文字截斷修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>修正：補回 overflow:hidden 防止內容溢出 widget 邊界</li>
+          <li>修正：右側胰島素生效時間過長時以省略號截斷（不再超出邊框）</li>
+        </ul>
+      </div>
 
       <!-- v2.28.1 -->
       <div class="cl-item">
@@ -8981,7 +8994,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.28.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.28.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
