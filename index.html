@@ -329,7 +329,7 @@
       width: 100%;
       border: 2px solid var(--border);
       border-radius: 8px;
-      padding: 10px 40px 10px 12px;
+      padding: 10px 62px 10px 12px;
       font-size: 1rem;
       font-weight: 700;
       color: var(--text);
@@ -363,6 +363,10 @@
     .bg-badge.low     { background: var(--low-bg);    color: var(--low);    }
 
     .cgm-fill-btn {
+  position: absolute;
+  right: 34px;
+  top: 50%;
+  transform: translateY(-50%);
   background: none;
   border: none;
   cursor: pointer;
@@ -3066,11 +3070,23 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.24.0</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.24.1</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.24.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.24.1</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">mg/dL 標籤超出修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【修正】血糖輸入欄 mg/dL 單位標籤與 📡 CGM 按鈕重疊超出欄位的問題，兩者改為 absolute 定位並分開排列</li>
+        </ul>
+      </div>
 
       <!-- v2.24.0 -->
       <div class="cl-item">
@@ -8670,7 +8686,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.24.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.24.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
