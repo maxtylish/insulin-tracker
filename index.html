@@ -3000,11 +3000,25 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.19.0</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.20.0</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.20.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.20.0</span>
+          <span class="cl-date">2026-05-21</span>
+          <span class="cl-tag">資料儲存安全性修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【P0】clearAllData() 同步清除 allDataCache，避免清除後立即儲存導致資料復活</li>
+          <li>【P0】init() cloud sync 後一律重新渲染今日紀錄，確保跨裝置補打/補糖不遺失</li>
+          <li>【P1】loadFromCloud() 陣列合併改為保留項目較多的版本，避免本機未 sync 的補打被 cloud 舊版覆蓋</li>
+        </ul>
+      </div>
 
       <!-- v2.19.0 -->
       <div class="cl-item">
@@ -3972,8 +3986,11 @@ async function loadFromCloud() {
               } else {
                 merged[key] = cv;  // neither has time, cloud wins
               }
+            } else if (Array.isArray(cv) && Array.isArray(lv)) {
+              // P1 fix: 保留項目較多的版本，避免本機未 sync 的補打被 cloud 舊版覆蓋
+              merged[key] = cv.length >= lv.length ? cv : lv;
             } else {
-              merged[key] = cv;  // arrays / primitives: cloud wins
+              merged[key] = cv;  // primitives: cloud wins
             }
           });
           allDataCache[row.date] = merged;
@@ -6790,6 +6807,7 @@ function saveSettings() {
 function clearAllData() {
   if (confirm('確定要清除所有胰島素紀錄資料？此動作無法復原。')) {
     localStorage.removeItem('insulin_records');
+    allDataCache = {};               // P0 fix: 同步清除 in-memory cache
     showToast('🗑️ 所有資料已清除');
     loadDayData();
   }
@@ -7550,10 +7568,9 @@ function init() {
   var hadLocalDataToday = !!getAllData()[today];
   loadDayData();
   loadFromCloud().then(function(){
-    // Only re-render after cloud sync if there was no local data for today
-    // (first install / new device). If user already has local data, don't
-    // overwrite what they may have started editing.
-    if (!hadLocalDataToday) loadDayData();
+    // P0 fix: 一律重新渲染，確保 cloud 帶來的 corrections/carbs/snacks 都顯示出來。
+    // hadLocalDataToday 舊條件會導致跨裝置補打在本裝置儲存時被 UI 空值覆蓋。
+    loadDayData();
     renderTodoPage();      // refresh todos with cloud data
     renderInsulinVials();  // refresh vials with cloud data
   });
@@ -8480,7 +8497,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.19.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.20.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
