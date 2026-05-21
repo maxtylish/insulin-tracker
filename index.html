@@ -1759,6 +1759,19 @@
     }
     .cgm-carousel-btn:hover { color: rgba(255,255,255,0.95); }
     .cgm-carousel-idx { font-size: .65rem; color: rgba(255,255,255,0.4); flex-shrink: 0; }
+    /* ── BG status label (LOW/NORMAL/ALERT/HIGH) ── */
+    .cgm-bg-status-label {
+      margin-top: 5px; font-size: 0.60rem; font-weight: 900;
+      letter-spacing: 0.15em; opacity: 0; transition: opacity 0.5s ease;
+    }
+    .cgm-widget[data-bg-status="low"]    .cgm-bg-status-label { color: #a78bfa; opacity: 0.9; }
+    .cgm-widget[data-bg-status="low"]    .cgm-bg-status-label::after { content: "LOW"; }
+    .cgm-widget[data-bg-status="normal"] .cgm-bg-status-label { color: #86efac; opacity: 0.9; }
+    .cgm-widget[data-bg-status="normal"] .cgm-bg-status-label::after { content: "NORMAL"; }
+    .cgm-widget[data-bg-status="warn"]   .cgm-bg-status-label { color: #fcd34d; opacity: 0.9; }
+    .cgm-widget[data-bg-status="warn"]   .cgm-bg-status-label::after { content: "ALERT"; }
+    .cgm-widget[data-bg-status="high"]   .cgm-bg-status-label { color: #fca5a5; opacity: 0.9; }
+    .cgm-widget[data-bg-status="high"]   .cgm-bg-status-label::after { content: "HIGH"; }
     .cgm-main-row { display: flex; align-items: baseline; gap: 6px; line-height: 1; }
     .cgm-pip-btn {
       background: rgba(255,255,255,0.15); border: none; color: white;
@@ -2552,6 +2565,8 @@
         <span class="cgm-carousel-idx" id="cgm-carousel-idx"></span>
         <button class="cgm-carousel-btn" onclick="cgmCarouselNav(1)">&#8250;</button>
       </div>
+      <!-- BG status label -->
+      <div class="cgm-bg-status-label" id="cgm-bg-status-label"></div>
     </div>
     <!-- Right: Insulin panel (populated by updateBasalTimeBar) -->
     <div class="cgm-divider" id="cgm-ins-divider" style="display:none;"></div>
@@ -2595,15 +2610,7 @@
     <canvas id="miniCgmChart" height="90"></canvas>
   </div>
 
-  <!-- Legend -->
-  <div class="legend-card" style="padding:10px 14px;">
-    <div class="legend-items">
-      <div class="legend-item"><div class="legend-dot" style="background:#8b5cf6"></div><span style="color:#8b5cf6">低 &lt;80</span></div>
-      <div class="legend-item"><div class="legend-dot" style="background:#22c55e"></div><span style="color:#22c55e">正常 85–180</span></div>
-      <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div><span style="color:#f59e0b">警戒 180–250</span></div>
-      <div class="legend-item"><div class="legend-dot" style="background:#ef4444"></div><span style="color:#ef4444">高 &gt;250</span></div>
-    </div>
-  </div>
+
 
   <!-- Date Bar -->
   <div class="date-bar">
@@ -3142,11 +3149,24 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.28.2</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.29.0</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.29.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.29.0</span>
+          <span class="cl-date">2026-05-22</span>
+          <span class="cl-tag">CGM 血糖狀態標籤</span>
+        </div>
+        <ul class="cl-list">
+          <li>【CGM】移除血糖狀態 legend 圖例（低/正常/警戒/高）</li>
+          <li>【CGM】待辦事項下方新增 LOW / NORMAL / ALERT / HIGH 狀態標籤，顏色與血糖狀態對應</li>
+        </ul>
+      </div>
 
       <!-- v2.28.2 -->
       <div class="cl-item">
@@ -8994,7 +9014,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.28.2';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.29.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
