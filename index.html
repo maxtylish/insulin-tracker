@@ -2498,7 +2498,7 @@
   <div style="text-align:center;">
     <h1>Ms.Aududu</h1>
     <div class="subtitle">血糖與胰島素注射管理</div>
-    <div style="font-size:0.65rem;opacity:0.55;margin-top:3px;letter-spacing:0.06em;">Powered by Lukuarts Studio · 2026</div>
+    <div style="font-size:0.65rem;opacity:0.55;margin-top:3px;letter-spacing:0.06em;">Lukuarts Studio · 2026</div>
   </div>
   <!-- 右側：日期 + 版本號 + 同步狀態 -->
   <div class="header-right">
@@ -3133,11 +3133,23 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.30.3</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.30.4</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.30.4 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.30.4</span>
+          <span class="cl-date">2026-05-22</span>
+          <span class="cl-tag">頁尾文字</span>
+        </div>
+        <ul class="cl-list">
+          <li>【UI】移除頁尾 "Powered by"，簡化為 Lukuarts Studio · 2026</li>
+        </ul>
+      </div>
 
       <!-- v2.30.3 -->
       <div class="cl-item">
@@ -4272,7 +4284,7 @@ alter table user_todos enable row level security;
     <a href="tel:0932754860" class="footer-link">📞 0932-754-860</a>
     <a href="https://lukuarts-website.vercel.app/" target="_blank" rel="noopener" class="footer-link">🌐 官方網站</a>
   </div>
-  <div class="app-footer-copy">Powered by Lukuarts Studio &nbsp;·&nbsp; 2026</div>
+  <div class="app-footer-copy">Lukuarts Studio &nbsp;·&nbsp; 2026</div>
 </footer>
 
 <!-- Todo Add/Edit Modal -->
@@ -9134,7 +9146,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.30.3';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.30.4';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
