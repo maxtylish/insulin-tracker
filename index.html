@@ -1466,6 +1466,53 @@
     .todo-star-btn:hover { background: #fef9c3; transform: scale(1.2); }
     .todo-item.todo-starred { background: #fffbeb; border-radius: 8px; padding-left: 6px; }
     .todo-item.todo-starred .todo-title { color: #92400e; }
+    /* ── Todo 搜尋 / Filter / 分頁 ── */
+    .todo-search-wrap {
+      display:flex; align-items:center; gap:8px;
+      background:var(--bg); border:1.5px solid var(--border);
+      border-radius:10px; padding:7px 12px; margin-bottom:10px;
+    }
+    .todo-search-icon { font-size:.95rem; flex-shrink:0; color:var(--text-muted); }
+    .todo-search-input {
+      flex:1; border:none; background:transparent;
+      font-size:.88rem; color:var(--text); outline:none;
+    }
+    .todo-filter-bar { display:flex; flex-wrap:wrap; gap:6px; }
+    .todo-filter-btn {
+      padding:5px 12px; font-size:.78rem; font-weight:700;
+      border:1.5px solid var(--border); border-radius:20px;
+      background:var(--card); color:var(--text-muted);
+      cursor:pointer; transition:all .15s; white-space:nowrap;
+    }
+    .todo-filter-btn.active {
+      background:var(--primary); color:#fff;
+      border-color:var(--primary);
+    }
+    .todo-num {
+      font-size:.8rem; font-weight:800; color:var(--text-muted);
+      min-width:18px; flex-shrink:0;
+    }
+    .todo-created {
+      font-size:.72rem; color:var(--text-muted);
+      flex-shrink:0; white-space:nowrap; margin-top:2px; align-self:flex-start;
+      padding-top:2px;
+    }
+    .todo-item { align-items:flex-start; }
+    .todo-pagination {
+      display:flex; align-items:center; justify-content:center;
+      gap:12px; margin-top:10px; padding-top:8px;
+      border-top:1px solid var(--border);
+    }
+    .todo-pag-btn {
+      width:32px; height:32px; border-radius:8px;
+      border:1.5px solid var(--border); background:var(--card);
+      font-size:1rem; cursor:pointer; color:var(--text);
+      display:flex; align-items:center; justify-content:center;
+      transition:all .15s;
+    }
+    .todo-pag-btn:hover:not(:disabled) { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .todo-pag-btn:disabled { opacity:.35; cursor:default; }
+    .todo-pag-info { font-size:.82rem; font-weight:700; color:var(--text-muted); min-width:48px; text-align:center; }
 
     /* ── Changelog ── */
     .cl-item {
@@ -2961,69 +3008,66 @@
 <!-- ══════════════ TODO PAGE ══════════════ -->
 <div id="page-todo" class="page">
 
-  <!-- Sub-tab bar -->
-  <div class="period-tabs" style="margin-bottom:14px;">
-    <button class="todo-tab active" onclick="switchTodoTab('list',this)">📝 待辦清單</button>
-    <button class="todo-tab" onclick="switchTodoTab('cal',this)">📅 行事曆</button>
+  <!-- 📅 Google 行事曆（置頂） -->
+  <div class="chart-card" style="margin-bottom:14px;">
+    <div class="stat-date-nav" style="margin-bottom:14px;">
+      <button onclick="calNavMonth(-1)">‹</button>
+      <span id="calMonthLabel" class="nav-label">--</span>
+      <button onclick="calNavMonth(1)">›</button>
+    </div>
+    <div class="todo-cal-dow">
+      <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
+    </div>
+    <div id="calDaysGrid" class="todo-cal-grid"></div>
+    <div id="calDayDetail"></div>
   </div>
 
-  <!-- ══ Sub: 待辦清單 ══ -->
-  <div id="todo-sub-list">
-    <!-- GCal 連結提示（未連結時顯示） -->
-    <div id="todo-gcal-hint" style="display:none;margin-bottom:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;align-items:center;justify-content:space-between;gap:10px;">
-      <span style="font-size:.83rem;color:#1d4ed8;">📅 連結 Google 行事曆後，待辦事項可自動同步</span>
-      <button onclick="switchTab('settings');setTimeout(function(){document.getElementById('gcal-auth-btn').scrollIntoView({behavior:'smooth',block:'center'});},300)"
-        style="flex-shrink:0;padding:5px 12px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer;">前往設定 →</button>
+  <!-- 🔍 搜尋 + Filter -->
+  <div class="chart-card" style="margin-bottom:14px;">
+    <div class="todo-search-wrap">
+      <span class="todo-search-icon">🔍</span>
+      <input type="search" id="todo-search-input" class="todo-search-input"
+        placeholder="搜尋待辦事項…" oninput="setTodoSearch(this.value)">
     </div>
+    <div class="todo-filter-bar">
+      <button class="todo-filter-btn active" data-filter="all" onclick="setTodoFilter('all')">全部</button>
+      <button class="todo-filter-btn" data-filter="health" onclick="setTodoFilter('health')">🏥 健康待辦</button>
+      <button class="todo-filter-btn" data-filter="general" onclick="setTodoFilter('general')">📝 一般待辦</button>
+      <button class="todo-filter-btn" id="hide-done-btn" onclick="toggleHideDone()">隱藏已完成</button>
+    </div>
+  </div>
 
-    <!-- 健康待辦 -->
-    <div class="chart-card" style="margin-bottom:14px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <h3 style="margin:0;">🏥 健康待辦</h3>
-        <button class="suppl-add-btn" onclick="openTodoForm('health')">＋ 新增</button>
-      </div>
-      <div id="todo-health-list"><div class="suppl-empty">尚無健康待辦事項</div></div>
-    </div>
+  <!-- GCal 連結提示（未連結時顯示） -->
+  <div id="todo-gcal-hint" style="display:none;margin-bottom:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;align-items:center;justify-content:space-between;gap:10px;">
+    <span style="font-size:.83rem;color:#1d4ed8;">📅 連結 Google 行事曆後，待辦事項可自動同步</span>
+    <button onclick="switchTab('settings');setTimeout(function(){document.getElementById('gcal-auth-btn').scrollIntoView({behavior:'smooth',block:'center'});},300)"
+      style="flex-shrink:0;padding:5px 12px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer;">前往設定 →</button>
+  </div>
 
-    <!-- 一般待辦 -->
-    <div class="chart-card">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-        <h3 style="margin:0;">📝 一般待辦</h3>
-        <button class="suppl-add-btn" onclick="openTodoForm('general')">＋ 新增</button>
-      </div>
-      <div id="todo-general-list"><div class="suppl-empty">尚無一般待辦事項</div></div>
+  <!-- 🏥 健康待辦 -->
+  <div id="todo-health-section" class="chart-card" style="margin-bottom:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h3 style="margin:0;">🏥 健康待辦</h3>
+      <button class="suppl-add-btn" onclick="openTodoForm('health')">＋ 新增</button>
     </div>
+    <div id="todo-health-list"><div class="suppl-empty">尚無健康待辦事項</div></div>
+    <div id="todo-health-pager" class="todo-pagination"></div>
+  </div>
 
-    <!-- 返回首頁按鈕 -->
-    <div class="back-home-wrap">
-      <button class="back-home-btn" onclick="goHome()">⬆ 返回首頁</button>
+  <!-- 📝 一般待辦 -->
+  <div id="todo-general-section" class="chart-card" style="margin-bottom:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+      <h3 style="margin:0;">📝 一般待辦</h3>
+      <button class="suppl-add-btn" onclick="openTodoForm('general')">＋ 新增</button>
     </div>
-  </div><!-- end todo-sub-list -->
+    <div id="todo-general-list"><div class="suppl-empty">尚無一般待辦事項</div></div>
+    <div id="todo-general-pager" class="todo-pagination"></div>
+  </div>
 
-  <!-- ══ Sub: 行事曆 ══ -->
-  <div id="todo-sub-cal" style="display:none;">
-    <div class="chart-card">
-      <!-- Month nav (reuse stat-date-nav style) -->
-      <div class="stat-date-nav" style="margin-bottom:14px;">
-        <button onclick="calNavMonth(-1)">‹</button>
-        <span id="calMonthLabel" class="nav-label">--</span>
-        <button onclick="calNavMonth(1)">›</button>
-      </div>
-      <!-- Day-of-week header -->
-      <div class="todo-cal-dow">
-        <span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span>
-      </div>
-      <!-- Day cells (rendered by JS) -->
-      <div id="calDaysGrid" class="todo-cal-grid"></div>
-      <!-- Inline day detail -->
-      <div id="calDayDetail"></div>
-    </div>
-
-    <!-- 返回首頁按鈕 -->
-    <div class="back-home-wrap">
-      <button class="back-home-btn" onclick="goHome()">⬆ 返回首頁</button>
-    </div>
-  </div><!-- end todo-sub-cal -->
+  <!-- 返回首頁按鈕 -->
+  <div class="back-home-wrap">
+    <button class="back-home-btn" onclick="goHome()">⬆ 返回首頁</button>
+  </div>
 
 </div>
 
@@ -4147,6 +4191,8 @@ alter table user_todos enable row level security;
           <li>統計分析頁改為活頁本樣式：左側書籤導覽（概覽／TIR／血糖趨勢／劑量趨勢／CGM／IOB）</li>
           <!-- v2.31.1 -->
           <li>管理頁面：回診資訊移至頂端；耗材庫存 &amp; 胰島素管理改為活頁本書籤版面</li>
+          <!-- v2.32.0 -->
+          <li>待辦頁面重設計：行事曆置頂常駐顯示；新增搜尋欄；新增 Filter（全部/健康/一般/隱藏已完成）；自動編號 + 新增日期顯示；分頁（5筆/頁，最新第一頁）</li>
           <li>將 APP_VERSION 移至 init() 呼叫前，確保所有頁面正常初始化</li>
         </ul>
       </div>
@@ -5404,6 +5450,12 @@ async function pollCGM() {
 //  TODO SUB-TABS + GCAL CALENDAR
 // ════════════════════════════════════════
 var todoSubTabState = 'list';
+var _todoFilter      = 'all';
+var _todoHideDone    = false;
+var _todoSearchQuery = '';
+var _healthTodoPage  = 1;
+var _generalTodoPage = 1;
+var TODOS_PER_PAGE   = 5;
 var calViewYM       = null;          // 'YYYY-MM'
 var gcalEventsCache = {};            // { 'YYYY-MM': [...events] }
 var calSelectedDate = null;
@@ -5420,6 +5472,36 @@ function switchTodoTab(tab, btn) {
     if (!calViewYM) calViewYM = todayStr().slice(0, 7);
     renderTodoCalendar();
   }
+}
+
+function setTodoFilter(f) {
+  _todoFilter = f;
+  _healthTodoPage = 1;
+  _generalTodoPage = 1;
+  document.querySelectorAll('.todo-filter-btn[data-filter]').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.filter === f);
+  });
+  renderTodoPage();
+}
+
+function toggleHideDone() {
+  _todoHideDone = !_todoHideDone;
+  var btn = document.getElementById('hide-done-btn');
+  if (btn) btn.classList.toggle('active', _todoHideDone);
+  renderTodoPage();
+}
+
+function setTodoSearch(q) {
+  _todoSearchQuery = (q || '').trim().toLowerCase();
+  _healthTodoPage  = 1;
+  _generalTodoPage = 1;
+  renderTodoPage();
+}
+
+function setTodoPage(type, page) {
+  if (type === 'health') _healthTodoPage  = page;
+  else                   _generalTodoPage = page;
+  renderTodoPage();
 }
 
 function calNavMonth(dir) {
@@ -9319,7 +9401,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.31.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.32.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -11531,6 +11613,9 @@ async function saveTodoForm() {
     };
     if (gcalSync && dueDate) todo.gcalEventId = await gcalCreate(todo);
     todos.push(todo);
+    // 新增後回第一頁，確保最新項目可見
+    if (_todoCat === 'health') _healthTodoPage = 1;
+    else _generalTodoPage = 1;
   }
 
   setTodos(todos);
@@ -11568,37 +11653,87 @@ function escapeHtml(s) {
 }
 
 function renderTodoPage() {
-  var todos   = getTodos();
-  var health  = todos.filter(function(t){ return t.category==='health'; });
-  var general = todos.filter(function(t){ return t.category==='general'; });
-  _renderTodoList('todo-health-list',  health);
-  _renderTodoList('todo-general-list', general);
-  updateGCalUI();
-  // 顯示 / 隱藏 GCal 未連結提示
-  var hint = document.getElementById('todo-gcal-hint');
-  if (hint) hint.style.display = isGCalConnected() ? 'none' : 'flex';
-}
+  var allTodos = getTodos();
 
-function _renderTodoList(elId, todos) {
-  var el = document.getElementById(elId);
-  if (!el) return;
-  if (!todos.length) { el.innerHTML = '<div class="suppl-empty">尚無待辦事項</div>'; return; }
-  // 標星的排最前，已完成排最後
-  todos = todos.slice().sort(function(a, b) {
+  // 搜尋篩選
+  var q = _todoSearchQuery;
+  var filtered = q ? allTodos.filter(function(t) {
+    return (t.title||'').toLowerCase().indexOf(q) >= 0
+        || (t.note||'').toLowerCase().indexOf(q) >= 0;
+  }) : allTodos;
+
+  // 隱藏已完成
+  if (_todoHideDone) filtered = filtered.filter(function(t){ return !t.completed; });
+
+  // 排序：未完成 → 星號 → 最新 createdAt → 已完成
+  filtered = filtered.slice().sort(function(a, b) {
     if (a.completed !== b.completed) return a.completed ? 1 : -1;
     if (!!a.starred !== !!b.starred) return a.starred ? -1 : 1;
-    return 0;
+    var ta = a.createdAt || '0', tb = b.createdAt || '0';
+    return tb.localeCompare(ta);
   });
-  var today = todayStr();
-  el.innerHTML = todos.map(function(t) {
+
+  var health  = filtered.filter(function(t){ return t.category === 'health'; });
+  var general = filtered.filter(function(t){ return t.category === 'general'; });
+
+  // Filter 顯示/隱藏各 section
+  var healthSec  = document.getElementById('todo-health-section');
+  var generalSec = document.getElementById('todo-general-section');
+  if (healthSec)  healthSec.style.display  = (_todoFilter === 'general') ? 'none' : '';
+  if (generalSec) generalSec.style.display = (_todoFilter === 'health')  ? 'none' : '';
+
+  _renderTodoList('todo-health-list',  'todo-health-pager',  health,  'health',  _healthTodoPage);
+  _renderTodoList('todo-general-list', 'todo-general-pager', general, 'general', _generalTodoPage);
+
+  updateGCalUI();
+  var hint = document.getElementById('todo-gcal-hint');
+  if (hint) hint.style.display = isGCalConnected() ? 'none' : 'flex';
+
+  // 行事曆（置頂，第一次初始化）
+  if (!calViewYM) {
+    calViewYM = todayStr().slice(0, 7);
+    renderTodoCalendar();
+  }
+}
+
+function _renderTodoList(elId, pagerId, todos, type, page) {
+  var el      = document.getElementById(elId);
+  var pagerEl = document.getElementById(pagerId);
+  if (!el) return;
+
+  if (!todos.length) {
+    el.innerHTML = '<div class="suppl-empty">尚無待辦事項</div>';
+    if (pagerEl) pagerEl.innerHTML = '';
+    return;
+  }
+
+  var totalPages = Math.max(1, Math.ceil(todos.length / TODOS_PER_PAGE));
+  page = Math.max(1, Math.min(page, totalPages));
+  // 同步回全域
+  if (type === 'health') _healthTodoPage  = page;
+  else                   _generalTodoPage = page;
+
+  var start     = (page - 1) * TODOS_PER_PAGE;
+  var pageItems = todos.slice(start, start + TODOS_PER_PAGE);
+  var today     = todayStr();
+
+  el.innerHTML = pageItems.map(function(t, idx) {
+    var num = start + idx + 1;
     var overdue  = t.dueDate && !t.completed && t.dueDate < today;
     var dueToday = t.dueDate && !t.completed && t.dueDate === today;
-    var dueTxt   = '';
+    var dueTxt = '';
     if (t.dueDate) {
       var prefix = overdue ? '⚠️ ' : dueToday ? '📅 今天 ' : '🗓 ';
       var cls    = overdue ? ' overdue' : dueToday ? ' today' : '';
       dueTxt = '<span class="todo-due' + cls + '">' + prefix + t.dueDate
              + (t.dueTime ? ' ' + t.dueTime : '') + '</span>';
+    }
+    var createdTxt = '';
+    if (t.createdAt) {
+      var d = new Date(t.createdAt);
+      createdTxt = '<span class="todo-created">'
+        + d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0')
+        + '/' + String(d.getDate()).padStart(2,'0') + '</span>';
     }
     var gcalBadge  = t.gcalEventId ? '<span class="todo-gcal-badge" title="已同步 Google 行事曆">📅</span>' : '';
     var typeBadge  = t.healthType  ? '<span class="todo-type-badge">' + escapeHtml(t.healthType) + '</span>' : '';
@@ -11610,11 +11745,13 @@ function _renderTodoList(elId, todos) {
         + ' onchange="toggleTodoComplete(\'' + t.id + '\')">'
       + '<div class="todo-body">'
         + '<div class="todo-title-row">'
+          + '<span class="todo-num">' + num + '.</span>'
           + '<span class="todo-title">' + escapeHtml(t.title) + '</span>'
           + gcalBadge + typeBadge
         + '</div>'
         + dueTxt + noteTxt
       + '</div>'
+      + createdTxt
       + '<div class="todo-actions">'
         + '<button class="todo-star-btn" onclick="toggleTodoStar(\'' + t.id + '\')" title="' + (t.starred ? '取消重要' : '設為重要') + '">' + starIcon + '</button>'
         + '<button class="todo-edit-btn" onclick="openTodoForm(\'' + t.category + '\',\'' + t.id + '\')" title="編輯">✏️</button>'
@@ -11622,6 +11759,20 @@ function _renderTodoList(elId, todos) {
       + '</div>'
     + '</div>';
   }).join('');
+
+  // 分頁控制
+  if (pagerEl) {
+    if (totalPages <= 1) {
+      pagerEl.innerHTML = '';
+    } else {
+      var prevDis = page <= 1 ? ' disabled' : '';
+      var nextDis = page >= totalPages ? ' disabled' : '';
+      pagerEl.innerHTML =
+        '<button class="todo-pag-btn"' + prevDis + ' onclick="setTodoPage(\'' + type + '\',' + Math.max(1,page-1) + ')">‹</button>'
+        + '<span class="todo-pag-info">' + page + ' / ' + totalPages + '</span>'
+        + '<button class="todo-pag-btn"' + nextDis + ' onclick="setTodoPage(\'' + type + '\',' + Math.min(totalPages,page+1) + ')">›</button>';
+    }
+  }
 }
 
 // ── Star (Important) ──────────────────────────────────────────────────────
