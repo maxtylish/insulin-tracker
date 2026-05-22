@@ -462,6 +462,38 @@
       margin-bottom:14px; padding:0; background:transparent;
     }
     .stat-panel > *:last-child { margin-bottom:0; }
+    /* ── Manage 活頁本版面 ── */
+    .manage-layout { display:flex; gap:0; align-items:flex-start; margin-bottom:12px; }
+    .manage-bookmarks { display:flex; flex-direction:column; gap:4px; flex-shrink:0; padding:2px 0; }
+    .manage-bm-btn {
+      width:46px; min-height:64px;
+      background:var(--card); border:1px solid var(--border);
+      border-right:2px solid var(--card); border-radius:10px 0 0 10px;
+      cursor:pointer; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:3px;
+      font-size:.62rem; font-weight:700; color:var(--text-muted);
+      transition:all .15s; padding:6px 2px; line-height:1.2;
+      box-shadow:-1px 0 3px rgba(0,0,0,.06);
+    }
+    .manage-bm-btn .bm-icon { font-size:1.1rem; line-height:1; }
+    .manage-bm-btn.active {
+      background:var(--primary); color:#fff;
+      border-color:var(--primary); border-right-color:var(--card);
+      box-shadow:-2px 0 6px rgba(99,102,241,.25);
+      z-index:1; position:relative; margin-right:-1px;
+    }
+    body[data-skin='cold-dark'] .manage-bm-btn,
+    body[data-skin='warm-dark'] .manage-bm-btn { border-right-color:var(--card); }
+    .manage-content {
+      flex:1; min-width:0;
+      background:var(--card); border-radius:0 var(--radius) var(--radius) 0;
+      border:1px solid var(--border); padding:14px 12px;
+      box-shadow:var(--shadow);
+    }
+    .manage-panel > .chart-card {
+      box-shadow:none; border:none; border-radius:0;
+      margin-bottom:0; padding:0; background:transparent;
+    }
     /* ── 補打/補糖 Tab ── */
     .suppl-tab-wrap { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid var(--border); gap:8px; flex-wrap:wrap; }
     .suppl-tabs { display:flex; gap:4px; background:var(--bg); border-radius:20px; padding:3px; }
@@ -2863,27 +2895,9 @@
 
 <!-- ══════════════ MANAGE PAGE ══════════════ -->
 <div id="page-manage" class="page">
-  <!-- 耗材庫存 -->
-  <div class="chart-card" style="margin-bottom:14px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-      <h3 style="margin:0;cursor:pointer;user-select:none;" onclick="toggleSection('supply-body','supply-collapse-btn')">
-        🧴 耗材庫存
-        <span id="supply-collapse-btn" style="font-size:.85rem;color:var(--text-muted);margin-left:4px;">▾</span>
-      </h3>
-      <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;">
-        <input type="checkbox" id="supply-auto-deduct" style="width:15px;height:15px;" onchange="saveSupplies()">
-        <span>自動扣除</span>
-      </label>
-    </div>
-    <div id="supply-body" style="margin-top:10px;">
-      <div id="supply-low-banner" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:0.82rem;color:#dc2626;"></div>
-      <div id="supply-list"></div>
-      <button class="settings-save-btn" style="width:100%;margin-top:14px;" onclick="saveSuppliesManual()">💾 儲存庫存</button>
-    </div>
-  </div>
 
-  <!-- 藥品管理 -->
-  <div class="chart-card">
+  <!-- 💊 藥品 & 回診管理（置頂） -->
+  <div class="chart-card" style="margin-bottom:14px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
       <h3 style="margin:0;">💊 藥品 &amp; 回診管理</h3>
       <button class="suppl-add-btn" onclick="addPrescription()">＋ 新增處方</button>
@@ -2891,16 +2905,49 @@
     <div id="prescription-list"></div>
   </div>
 
-  <!-- 胰島素管理 -->
-  <div class="chart-card" id="insulin-vial-card">
-    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
-      <h3 style="margin:0;">💉 胰島素管理</h3>
-      <div style="display:flex;gap:6px;">
-        <button class="suppl-add-btn" onclick="manualSyncVials(this)" title="同步胰島素資料到雲端">🔄</button>
-        <button class="suppl-add-btn" onclick="addInsulinVial()">＋ 新增</button>
+  <!-- ── 活頁本：耗材 + 胰島素 ── -->
+  <div class="manage-layout">
+    <nav class="manage-bookmarks" id="manage-bookmarks">
+      <button class="manage-bm-btn active" onclick="switchManagePanel('supply')">
+        <span class="bm-icon">🧴</span>耗材
+      </button>
+      <button class="manage-bm-btn" onclick="switchManagePanel('vial')">
+        <span class="bm-icon">💉</span>胰島素
+      </button>
+    </nav>
+    <div class="manage-content">
+
+      <!-- Panel 1: 耗材庫存 -->
+      <div id="manage-panel-supply" class="manage-panel">
+        <div class="chart-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+            <h3 style="margin:0;">🧴 耗材庫存</h3>
+            <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;">
+              <input type="checkbox" id="supply-auto-deduct" style="width:15px;height:15px;" onchange="saveSupplies()">
+              <span>自動扣除</span>
+            </label>
+          </div>
+          <div id="supply-low-banner" style="display:none;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:0.82rem;color:#dc2626;"></div>
+          <div id="supply-list"></div>
+          <button class="settings-save-btn" style="width:100%;margin-top:14px;" onclick="saveSuppliesManual()">💾 儲存庫存</button>
+        </div>
       </div>
+
+      <!-- Panel 2: 胰島素管理 -->
+      <div id="manage-panel-vial" class="manage-panel" style="display:none">
+        <div class="chart-card" id="insulin-vial-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:12px;">
+            <h3 style="margin:0;">💉 胰島素管理</h3>
+            <div style="display:flex;gap:6px;">
+              <button class="suppl-add-btn" onclick="manualSyncVials(this)" title="同步胰島素資料到雲端">🔄</button>
+              <button class="suppl-add-btn" onclick="addInsulinVial()">＋ 新增</button>
+            </div>
+          </div>
+          <div id="insulin-vial-list"></div>
+        </div>
+      </div>
+
     </div>
-    <div id="insulin-vial-list"></div>
   </div>
 
   <!-- 返回首頁按鈕 -->
@@ -4098,6 +4145,8 @@ alter table user_todos enable row level security;
           <li>修正：APP_VERSION const 定義在 init() 之後造成 TDZ crash，管理頁面無法進入</li>
           <!-- v2.31.0 -->
           <li>統計分析頁改為活頁本樣式：左側書籤導覽（概覽／TIR／血糖趨勢／劑量趨勢／CGM／IOB）</li>
+          <!-- v2.31.1 -->
+          <li>管理頁面：回診資訊移至頂端；耗材庫存 &amp; 胰島素管理改為活頁本書籤版面</li>
           <li>將 APP_VERSION 移至 init() 呼叫前，確保所有頁面正常初始化</li>
         </ul>
       </div>
@@ -7666,6 +7715,19 @@ function switchStatPanel(panel) {
   // 切換後重新渲染圖表（確保 canvas 尺寸正確）
   setTimeout(renderCharts, 40);
 }
+
+var _manageActivePanel = 'supply';
+
+function switchManagePanel(panel) {
+  _manageActivePanel = panel;
+  var panels = ['supply', 'vial'];
+  var btns = document.querySelectorAll('.manage-bm-btn');
+  panels.forEach(function(p, i) {
+    var el = document.getElementById('manage-panel-' + p);
+    if (el) el.style.display = (p === panel) ? '' : 'none';
+    if (btns[i]) btns[i].classList.toggle('active', p === panel);
+  });
+}
 var _todayActivePanel = 'morning';
 
 function switchTodayPanel(panel) {
@@ -9257,7 +9319,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.31.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.31.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
