@@ -3,14 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>胰島素紀錄表</title>
+  <title>Ms.Aududu</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231d4ed8'/%3E%3Cg transform='translate(32,32) rotate(-45)'%3E%3Crect x='-3' y='-18' width='6' height='20' rx='2' fill='%23bfdbfe'/%3E%3Crect x='-3' y='2' width='6' height='16' rx='1' fill='%23fff'/%3E%3Crect x='-5' y='12' width='10' height='6' rx='1' fill='%23bfdbfe'/%3E%3Crect x='-1.5' y='18' width='3' height='8' rx='1.5' fill='%23bfdbfe'/%3E%3Crect x='-1' y='-20' width='2' height='4' rx='1' fill='%23fff'/%3E%3Crect x='-8' y='4' width='4' height='2' rx='1' fill='%2393c5fd'/%3E%3Crect x='-8' y='8' width='4' height='2' rx='1' fill='%2393c5fd'/%3E%3C/g%3E%3C/svg%3E" />
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#1d4ed8" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="胰島素紀錄表" />
+  <meta name="apple-mobile-web-app-title" content="Ms.Aududu" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Pacifico&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
@@ -85,7 +88,12 @@
       align-items: center;
       box-shadow: 0 2px 8px rgba(29,78,216,0.3);
     }
-    header h1 { font-size: 1.2rem; font-weight: 700; letter-spacing: 0.5px; }
+    header h1 {
+      font-family: 'Pacifico', cursive;
+      font-size: 1.35rem; font-weight: 400;
+      letter-spacing: 0.5px;
+      text-shadow: 0 1px 6px rgba(0,0,0,0.25);
+    }
     header .subtitle { font-size: 0.75rem; opacity: 0.8; margin-top: 2px; }
     .header-right {
       text-align: right;
@@ -2488,7 +2496,7 @@
   </div>
   <!-- 中央標題（自動置中） -->
   <div style="text-align:center;">
-    <h1>💉 胰島素紀錄表</h1>
+    <h1>Ms.Aududu</h1>
     <div class="subtitle">血糖與胰島素注射管理</div>
     <div style="font-size:0.65rem;opacity:0.55;margin-top:3px;letter-spacing:0.06em;">Powered by Lukuarts Studio · 2026</div>
   </div>
@@ -3125,11 +3133,23 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.30.2</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.30.3</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.30.3 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.30.3</span>
+          <span class="cl-date">2026-05-22</span>
+          <span class="cl-tag">品牌名稱 + 字體</span>
+        </div>
+        <ul class="cl-list">
+          <li>【UI】標題改為 Ms.Aududu，採用 Pacifico 個性字體</li>
+        </ul>
+      </div>
 
       <!-- v2.30.2 -->
       <div class="cl-item">
@@ -9114,7 +9134,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.30.2';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.30.3';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
