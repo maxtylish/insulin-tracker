@@ -3125,11 +3125,24 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.30.0</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.30.1</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.30.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.30.1</span>
+          <span class="cl-date">2026-05-22</span>
+          <span class="cl-tag">PiP 透明度橫桿</span>
+        </div>
+        <ul class="cl-list">
+          <li>【PiP】左上角新增透明度滑桿，僅調整底色透明度（文字不受影響）</li>
+          <li>【PiP】透明度設定存入 localStorage，下次開啟自動套用</li>
+        </ul>
+      </div>
 
       <!-- v2.30.0 -->
       <div class="cl-item">
@@ -8745,14 +8758,23 @@ async function fetchPipHistory() {
   } catch(e) {}
 }
 
+function _getPipBgAlpha() {
+  try { var v = parseFloat(localStorage.getItem('pip_alpha')); return (!isNaN(v) && v >= 0.05 && v <= 1) ? v : 1; } catch(e) { return 1; }
+}
 function _buildPipStyle(tKey) {
   var t = PIP_THEMES[tKey] || PIP_THEMES.white;
   return [
     '* { margin:0; padding:0; box-sizing:border-box; }',
-    'body { background:' + t.bg + '; color:' + t.text + ';',
+    'html { background:transparent; }',
+    'body { background:transparent; color:' + t.text + '; position:relative;',
     '       display:flex; flex-direction:column; justify-content:space-between;',
     '       width:100%; height:100%; padding:8px 10px 6px; cursor:default; user-select:none;',
     '       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }',
+    '#pip-bg { position:absolute; inset:0; z-index:-1; background:' + t.bg + '; pointer-events:none; transition:opacity 0.12s; }',
+    '.pip-alpha-bar { position:absolute; top:5px; left:8px; z-index:10; opacity:0.28; transition:opacity 0.2s; display:flex; align-items:center; }',
+    '.pip-alpha-bar:hover { opacity:0.88; }',
+    '.pip-alpha-bar input[type=range] { width:48px; height:2px; -webkit-appearance:none; appearance:none; background:' + t.sub + '55; border-radius:1px; cursor:pointer; outline:none; vertical-align:middle; }',
+    '.pip-alpha-bar input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:8px; height:8px; border-radius:50%; background:' + t.sub + 'cc; cursor:pointer; }',
     '.pip-row { display:flex; align-items:center; gap:8px; flex:1; min-height:0; }',
     '.pip-left { display:flex; flex-direction:column; flex-shrink:0; }',
     '.pip-main { display:flex; align-items:baseline; gap:2px; line-height:1; }',
@@ -8783,7 +8805,13 @@ function _buildPipHTML(tKey) {
     var sel = k === tKey ? ' sel' : '';
     return '<span class="pip-dot' + sel + '" onclick="window._pipSetTheme(\'' + k + '\')" style="background:' + PIP_THEMES[k].dot + ';cursor:pointer;" title="' + PIP_THEMES[k].label + '"></span>';
   }).join('');
-  return '<div class="pip-row">' +
+  var alpha = _getPipBgAlpha();
+  return '<div id="pip-bg" style="opacity:' + alpha + ';"></div>' +
+    '<div class="pip-alpha-bar">' +
+      '<input type="range" id="pip-alpha" min="5" max="100" value="' + Math.round(alpha * 100) + '"' +
+      ' oninput="var v=this.value/100;document.getElementById(\'pip-bg\').style.opacity=v;try{localStorage.setItem(\'pip_alpha\',v);}catch(e){}">' +
+    '</div>' +
+    '<div class="pip-row">' +
     '<div class="pip-left">' +
       '<div class="pip-main">' +
         '<span id="pip-val" class="pip-val">---</span>' +
@@ -9061,7 +9089,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.30.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.30.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
