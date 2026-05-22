@@ -426,6 +426,42 @@
     .today-content .period-card { box-shadow:none; border-radius:0; margin-bottom:0; background:transparent; }
     /* 在 today-content 裡的 suppl-section 去掉多餘外殼 */
     .today-content .suppl-section { box-shadow:none; border-radius:0; padding:0; margin:0; background:transparent; }
+    /* ── Stats 活頁本版面 ── */
+    .stats-layout { display:flex; gap:0; align-items:flex-start; margin-bottom:12px; }
+    .stats-bookmarks { display:flex; flex-direction:column; gap:4px; flex-shrink:0; padding:2px 0; }
+    .stats-bm-btn {
+      width:46px; min-height:52px;
+      background:var(--card); border:1px solid var(--border);
+      border-right:2px solid var(--card); border-radius:10px 0 0 10px;
+      cursor:pointer; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:3px;
+      font-size:.62rem; font-weight:700; color:var(--text-muted);
+      transition:all .15s; padding:5px 2px; line-height:1.2;
+      box-shadow:-1px 0 3px rgba(0,0,0,.06);
+    }
+    .stats-bm-btn .bm-icon { font-size:1rem; line-height:1; }
+    .stats-bm-btn.active {
+      background:#0891b2; color:#fff;
+      border-color:#0891b2; border-right-color:var(--card);
+      box-shadow:-2px 0 6px rgba(8,145,178,.25);
+      z-index:1; position:relative; margin-right:-1px;
+    }
+    body[data-skin='cold-dark'] .stats-bm-btn,
+    body[data-skin='warm-dark'] .stats-bm-btn { border-right-color:var(--card); }
+    .stats-content {
+      flex:1; min-width:0;
+      background:var(--card); border-radius:0 var(--radius) var(--radius) 0;
+      border:1px solid var(--border); padding:14px 12px;
+      box-shadow:var(--shadow);
+    }
+    .stat-panel > .overview-card,
+    .stat-panel > .hba1c-card,
+    .stat-panel > .tir-card,
+    .stat-panel > .chart-card {
+      box-shadow:none; border:none; border-radius:0;
+      margin-bottom:14px; padding:0; background:transparent;
+    }
+    .stat-panel > *:last-child { margin-bottom:0; }
     /* ── 補打/補糖 Tab ── */
     .suppl-tab-wrap { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid var(--border); gap:8px; flex-wrap:wrap; }
     .suppl-tabs { display:flex; gap:4px; background:var(--bg); border-radius:20px; padding:3px; }
@@ -2692,93 +2728,131 @@
     <button onclick="navigateStat(1)">›</button>
   </div>
 
-  <!-- Blood sugar overview -->
-  <div class="overview-card">
-    <h3>血糖概覽</h3>
-    <div class="overview-grid" id="overviewGrid">
-      <div class="overview-item">
-        <div class="ov-label">最高血糖</div>
-        <div class="ov-value" style="color:#ef4444">--<span class="ov-unit">mg/dL</span></div>
-      </div>
-      <div class="overview-item">
-        <div class="ov-label">最低血糖</div>
-        <div class="ov-value" style="color:#8b5cf6">--<span class="ov-unit">mg/dL</span></div>
-      </div>
-      <div class="overview-item">
-        <div class="ov-label">最大血糖波動</div>
-        <div class="ov-value" style="color:#f59e0b">--<span class="ov-unit">mg/dL</span></div>
-      </div>
-      <div class="overview-item">
-        <div class="ov-label">平均血糖</div>
-        <div class="ov-value" style="color:#3b82f6">--<span class="ov-unit">mg/dL</span></div>
-      </div>
-    </div>
-  </div>
+  <!-- ── Stats 活頁本導覽 ── -->
+  <div class="stats-layout">
+    <nav class="stats-bookmarks" id="stats-bookmarks">
+      <button class="stats-bm-btn active" onclick="switchStatPanel('overview')">
+        <span class="bm-icon">📊</span>概覽
+      </button>
+      <button class="stats-bm-btn" onclick="switchStatPanel('tir')">
+        <span class="bm-icon">🎯</span>TIR
+      </button>
+      <button class="stats-bm-btn" onclick="switchStatPanel('bg')">
+        <span class="bm-icon">📈</span>血糖趨勢
+      </button>
+      <button class="stats-bm-btn" onclick="switchStatPanel('insulin')">
+        <span class="bm-icon">💉</span>劑量趨勢
+      </button>
+      <button class="stats-bm-btn" onclick="switchStatPanel('cgm')">
+        <span class="bm-icon">📡</span>CGM
+      </button>
+      <button class="stats-bm-btn" onclick="switchStatPanel('iob')">
+        <span class="bm-icon">⏱</span>IOB
+      </button>
+    </nav>
+    <div class="stats-content">
 
-  <!-- eHbA1c -->
-  <div class="hba1c-card">
-    <div>
-      <div class="hba1c-label">預估糖化血色素</div>
-      <div class="hba1c-desc">依平均血糖估算（Nathan 公式）</div>
-    </div>
-    <div style="text-align:right">
-      <div class="hba1c-value" id="hba1cValue">--</div>
-      <div class="hba1c-unit">%</div>
-    </div>
-  </div>
-
-  <!-- TIR Donut -->
-  <div class="tir-card">
-    <h3>血糖達標率 TIR</h3>
-    <div class="tir-inner">
-      <div class="tir-chart-wrap">
-        <canvas id="tirChart"></canvas>
-        <div class="tir-center-label">
-          <div class="tir-center-pct" id="tirCenterPct">--%</div>
-          <div class="tir-center-sub">達標率</div>
+      <!-- Panel 1: 血糖概覽 -->
+      <div id="stat-panel-overview" class="stat-panel">
+        <div class="overview-card">
+          <h3>血糖概覽</h3>
+          <div class="overview-grid" id="overviewGrid">
+            <div class="overview-item">
+              <div class="ov-label">最高血糖</div>
+              <div class="ov-value" style="color:#ef4444">--<span class="ov-unit">mg/dL</span></div>
+            </div>
+            <div class="overview-item">
+              <div class="ov-label">最低血糖</div>
+              <div class="ov-value" style="color:#8b5cf6">--<span class="ov-unit">mg/dL</span></div>
+            </div>
+            <div class="overview-item">
+              <div class="ov-label">最大血糖波動</div>
+              <div class="ov-value" style="color:#f59e0b">--<span class="ov-unit">mg/dL</span></div>
+            </div>
+            <div class="overview-item">
+              <div class="ov-label">平均血糖</div>
+              <div class="ov-value" style="color:#3b82f6">--<span class="ov-unit">mg/dL</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="hba1c-card">
+          <div>
+            <div class="hba1c-label">預估糖化血色素</div>
+            <div class="hba1c-desc">依平均血糖估算（Nathan 公式）</div>
+          </div>
+          <div style="text-align:right">
+            <div class="hba1c-value" id="hba1cValue">--</div>
+            <div class="hba1c-unit">%</div>
+          </div>
         </div>
       </div>
-      <div class="tir-legend" id="tirLegend"></div>
+
+      <!-- Panel 2: 血糖達標率 TIR -->
+      <div id="stat-panel-tir" class="stat-panel" style="display:none">
+        <div class="tir-card">
+          <h3>血糖達標率 TIR</h3>
+          <div class="tir-inner">
+            <div class="tir-chart-wrap">
+              <canvas id="tirChart"></canvas>
+              <div class="tir-center-label">
+                <div class="tir-center-pct" id="tirCenterPct">--%</div>
+                <div class="tir-center-sub">達標率</div>
+              </div>
+            </div>
+            <div class="tir-legend" id="tirLegend"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 3: 血糖趨勢 -->
+      <div id="stat-panel-bg" class="stat-panel" style="display:none">
+        <div class="chart-card">
+          <h3>血糖趨勢</h3>
+          <div class="chart-period-sel">
+            <select id="chartPeriodSel" onchange="renderCharts()">
+              <option value="all">全部時段</option>
+              <option value="morning">早</option>
+              <option value="noon">中</option>
+              <option value="evening">晚</option>
+              <option value="bedtime">睡前</option>
+            </select>
+          </div>
+          <canvas id="bgChart" height="200"></canvas>
+        </div>
+      </div>
+
+      <!-- Panel 4: 胰島素劑量趨勢 -->
+      <div id="stat-panel-insulin" class="stat-panel" style="display:none">
+        <div class="chart-card">
+          <h3>胰島素劑量趨勢</h3>
+          <div class="chart-sub">每日各時段劑量（含修正劑量）</div>
+          <canvas id="insulinChart" height="200"></canvas>
+        </div>
+      </div>
+
+      <!-- Panel 5: CGM 連續血糖曲線 -->
+      <div id="stat-panel-cgm" class="stat-panel" style="display:none">
+        <div class="chart-card" id="cgm-day-section">
+          <h3>📡 CGM 連續血糖曲線</h3>
+          <div class="chart-sub">來自 Nightscout · 每 5 分鐘一點</div>
+          <canvas id="cgmChart" height="220"></canvas>
+        </div>
+      </div>
+
+      <!-- Panel 6: 胰島素作用時間預估 (IOB) -->
+      <div id="stat-panel-iob" class="stat-panel" style="display:none">
+        <div class="chart-card">
+          <h3>💉 胰島素作用時間預估 (IOB)</h3>
+          <div class="chart-sub" id="iobDateLabel">-- 選取單日查看 --</div>
+          <div class="iob-info-box">
+            <span class="iob-type-badge iob-rapid">速效</span> NovoRapid：起效 15min・峰值 75min・持續 4.5h<br>
+            <span class="iob-type-badge iob-basal">長效</span> Tresiba：起效 1-2h・近乎恆定・持續 42h+（睡前注射）
+          </div>
+          <canvas id="iobChart" height="220"></canvas>
+        </div>
+      </div>
+
     </div>
-  </div>
-
-  <!-- Trend charts -->
-  <div class="chart-card">
-    <h3>血糖趨勢</h3>
-    <div class="chart-period-sel">
-      <select id="chartPeriodSel" onchange="renderCharts()">
-        <option value="all">全部時段</option>
-        <option value="morning">早</option>
-        <option value="noon">中</option>
-        <option value="evening">晚</option>
-        <option value="bedtime">睡前</option>
-      </select>
-    </div>
-    <canvas id="bgChart" height="200"></canvas>
-  </div>
-
-  <div class="chart-card">
-    <h3>胰島素劑量趨勢</h3>
-    <div class="chart-sub">每日各時段劑量（含修正劑量）</div>
-    <canvas id="insulinChart" height="200"></canvas>
-  </div>
-
-  <!-- CGM Timeline (single day only) -->
-  <div class="chart-card" id="cgm-day-section">
-    <h3>📡 CGM 連續血糖曲線</h3>
-    <div class="chart-sub">來自 Nightscout · 每 5 分鐘一點</div>
-    <canvas id="cgmChart" height="220"></canvas>
-  </div>
-
-  <!-- IOB Chart -->
-  <div class="chart-card">
-    <h3>💉 胰島素作用時間預估 (IOB)</h3>
-    <div class="chart-sub" id="iobDateLabel">-- 選取單日查看 --</div>
-    <div class="iob-info-box">
-      <span class="iob-type-badge iob-rapid">速效</span> NovoRapid：起效 15min・峰值 75min・持續 4.5h<br>
-      <span class="iob-type-badge iob-basal">長效</span> Tresiba：起效 1-2h・近乎恆定・持續 42h+（睡前注射）
-    </div>
-    <canvas id="iobChart" height="220"></canvas>
   </div>
 
   <!-- 返回首頁按鈕 -->
@@ -4022,6 +4096,8 @@ alter table user_todos enable row level security;
         </div>
         <ul class="cl-list">
           <li>修正：APP_VERSION const 定義在 init() 之後造成 TDZ crash，管理頁面無法進入</li>
+          <!-- v2.31.0 -->
+          <li>統計分析頁改為活頁本樣式：左側書籤導覽（概覽／TIR／血糖趨勢／劑量趨勢／CGM／IOB）</li>
           <li>將 APP_VERSION 移至 init() 呼叫前，確保所有頁面正常初始化</li>
         </ul>
       </div>
@@ -7576,6 +7652,20 @@ async function autoFillCorrBG(idx) {
 }
 
 var _supplActiveTab = 'corrections';
+var _statsActivePanel = 'overview';
+
+function switchStatPanel(panel) {
+  _statsActivePanel = panel;
+  var panels = ['overview','tir','bg','insulin','cgm','iob'];
+  var btns = document.querySelectorAll('.stats-bm-btn');
+  panels.forEach(function(p, i) {
+    var el = document.getElementById('stat-panel-' + p);
+    if (el) el.style.display = (p === panel) ? '' : 'none';
+    if (btns[i]) btns[i].classList.toggle('active', p === panel);
+  });
+  // 切換後重新渲染圖表（確保 canvas 尺寸正確）
+  setTimeout(renderCharts, 40);
+}
 var _todayActivePanel = 'morning';
 
 function switchTodayPanel(panel) {
@@ -9167,7 +9257,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.30.5';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.31.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
