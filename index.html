@@ -1728,23 +1728,16 @@
     .cgm-ins-time { font-size: .92rem; font-weight: 800; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .cgm-ins-bar-track { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.18); margin-top: 2px; }
     .cgm-ins-bar-fill { height: 3px; border-radius: 2px; transition: width .4s; }
-    /* cgm events carousel */
+    /* cgm events carousel — 3 rows */
     .cgm-carousel {
-      display: flex; align-items: center; gap: 4px;
+      display: flex; flex-direction: column; gap: 2px;
       margin-top: 5px; min-width: 0;
     }
     .cgm-carousel-text {
-      flex: 1; font-size: .72rem; color: rgba(255,255,255,0.75);
+      font-size: .72rem; color: rgba(255,255,255,0.75);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-      min-width: 0;
+      min-width: 0; display: none;
     }
-    .cgm-carousel-btn {
-      background: none; border: none; color: rgba(255,255,255,0.5);
-      font-size: .85rem; cursor: pointer; padding: 0 2px; line-height: 1;
-      flex-shrink: 0; transition: color .15s;
-    }
-    .cgm-carousel-btn:hover { color: rgba(255,255,255,0.95); }
-    .cgm-carousel-idx { font-size: .65rem; color: rgba(255,255,255,0.4); flex-shrink: 0; }
     /* ── BG status pill (LOW/NORMAL/ALERT/HIGH) ── */
     .cgm-status-pill {
       font-size: 0.58rem; font-weight: 900; letter-spacing: 0.12em;
@@ -2544,12 +2537,11 @@
         <span class="cgm-meta" id="cgm-meta">CGM 即時血糖</span>
         <button class="cgm-pip-btn" id="cgm-pip-btn" onclick="openCGMPip()" title="浮動視窗（常駐最上層）">⊡</button>
       </div>
-      <!-- Events carousel -->
+      <!-- Events carousel (top 3 items) -->
       <div class="cgm-carousel" id="cgm-carousel" style="display:none;">
-        <button class="cgm-carousel-btn" onclick="cgmCarouselNav(-1)">&#8249;</button>
-        <span class="cgm-carousel-text" id="cgm-carousel-text"></span>
-        <span class="cgm-carousel-idx" id="cgm-carousel-idx"></span>
-        <button class="cgm-carousel-btn" onclick="cgmCarouselNav(1)">&#8250;</button>
+        <span class="cgm-carousel-text" id="cgm-carousel-text-0"></span>
+        <span class="cgm-carousel-text" id="cgm-carousel-text-1"></span>
+        <span class="cgm-carousel-text" id="cgm-carousel-text-2"></span>
       </div>
     </div>
     <!-- Right: Insulin panel (populated by updateBasalTimeBar) -->
@@ -3133,11 +3125,23 @@ alter table user_todos enable row level security;
   <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.29.4</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.30.0</strong>
     </p>
 
     <!-- 版本列表 -->
     <div style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.30.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-major">v2.30.0</span>
+          <span class="cl-date">2026-05-22</span>
+          <span class="cl-tag">CGM 重要記事三列同顯</span>
+        </div>
+        <ul class="cl-list">
+          <li>【CGM】重要記事改為同時顯示前 3 筆（待辦、複診、領藥），移除左右導覽按鈕</li>
+        </ul>
+      </div>
 
       <!-- v2.29.4 -->
       <div class="cl-item">
@@ -9057,7 +9061,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.29.4';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.30.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -10777,14 +10781,20 @@ function buildCgmCarousel() {
 }
 
 function _renderCgmCarousel() {
-  var el   = document.getElementById('cgm-carousel');
-  var txt  = document.getElementById('cgm-carousel-text');
-  var idx  = document.getElementById('cgm-carousel-idx');
+  var el = document.getElementById('cgm-carousel');
   if (!el) return;
   if (!_cgmCarouselItems.length) { el.style.display = 'none'; return; }
   el.style.display = 'flex';
-  txt.textContent  = _cgmCarouselItems[_cgmCarouselIdx];
-  idx.textContent  = (_cgmCarouselIdx + 1) + '/' + _cgmCarouselItems.length;
+  for (var i = 0; i < 3; i++) {
+    var row = document.getElementById('cgm-carousel-text-' + i);
+    if (!row) continue;
+    if (i < _cgmCarouselItems.length) {
+      row.textContent = _cgmCarouselItems[i];
+      row.style.display = '';
+    } else {
+      row.style.display = 'none';
+    }
+  }
 }
 
 function cgmCarouselNav(dir) {
