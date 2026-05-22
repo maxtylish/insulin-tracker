@@ -1368,6 +1368,28 @@
     .mp-confirm-btn:hover { filter: brightness(1.1); }
     /* ── carb-calc overlay (reuses calc-overlay styles) ── */
     #carbCalcOverlay .calc-modal { max-width: 340px; }
+    /* ── 套餐搜尋欄 ── */
+    .calc-set-search {
+      width:100%; padding:6px 10px; font-size:.82rem;
+      border:1.5px solid var(--border); border-radius:8px;
+      background:var(--bg); color:var(--text); outline:none;
+    }
+    .calc-set-search:focus { border-color:var(--primary); }
+    /* ── 快速計算機按鈕 ── */
+    .qc-btn {
+      padding:14px 8px; font-size:1.1rem; font-weight:600;
+      border:none; border-radius:10px; cursor:pointer;
+      background:var(--card); color:var(--text); transition:all .1s;
+      box-shadow:0 1px 3px rgba(0,0,0,.08);
+    }
+    .qc-btn:active { transform:scale(0.94); }
+    .qc-btn.qc-fn { background:#e2e8f0; color:#374151; }
+    .qc-btn.qc-op { background:#f97316; color:#fff; }
+    .qc-btn.qc-eq { background:var(--primary); color:#fff; }
+    body[data-skin='cold-dark'] .qc-btn,
+    body[data-skin='warm-dark'] .qc-btn { background:#2d3748; color:#e2e8f0; }
+    body[data-skin='cold-dark'] .qc-btn.qc-fn,
+    body[data-skin='warm-dark'] .qc-btn.qc-fn { background:#4a5568; color:#e2e8f0; }
 
     .danger-btn {
       width: 100%;
@@ -4193,6 +4215,8 @@ alter table user_todos enable row level security;
           <li>管理頁面：回診資訊移至頂端；耗材庫存 &amp; 胰島素管理改為活頁本書籤版面</li>
           <!-- v2.32.0 -->
           <li>待辦頁面重設計：行事曆置頂常駐顯示；新增搜尋欄；新增 Filter（全部/健康/一般/隱藏已完成）；自動編號 + 新增日期顯示；分頁（5筆/頁，最新第一頁）</li>
+          <!-- v2.33.0 -->
+          <li>胰島素計算：新增春水堂套餐（功夫麵½＋奶酥厚片½，57g）；新增午/晚餐主餐春水堂功夫麵一份(64g)、奶酥厚片一份(50g)；套餐搜尋欄；🧮 浮動快速計算機</li>
           <li>將 APP_VERSION 移至 init() 呼叫前，確保所有頁面正常初始化</li>
         </ul>
       </div>
@@ -8508,6 +8532,8 @@ const CALC_CARB_FOODS = {
   guava: 10.6, apple: 11.9, cherry: 19.12, banana_peel: 10.6, banana: 22.1,
   pineapple: 13.6, dragon_fruit: 12.36, strawberry: 9.3, kiwi: 14.6,
   milk_100: 4.8, milk_150: 7, milk_200: 10, yogurt_100: 12, yakult: 14.7,
+  chunshuitang_kung_noodle: 64,    // 春水堂功夫麵 一份(220克)
+  chunshuitang_butter_toast: 50,   // 春水堂奶酥厚片 一份
 };
 
 const CALC_MAIN_OPTIONS = {
@@ -8538,6 +8564,8 @@ const CALC_MAIN_OPTIONS = {
     { value: 'potato_skin',     label: '馬鈴薯帶皮 100公克 (碳水12.9克)' },
     { value: 'dumpling',        label: '水餃 1顆 (碳水4克)' },
     { value: 'soup_dumpling',   label: '湯包 1顆 (碳水4.3克)' },
+    { value: 'chunshuitang_kung_noodle',  label: '🍜 春水堂功夫麵 一份(220克) (碳水64克)' },
+    { value: 'chunshuitang_butter_toast', label: '🍞 春水堂奶酥厚片 一份 (碳水50克)' },
   ],
   dinner: [
     { value: 'white_rice',      label: '白飯 100公克 (碳水30克)' },
@@ -8549,6 +8577,8 @@ const CALC_MAIN_OPTIONS = {
     { value: 'potato_skin',     label: '馬鈴薯帶皮 100公克 (碳水12.9克)' },
     { value: 'dumpling',        label: '水餃 1顆 (碳水4克)' },
     { value: 'soup_dumpling',   label: '湯包 1顆 (碳水4.3克)' },
+    { value: 'chunshuitang_kung_noodle',  label: '🍜 春水堂功夫麵 一份(220克) (碳水64克)' },
+    { value: 'chunshuitang_butter_toast', label: '🍞 春水堂奶酥厚片 一份 (碳水50克)' },
   ],
 };
 
@@ -8573,6 +8603,9 @@ const CALC_MEAL_SETS = {
     { label: '🍟 麥當勞組合2（鱈魚堡＋玉米杯＋水果袋）',
       items: [{ slot: 'other', name: '麥當勞組合2', carb: 55.2 }]
     },
+    { label: '🍜 春水堂功夫麵½＋奶酥厚片½',
+      items: [{ slot: 'other', name: '春水堂功夫麵½＋奶酥厚片½', carb: 57 }]
+    },
   ],
   dinner: [
     { label: '🏮 夜市油麵組合（油麵140g＋牛奶120ml）',
@@ -8593,6 +8626,9 @@ const CALC_MEAL_SETS = {
     },
     { label: '🍟 麥當勞組合2（鱈魚堡＋玉米杯＋水果袋）',
       items: [{ slot: 'other', name: '麥當勞組合2', carb: 55.2 }]
+    },
+    { label: '🍜 春水堂功夫麵½＋奶酥厚片½',
+      items: [{ slot: 'other', name: '春水堂功夫麵½＋奶酥厚片½', carb: 57 }]
     },
   ],
 };
@@ -8755,9 +8791,25 @@ function calcUpdateMealSets() {
   var sets = CALC_MEAL_SETS[meal] || [];
   var sel  = document.getElementById('calc-meal-set');
   if (!sel) return;
+  // 切換餐別時重置搜尋欄
+  var searchEl = document.getElementById('calc-set-search');
+  if (searchEl) searchEl.value = '';
   sel.innerHTML = '<option value="">── 選擇套餐（自動填入）──</option>' +
     sets.map(function(s, i) {
       return '<option value="' + i + '">' + s.label + '</option>';
+    }).join('');
+}
+
+function calcFilterMealSets(q) {
+  var meal = (document.getElementById('calc-meal-period') || {}).value || 'breakfast';
+  var sets = CALC_MEAL_SETS[meal] || [];
+  var sel  = document.getElementById('calc-meal-set');
+  if (!sel) return;
+  var lq = (q || '').toLowerCase();
+  var items = lq ? sets.filter(function(s){ return s.label.toLowerCase().indexOf(lq) >= 0; }) : sets;
+  sel.innerHTML = '<option value="">── 選擇套餐（自動填入）──</option>' +
+    items.map(function(s) {
+      return '<option value="' + sets.indexOf(s) + '">' + s.label + '</option>';
     }).join('');
 }
 
@@ -9401,7 +9453,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.32.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.33.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -11527,6 +11579,66 @@ async function gcalDelete(eid) {
 // ══════════════════════════════════════════════════════════════
 //  TODO — DATA
 // ══════════════════════════════════════════════════════════════
+// ── 快速計算機 ──────────────────────────────────────────────────────────
+var _qc = { display: '0', operand: null, operator: null, waiting: false };
+
+function openQuickCalc() {
+  _qc = { display: '0', operand: null, operator: null, waiting: false };
+  var el = document.getElementById('quickCalcOverlay');
+  if (el) { el.style.display = 'flex'; _qcUpdateDisplay(); }
+}
+function closeQuickCalc() {
+  var el = document.getElementById('quickCalcOverlay');
+  if (el) el.style.display = 'none';
+}
+function _qcUpdateDisplay() {
+  var el = document.getElementById('qc-display');
+  if (el) el.textContent = _qc.display;
+}
+function qcDigit(d) {
+  if (_qc.waiting) { _qc.display = String(d); _qc.waiting = false; }
+  else if (_qc.display === '0' || _qc.display === 'Error') { _qc.display = String(d); }
+  else if (_qc.display.replace('-','').replace('.','').length < 10) { _qc.display += d; }
+  _qcUpdateDisplay();
+}
+function qcDot() {
+  if (_qc.waiting) { _qc.display = '0.'; _qc.waiting = false; }
+  else if (_qc.display.indexOf('.') < 0) { _qc.display += '.'; }
+  _qcUpdateDisplay();
+}
+function qcOp(op) {
+  if (_qc.operator && !_qc.waiting) qcEquals();
+  _qc.operand = parseFloat(_qc.display);
+  _qc.operator = op;
+  _qc.waiting = true;
+}
+function qcEquals() {
+  if (_qc.operator === null) return;
+  var a = _qc.operand, b = parseFloat(_qc.display), r;
+  if      (_qc.operator === '+') r = a + b;
+  else if (_qc.operator === '-') r = a - b;
+  else if (_qc.operator === '*') r = a * b;
+  else if (_qc.operator === '/') r = b !== 0 ? a / b : NaN;
+  var rs = isNaN(r) ? 'Error' : (Math.round(r * 1e9) / 1e9).toString();
+  if (rs !== 'Error' && rs.length > 12) rs = parseFloat(r.toPrecision(9)).toString();
+  _qc.display = rs;
+  _qc.operator = null; _qc.operand = null; _qc.waiting = false;
+  _qcUpdateDisplay();
+}
+function qcClear() {
+  _qc = { display: '0', operand: null, operator: null, waiting: false };
+  _qcUpdateDisplay();
+}
+function qcToggleSign() {
+  if (_qc.display === 'Error' || _qc.display === '0') return;
+  _qc.display = _qc.display.startsWith('-') ? _qc.display.slice(1) : '-' + _qc.display;
+  _qcUpdateDisplay();
+}
+function qcPercent() {
+  var v = parseFloat(_qc.display);
+  if (!isNaN(v)) { _qc.display = (v / 100).toString(); _qcUpdateDisplay(); }
+}
+
 function getTodos(){ try{ return JSON.parse(localStorage.getItem('insulin_todos')||'[]'); }catch(e){ return []; } }
 function setTodos(a) {
   localStorage.setItem('insulin_todos', JSON.stringify(a));
@@ -11811,6 +11923,15 @@ function checkTodoAlerts() {
 
 </script>
 
+<!-- ── 快速計算機浮動按鈕 ── -->
+<button id="quick-calc-fab" onclick="openQuickCalc()" title="快速計算機"
+  style="position:fixed;bottom:80px;right:14px;z-index:200;
+  width:46px;height:46px;border-radius:50%;
+  background:var(--primary);color:#fff;border:none;
+  font-size:1.3rem;cursor:pointer;
+  box-shadow:0 3px 14px rgba(0,0,0,.28);
+  display:flex;align-items:center;justify-content:center;">🧮</button>
+
 <!-- ══════════════ CALCULATOR MODAL ══════════════ -->
 <div id="carbCalcOverlay" class="calc-overlay" onclick="if(event.target.id==='carbCalcOverlay')closeCarbCalc()">
   <div class="calc-modal" style="max-width:340px;">
@@ -11880,11 +12001,15 @@ function checkTodoAlerts() {
       <!-- 飲食紀錄 -->
       <div class="calc-section">
         <div class="calc-section-title">飲食紀錄</div>
-        <div class="calc-food-row">
-          <span class="calc-food-badge badge-set">套餐</span>
-          <select id="calc-meal-set" onchange="calcApplyMealSet(this.value)" style="flex:1 1 auto;min-width:0;">
-            <option value="">── 選擇套餐（自動填入）──</option>
-          </select>
+        <div class="calc-food-row" style="align-items:flex-start;">
+          <span class="calc-food-badge badge-set" style="margin-top:4px;">套餐</span>
+          <div style="flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;">
+            <input type="search" id="calc-set-search" class="calc-set-search"
+              placeholder="🔍 搜尋套餐名稱…" oninput="calcFilterMealSets(this.value)">
+            <select id="calc-meal-set" onchange="calcApplyMealSet(this.value)" style="width:100%;">
+              <option value="">── 選擇套餐（自動填入）──</option>
+            </select>
+          </div>
         </div>
         <hr class="calc-set-divider">
         <div class="calc-food-row">
@@ -11995,6 +12120,45 @@ function checkTodoAlerts() {
 </div>
 
 
+
+<!-- ══ Quick Calculator Modal ══ -->
+<div id="quickCalcOverlay" class="calc-overlay" style="display:none"
+  onclick="if(event.target.id==='quickCalcOverlay')closeQuickCalc()">
+  <div class="calc-modal" style="max-width:290px;">
+    <div class="calc-modal-header">
+      <h2>🧮 快速計算機</h2>
+      <button class="calc-close-btn" type="button" onclick="closeQuickCalc()">✕</button>
+    </div>
+    <div style="padding:14px 12px 16px;">
+      <div id="qc-display"
+        style="text-align:right;font-size:2rem;font-weight:700;
+        min-height:54px;padding:8px 12px;background:var(--bg);
+        border-radius:10px;margin-bottom:12px;color:var(--text);
+        word-break:break-all;letter-spacing:0.01em;">0</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+        <button class="qc-btn qc-fn" onclick="qcClear()">AC</button>
+        <button class="qc-btn qc-fn" onclick="qcToggleSign()">±</button>
+        <button class="qc-btn qc-fn" onclick="qcPercent()">%</button>
+        <button class="qc-btn qc-op" onclick="qcOp('/')">÷</button>
+        <button class="qc-btn" onclick="qcDigit(7)">7</button>
+        <button class="qc-btn" onclick="qcDigit(8)">8</button>
+        <button class="qc-btn" onclick="qcDigit(9)">9</button>
+        <button class="qc-btn qc-op" onclick="qcOp('*')">×</button>
+        <button class="qc-btn" onclick="qcDigit(4)">4</button>
+        <button class="qc-btn" onclick="qcDigit(5)">5</button>
+        <button class="qc-btn" onclick="qcDigit(6)">6</button>
+        <button class="qc-btn qc-op" onclick="qcOp('-')">−</button>
+        <button class="qc-btn" onclick="qcDigit(1)">1</button>
+        <button class="qc-btn" onclick="qcDigit(2)">2</button>
+        <button class="qc-btn" onclick="qcDigit(3)">3</button>
+        <button class="qc-btn qc-op" onclick="qcOp('+')">+</button>
+        <button class="qc-btn" style="grid-column:span 2" onclick="qcDigit(0)">0</button>
+        <button class="qc-btn" onclick="qcDot()">.</button>
+        <button class="qc-btn qc-eq" onclick="qcEquals()">=</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ══ Prescription Modal ══ -->
 <div id="rxModalOverlay" class="rx-modal-overlay" onclick="if(event.target===this)closeRxModal()">
