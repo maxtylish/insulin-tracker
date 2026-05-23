@@ -63,6 +63,13 @@
       background: linear-gradient(135deg, #c87d87 0%, #d4919a 100%);
       box-shadow: 0 2px 8px rgba(200,125,135,0.35);
     }
+    body[data-skin="warm-light"] .save-btn {
+      background: linear-gradient(135deg, #c87d87 0%, #d4919a 100%);
+      box-shadow: 0 4px 12px rgba(200,125,135,0.4);
+    }
+    body[data-skin="warm-light"] .save-btn:hover {
+      box-shadow: 0 6px 18px rgba(200,125,135,0.5);
+    }
     body[data-skin="warm-dark"] {
       --bg: #1e1610;       --card: #2c2018;
       --primary: #d4925a;  --primary-dark: #c07a40;
@@ -502,6 +509,49 @@
       box-shadow:none; border:none; border-radius:0;
       margin-bottom:0; padding:0; background:transparent;
     }
+    /* ── Settings 活頁本版面 ── */
+    .settings-layout { display:flex; gap:0; align-items:flex-start; margin-bottom:12px; }
+    .settings-bookmarks { display:flex; flex-direction:column; gap:4px; flex-shrink:0; padding:2px 0; }
+    .settings-bm-btn {
+      width:46px; min-height:52px;
+      background:var(--card); border:1px solid var(--border);
+      border-right:2px solid var(--card); border-radius:10px 0 0 10px;
+      cursor:pointer; display:flex; flex-direction:column;
+      align-items:center; justify-content:center; gap:3px;
+      font-size:.62rem; font-weight:700; color:var(--text-muted);
+      transition:all .15s; padding:6px 2px; line-height:1.2;
+      box-shadow:-1px 0 3px rgba(0,0,0,.06);
+    }
+    .settings-bm-btn .bm-icon { font-size:1.1rem; line-height:1; }
+    .settings-bm-btn.active {
+      background:var(--primary); color:#fff;
+      border-color:var(--primary); border-right-color:var(--card);
+      box-shadow:-2px 0 6px rgba(99,102,241,.25);
+      z-index:1; position:relative; margin-right:-1px;
+    }
+    body[data-skin='cold-dark'] .settings-bm-btn,
+    body[data-skin='warm-dark'] .settings-bm-btn { border-right-color:var(--card); }
+    .settings-content {
+      flex:1; min-width:0;
+      background:var(--card); border-radius:0 var(--radius) var(--radius) 0;
+      border:1px solid var(--border); padding:14px 12px;
+      box-shadow:var(--shadow);
+      max-height:75vh; overflow-y:auto;
+    }
+    .settings-panel > .settings-section {
+      border:none; box-shadow:none; background:transparent;
+      padding:0; margin-bottom:14px;
+    }
+    .settings-panel > .settings-section:last-child { margin-bottom:0; }
+    /* Changelog pager */
+    .cl-pager { display:flex; align-items:center; justify-content:center; gap:14px; margin-top:14px; }
+    .cl-page-btn {
+      background:var(--card); border:1px solid var(--border);
+      border-radius:6px; padding:4px 14px; cursor:pointer;
+      font-size:1rem; color:var(--text); transition:background .1s;
+    }
+    .cl-page-btn:hover:not(:disabled) { background:var(--bg); }
+    .cl-page-btn:disabled { opacity:.35; cursor:not-allowed; }
     /* ── 補打/補糖 Tab ── */
     .suppl-tab-wrap { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; padding-bottom:10px; border-bottom:2px solid var(--border); gap:8px; flex-wrap:wrap; }
     .suppl-tabs { display:flex; gap:4px; background:var(--bg); border-radius:20px; padding:3px; }
@@ -3103,8 +3153,36 @@
 
 <div id="page-settings" class="page">
 
-  <!-- Cloud Sync -->
-  <div class="settings-section">
+  <div class="settings-layout">
+    <nav class="settings-bookmarks" id="settings-bookmarks">
+      <button class="settings-bm-btn active" onclick="switchSettingsPanel('cloud')">
+        <span class="bm-icon">☁️</span>雲端
+      </button>
+      <button class="settings-bm-btn" onclick="switchSettingsPanel('account')">
+        <span class="bm-icon">🔑</span>帳號
+      </button>
+      <button class="settings-bm-btn" onclick="switchSettingsPanel('meal')">
+        <span class="bm-icon">💊</span>餐前
+      </button>
+      <button class="settings-bm-btn" onclick="switchSettingsPanel('cgm')">
+        <span class="bm-icon">📡</span>CGM
+      </button>
+      <button class="settings-bm-btn" onclick="switchSettingsPanel('notif')">
+        <span class="bm-icon">🔔</span>通知
+      </button>
+      <button class="settings-bm-btn" onclick="switchSettingsPanel('tools')">
+        <span class="bm-icon">🔧</span>工具
+      </button>
+      <button class="settings-bm-btn" onclick="switchSettingsPanel('log')">
+        <span class="bm-icon">📋</span>日誌
+      </button>
+    </nav>
+
+    <div class="settings-content">
+
+      <!-- ── Panel: 雲端同步 ── -->
+      <div id="settings-panel-cloud" class="settings-panel">
+<div class="settings-section">
     <h3>☁️ 雲端同步設定</h3>
     <div class="cloud-setup-box">
       <strong>跨裝置同步說明</strong><br>
@@ -3150,9 +3228,11 @@ alter table user_todos enable row level security;
     </button>
     <div id="cloudStatus" style="margin-top:8px;font-size:0.8rem;color:var(--text-muted);"></div>
   </div>
+      </div>
 
-  <!-- Account ID -->
-  <div class="settings-section">
+      <!-- ── Panel: 帳號 + 血糖範圍 ── -->
+      <div id="settings-panel-account" class="settings-panel" style="display:none">
+<div class="settings-section">
     <h3>🔑 個人帳號 ID</h3>
     <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">
       設定一個好記的 ID（如 <code style="background:#f1f5f9;padding:1px 5px;border-radius:4px;">max-insulin</code>），所有裝置輸入同一個 ID 即可自動同步資料。
@@ -3174,8 +3254,7 @@ alter table user_todos enable row level security;
       <p style="font-size:0.75rem;color:#f59e0b;margin-top:6px;">⚠️ 切換 ID 後將讀取該 ID 的雲端資料</p>
     </div>
   </div>
-
-  <div class="settings-section">
+<div class="settings-section">
     <h3>血糖範圍設定</h3>
     <div class="settings-row">
       <div>
@@ -3207,9 +3286,11 @@ alter table user_todos enable row level security;
     </div>
     <button class="settings-save-btn" onclick="saveSettings()">儲存設定</button>
   </div>
+      </div>
 
-  <!-- 餐前計算參數 -->
-  <div class="settings-section">
+      <!-- ── Panel: 餐前計算參數 ── -->
+      <div id="settings-panel-meal" class="settings-panel" style="display:none">
+<div class="settings-section">
     <h3>💊 餐前計算參數</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px;">
       修改後點「預覽變更」確認，再按「確認儲存」才會生效，防止誤觸。
@@ -3246,9 +3327,11 @@ alter table user_todos enable row level security;
       </div>
     </div>
   </div>
+      </div>
 
-  <!-- Nightscout / CGM settings -->
-  <div class="settings-section">
+      <!-- ── Panel: CGM 連動 ── -->
+      <div id="settings-panel-cgm" class="settings-panel" style="display:none">
+<div class="settings-section">
     <h3>📡 CGM 連動設定（Nightscout）</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px;">
       連結 Nightscout 後，首頁即時顯示 CGM 血糖、點擊血糖欄位自動帶入、統計頁顯示連續曲線。
@@ -3269,8 +3352,11 @@ alter table user_todos enable row level security;
     </div>
     <button class="settings-save-btn" style="margin-top:12px;" onclick="saveNSSettings()">儲存 CGM 設定</button>
   </div>
+      </div>
 
-  <div class="settings-section">
+      <!-- ── Panel: 通知 ── -->
+      <div id="settings-panel-notif" class="settings-panel" style="display:none">
+<div class="settings-section">
     <h3>🔔 低 / 高血糖推播通知</h3>
     <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:12px;">
       開啟後，即使 App 切到背景或螢幕關閉，血糖異常時仍會跳出系統通知。<br>
@@ -3287,8 +3373,11 @@ alter table user_todos enable row level security;
       <label for="set-notif-sound" style="font-size:.88rem;">同時播放警示音效</label>
     </div>
   </div>
+      </div>
 
-  <div class="settings-section">
+      <!-- ── Panel: 外部工具 ── -->
+      <div id="settings-panel-tools" class="settings-panel" style="display:none">
+<div class="settings-section">
     <h3>📅 Google 行事曆</h3>
     <p style="font-size:.83rem;color:var(--text-muted);margin-bottom:12px;">
       連結後，待辦事項含到期日時可自動同步至 Google 行事曆，並支援雙向更新。
@@ -3297,8 +3386,7 @@ alter table user_todos enable row level security;
     <button class="settings-save-btn" id="gcal-auth-btn" style="width:100%;margin-bottom:8px;" onclick="startGCalAuth()">🔗 連結 Google 行事曆</button>
     <button class="danger-btn" id="gcal-disconnect-btn" style="display:none;" onclick="disconnectGCal()">中斷 Google 行事曆連結</button>
   </div>
-
-  <div class="settings-section">
+<div class="settings-section">
     <h3>資料管理</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px;">
       資料同步儲存於本機與雲端。建議定期匯出 CSV 備份。
@@ -3306,9 +3394,7 @@ alter table user_todos enable row level security;
     <button class="export-btn" style="width:100%;padding:11px;font-size:0.9rem;" onclick="exportCSV()">📥 匯出全部資料 (CSV)</button>
     <button class="danger-btn" onclick="clearAllData()">🗑️ 清除所有資料</button>
   </div>
-
-  <!-- ─── 外部工具 ─── -->
-  <div class="settings-section">
+<div class="settings-section">
     <h3>🔧 外部工具</h3>
     <a href="https://maxtylish.github.io/insulin_calculator/"
        target="_blank" rel="noopener"
@@ -3323,16 +3409,18 @@ alter table user_todos enable row level security;
       當主計算機無法使用時的備用選項
     </p>
   </div>
+      </div>
 
-  <!-- ─── 更新日誌 ─── -->
-  <div class="settings-section">
+      <!-- ── Panel: 更新日誌 ── -->
+      <div id="settings-panel-log" class="settings-panel" style="display:none">
+<div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
       目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.30.5</strong>
     </p>
 
     <!-- 版本列表 -->
-    <div style="display:flex;flex-direction:column;gap:0;">
+    <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
       <!-- v2.30.5 -->
       <div class="cl-item">
@@ -4237,6 +4325,10 @@ alter table user_todos enable row level security;
           <li>PiP 浮動視窗：背景色隨 App Skin 自動切換（玫瑰·淺色 → #E1B7BD）</li>
           <!-- v2.33.6 -->
           <li>App Skin「冷·深」換為靛夜配色（Space Indigo #2F2963 / Twilight Indigo #454372 / Tangerine Dream #EF946C / Soft Fawn #C4A77D）</li>
+          <!-- v2.33.7 -->
+          <li>玫瑰·淺色主題：「儲存今日紀錄」按鈕改為玫瑰漸層，與「儲存早餐」視覺統一</li>
+          <!-- v2.34.0 -->
+          <li>設定頁改為活頁本書籤樣式（雲端／帳號／餐前／CGM／通知／工具／日誌），更新日誌自動分頁（每頁 5 筆）</li>
           <li>將 APP_VERSION 移至 init() 呼叫前，確保所有頁面正常初始化</li>
         </ul>
       </div>
@@ -4492,7 +4584,12 @@ alter table user_todos enable row level security;
       </div>
 
     </div><!-- end 版本列表 -->
-  </div><!-- end 更新日誌 section -->
+    <div id="cl-pager" class="cl-pager"></div>
+  </div>
+      </div>
+
+    </div><!-- end settings-content -->
+  </div><!-- end settings-layout -->
 
   <!-- 返回首頁按鈕 -->
   <div class="back-home-wrap">
@@ -7634,6 +7731,8 @@ function loadSettingsUI() {
   document.getElementById('set-ns-autofill').checked = settings.nsAutoFill !== false;
   loadNotifSettingsUI();
   loadMealParamsUI();  // fix: 確保 ISF/CIR/目標血糖顯示已儲存的值，而非 HTML 預設值
+  // 確保書籤狀態正確
+  if (typeof switchSettingsPanel === 'function') switchSettingsPanel(_settingsActivePanel || 'cloud');
 }
 
 function saveNSSettings() {
@@ -7854,6 +7953,51 @@ function switchManagePanel(panel) {
     if (el) el.style.display = (p === panel) ? '' : 'none';
     if (btns[i]) btns[i].classList.toggle('active', p === panel);
   });
+}
+
+// ── Settings 書籤活頁本 ──────────────────────────────────────────────────
+var _settingsActivePanel = 'cloud';
+var _clPage = 1;
+var CL_PER_PAGE = 5;
+
+function switchSettingsPanel(panel) {
+  _settingsActivePanel = panel;
+  var panels = ['cloud', 'account', 'meal', 'cgm', 'notif', 'tools', 'log'];
+  var btns = document.querySelectorAll('.settings-bm-btn');
+  panels.forEach(function(p, i) {
+    var el = document.getElementById('settings-panel-' + p);
+    if (el) el.style.display = (p === panel) ? '' : 'none';
+    if (btns[i]) btns[i].classList.toggle('active', p === panel);
+  });
+  if (panel === 'log') { _clPage = 1; renderChangelogPage(); }
+}
+
+function renderChangelogPage() {
+  var container = document.getElementById('cl-page-container');
+  var pager     = document.getElementById('cl-pager');
+  if (!container) return;
+  var items      = Array.from(container.querySelectorAll('.cl-item'));
+  var total      = items.length;
+  var totalPages = Math.ceil(total / CL_PER_PAGE);
+  if (_clPage < 1) _clPage = 1;
+  if (_clPage > totalPages) _clPage = totalPages;
+  var start = (_clPage - 1) * CL_PER_PAGE;
+  items.forEach(function(item, idx) {
+    item.style.display = (idx >= start && idx < start + CL_PER_PAGE) ? '' : 'none';
+  });
+  if (pager) {
+    pager.innerHTML =
+      '<button class="cl-page-btn" onclick="setChangelogPage(' + (_clPage - 1) + ')"' +
+        (_clPage <= 1 ? ' disabled' : '') + '>&#8249;</button>' +
+      '<span style="font-size:.85rem;color:var(--text-muted)">' + _clPage + ' / ' + totalPages + '</span>' +
+      '<button class="cl-page-btn" onclick="setChangelogPage(' + (_clPage + 1) + ')"' +
+        (_clPage >= totalPages ? ' disabled' : '') + '>&#8250;</button>';
+  }
+}
+
+function setChangelogPage(p) {
+  _clPage = p;
+  renderChangelogPage();
 }
 var _todayActivePanel = 'morning';
 
@@ -9491,7 +9635,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.33.6';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.34.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
