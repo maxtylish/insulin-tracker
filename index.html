@@ -4229,6 +4229,8 @@ alter table user_todos enable row level security;
           <li>玫瑰·淺色主題：Header 背景改為 #C87D87 Antique Rose 漸層</li>
           <!-- v2.33.4 -->
           <li>修正：ISF／CIR／目標血糖設定開啟設定頁時未讀取已儲存值（顯示 HTML 預設值 110），導致誤覆蓋</li>
+          <!-- v2.33.5 -->
+          <li>PiP 浮動視窗：背景色隨 App Skin 自動切換（玫瑰·淺色 → #E1B7BD）</li>
           <li>將 APP_VERSION 移至 init() 呼叫前，確保所有頁面正常初始化</li>
         </ul>
       </div>
@@ -8453,6 +8455,11 @@ function setSkin(name) {
   });
   var lbl = document.getElementById('sk-label');
   if (lbl) lbl.textContent = SKIN_LABELS[name] || '';
+  // 若 PIP 視窗開啟，即時更新背景色
+  if (typeof _pipWin !== 'undefined' && _pipWin && !_pipWin.closed) {
+    _renderPipContent(_pipThemeKey);
+    updateCGMPip();
+  }
 }
 function initSkin() {
   var saved = 'cold-light';
@@ -8996,6 +9003,17 @@ var _pipCarouselIdx = 0;      // PiP event carousel current index
 var _pipLastRapid = null;     // last rapid injection {dt, site} for PiP display
 var _pipLastBasal = null;     // last basal injection {dt, site} for PiP display
 
+// ── PIP 背景隨 App Skin 改變的對應表 ──────────────────────────────────────
+var PIP_SKIN_BG = {
+  'warm-light': '#e1b7bd',  // 玫瑰·淺色
+};
+
+// 取得考慮 skin 後的 PIP 背景色
+function _getPipBgHex(tKey) {
+  var skinName = (document.body && document.body.dataset.skin) || 'cold-light';
+  return PIP_SKIN_BG[skinName] || (PIP_THEMES[tKey] || PIP_THEMES.white).bg;
+}
+
 var PIP_THEMES = {
   white:   { bg:'#ffffff', text:'#111111', sub:'#888888', ring:'#444444',
              low:'#7c3aed', normal:'#16a34a', warn:'#d97706', high:'#dc2626',
@@ -9134,7 +9152,7 @@ function _getPipBgAlpha() {
 }
 function _buildPipStyle(tKey) {
   var t = PIP_THEMES[tKey] || PIP_THEMES.white;
-  var rgb = _hexToRgb(t.bg);
+  var rgb = _hexToRgb(_getPipBgHex(tKey));  // skin-aware bg
   var alpha = _getPipBgAlpha();
   var bgRgba = 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + alpha + ')';
   return [
@@ -9181,7 +9199,7 @@ function _buildPipHTML(tKey) {
   }).join('');
   var alpha = _getPipBgAlpha();
   var t2 = PIP_THEMES[tKey] || PIP_THEMES.white;
-  var rgb2 = _hexToRgb(t2.bg);
+  var rgb2 = _hexToRgb(_getPipBgHex(tKey));  // skin-aware bg
   var rgbStr = rgb2[0] + ',' + rgb2[1] + ',' + rgb2[2];
   return '<div class="pip-alpha-bar">' +
       '<input type="range" id="pip-alpha" min="0" max="100" value="' + Math.round(alpha * 100) + '"' +
@@ -9466,7 +9484,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.33.4';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.33.5';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
