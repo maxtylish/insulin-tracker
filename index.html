@@ -34,17 +34,21 @@
       --shadow: 0 2px 12px rgba(0,0,0,0.08);
     }
     body[data-skin="cold-dark"] {
-      --bg: #1a2433;       --card: #243347;
-      --primary: #7baed0;  --primary-dark: #5a9ac0;
-      --text: #c8d8e8;     --text-muted: #8aaec8;
-      --border: #2c3e52;   --input-bg: #1e2d40;
-      --normal: #4ade80;   --normal-bg: #0f2318;
-      --warn: #fbbf24;     --warn-bg: #2a2208;
-      --danger: #f87171;   --danger-bg: #2a1010;
-      --low: #a78bfa;      --low-bg: #1a1630;
-      --c-morning-bg: #2a2510; --c-noon-bg: #0f2318;
-      --c-evening-bg: #2a1508; --c-bedtime-bg: #1a1630;
-      --shadow: 0 2px 12px rgba(0,0,0,0.3);
+      --bg: #2f2963;       --card: #454372;
+      --primary: #ef946c;  --primary-dark: #d07850;
+      --text: #f5ede8;     --text-muted: #c4a77d;
+      --border: #3a375e;   --input-bg: #2a265a;
+      --normal: #4ade80;   --normal-bg: #162818;
+      --warn: #fbbf24;     --warn-bg: #261e08;
+      --danger: #f87171;   --danger-bg: #280e10;
+      --low: #c4b5fd;      --low-bg: #221e3a;
+      --c-morning-bg: #362a30; --c-noon-bg: #1a2e25;
+      --c-evening-bg: #2e2218; --c-bedtime-bg: #22203c;
+      --shadow: 0 2px 12px rgba(0,0,0,0.45);
+    }
+    body[data-skin="cold-dark"] header {
+      background: linear-gradient(135deg, #2f2963 0%, #454372 100%);
+      box-shadow: 0 2px 8px rgba(47,41,99,0.55);
     }
     body[data-skin="warm-light"] {
       --bg: #fbf2f4;       --card: #ffffff;
@@ -2629,7 +2633,7 @@
   <div id="skin-switcher">
     <div class="sk-dots">
       <button class="sk-dot" onclick="setSkin('cold-light')" data-sk="cold-light" title="冷色·淺色" style="background:#5b8db8;"></button>
-      <button class="sk-dot" onclick="setSkin('cold-dark')" data-sk="cold-dark" title="冷色·深色" style="background:#243347;border-color:#7baed0;"></button>
+      <button class="sk-dot" onclick="setSkin('cold-dark')" data-sk="cold-dark" title="靛夜·深色" style="background:#454372;border-color:#ef946c;"></button>
       <button class="sk-dot" onclick="setSkin('warm-light')" data-sk="warm-light" title="玫瑰·淺色" style="background:#c87d87;"></button>
       <button class="sk-dot" onclick="setSkin('warm-dark')" data-sk="warm-dark" title="暖色·深色" style="background:#2c2018;border-color:#d4925a;"></button>
     </div>
@@ -4231,6 +4235,8 @@ alter table user_todos enable row level security;
           <li>修正：ISF／CIR／目標血糖設定開啟設定頁時未讀取已儲存值（顯示 HTML 預設值 110），導致誤覆蓋</li>
           <!-- v2.33.5 -->
           <li>PiP 浮動視窗：背景色隨 App Skin 自動切換（玫瑰·淺色 → #E1B7BD）</li>
+          <!-- v2.33.6 -->
+          <li>App Skin「冷·深」換為靛夜配色（Space Indigo #2F2963 / Twilight Indigo #454372 / Tangerine Dream #EF946C / Soft Fawn #C4A77D）</li>
           <li>將 APP_VERSION 移至 init() 呼叫前，確保所有頁面正常初始化</li>
         </ul>
       </div>
@@ -8444,7 +8450,7 @@ function importUserId() {
 // ════════════════════════════════
 // ── Skin System ──────────────────────────────────────────────────────────
 var SKIN_LABELS = {
-  'cold-light': '冷·淺', 'cold-dark': '冷·深',
+  'cold-light': '冷·淺', 'cold-dark': '靛夜',
   'warm-light': '玫瑰·淺', 'warm-dark': '暖·深'
 };
 function setSkin(name) {
@@ -9006,6 +9012,7 @@ var _pipLastBasal = null;     // last basal injection {dt, site} for PiP display
 // ── PIP 背景隨 App Skin 改變的對應表 ──────────────────────────────────────
 var PIP_SKIN_BG = {
   'warm-light': '#e1b7bd',  // 玫瑰·淺色
+  'cold-dark':  '#2f2963',  // 靛夜·深色（Space Indigo）
 };
 
 // 取得考慮 skin 後的 PIP 背景色
@@ -9484,7 +9491,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.33.5';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.33.6';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
