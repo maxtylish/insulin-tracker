@@ -3425,11 +3425,23 @@ alter table user_todos enable row level security;
 <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.35.1</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.35.2</strong>
     </p>
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.35.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.35.2</span>
+          <span class="cl-date">2026-05-23</span>
+          <span class="cl-tag">速效 IOB 安全警告</span>
+        </div>
+        <ul class="cl-list">
+          <li>【安全提示】儲存中/晚餐劑量時，若前一劑速效胰島素（NovoRapid）仍在 4.5h 效力內，跳出確認警告「前一劑速效胰島素生效中，請確認後再施打」，顯示剩餘時間供參考；長效（Tresiba）不計入判斷</li>
+        </ul>
+      </div>
 
       <!-- v2.35.1 -->
       <div class="cl-item">
@@ -6560,6 +6572,19 @@ function loadDayData() {
 }
 
 function savePeriod(periodId) {
+  // ── 速效 IOB 警告：中/晚餐有劑量時，若前一劑速效未結束則提示 ──
+  if (periodId === 'noon' || periodId === 'evening') {
+    var _insulinEl = document.getElementById(periodId + '-insulin');
+    if (_insulinEl && parseFloat(_insulinEl.value) > 0) {
+      var _remMins = _getRapidActiveRemainMins(periodId);
+      if (_remMins > 0) {
+        var _h = Math.floor(_remMins / 60), _m = _remMins % 60;
+        var _remStr = (_h ? _h + 'h' : '') + (_m ? _m + 'm' : '');
+        var _meal = periodId === 'noon' ? '中餐' : '晚餐';
+        if (!confirm('⚠️ 前一劑速效胰島素生效中\n（剩餘約 ' + _remStr + '）\n\n請確認血糖後再施打 ' + _meal + ' 劑量。\n\n確認繼續儲存？')) return;
+      }
+    }
+  }
   var date = document.getElementById('todayDate').value;
   const all = getAllData();
 
@@ -9268,6 +9293,37 @@ function calcIOBRemainingMins() {
   return Math.max(0, Math.round(maxRemainMs / 60000));
 }
 
+// ── 速效 IOB 剩餘分鐘（只計速效，供儲存前警告用）──
+// excludePeriod: 排除正在儲存的餐段本身，避免重複編輯誤報
+function _getRapidActiveRemainMins(excludePeriod) {
+  var now = Date.now();
+  var all = getAllData();
+  var today = todayStr();
+  var DURATION_MS = 4.5 * 3600000;  // NovoRapid 全效期 4.5h
+  var maxRemainMs = 0;
+  function checkInj(dateStr, timeStr, doseStr) {
+    if (!timeStr || !(parseFloat(doseStr) > 0)) return;
+    var injMs = new Date(dateStr + 'T' + timeStr + ':00').getTime();
+    if (injMs >= now) return;           // 跳過未來時間
+    var remain = (injMs + DURATION_MS) - now;
+    if (remain > maxRemainMs) maxRemainMs = remain;
+  }
+  for (var _i = 0; _i < 2; _i++) {
+    var _d = new Date(today + 'T00:00:00'); _d.setDate(_d.getDate() - _i);
+    var _ds = _d.getFullYear() + '-' + String(_d.getMonth()+1).padStart(2,'0') + '-' + String(_d.getDate()).padStart(2,'0');
+    var _day = all[_ds] || {};
+    ['morning','noon','evening'].forEach(function(pid) {
+      if (pid === excludePeriod && _ds === today) return; // 排除正在儲存的餐段
+      var rec = _day[pid];
+      if (rec && rec.time) checkInj(_ds, rec.time, rec.insulin);
+    });
+    (_day.corrections || []).forEach(function(r) {
+      checkInj(_ds, r.time, r.dose);
+    });
+  }
+  return Math.max(0, Math.round(maxRemainMs / 60000));
+}
+
 function calcCurrentIOB() {
   var now = Date.now();
   var todayData = getAllData()[todayStr()] || {};
@@ -9678,7 +9734,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.35.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.35.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
