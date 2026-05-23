@@ -4227,6 +4227,8 @@ alter table user_todos enable row level security;
           <li>App Skin：暖·淺色主題換為玫瑰配色（primary #C87D87 Antique Rose，底色 #FBF2F4 Blush 系）</li>
           <!-- v2.33.3 -->
           <li>玫瑰·淺色主題：Header 背景改為 #C87D87 Antique Rose 漸層</li>
+          <!-- v2.33.4 -->
+          <li>修正：ISF／CIR／目標血糖設定開啟設定頁時未讀取已儲存值（顯示 HTML 預設值 110），導致誤覆蓋</li>
           <li>將 APP_VERSION 移至 init() 呼叫前，確保所有頁面正常初始化</li>
         </ul>
       </div>
@@ -7623,6 +7625,7 @@ function loadSettingsUI() {
   document.getElementById('set-ns-token').value   = settings.nsToken  || '';
   document.getElementById('set-ns-autofill').checked = settings.nsAutoFill !== false;
   loadNotifSettingsUI();
+  loadMealParamsUI();  // fix: 確保 ISF/CIR/目標血糖顯示已儲存的值，而非 HTML 預設值
 }
 
 function saveNSSettings() {
@@ -9463,7 +9466,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.33.3';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.33.4';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
