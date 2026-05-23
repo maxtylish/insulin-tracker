@@ -2314,6 +2314,10 @@
     .vial-type-name { font-size:.84rem; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .vial-loc-tag { font-size:.67rem; font-weight:700; padding:2px 7px; border-radius:6px; background:var(--bg); color:var(--text-muted); border:1px solid var(--border); white-space:nowrap; flex-shrink:0; }
     .vial-serial-inline { font-size:.64rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:80px; }
+    .vial-info-row { display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap; margin:4px 0 2px; padding:0 2px; }
+    .vial-serial-tag { font-size:.73rem; color:var(--text); background:var(--bg); border:1px solid var(--border); border-radius:6px; padding:1px 8px; white-space:nowrap; }
+    .vial-serial-tag .sv-label { color:var(--text-muted); font-size:.67rem; margin-right:3px; }
+    .vial-note-tag { font-size:.73rem; color:var(--text-muted); line-height:1.4; flex:1; min-width:0; }
     .vial-row-right { display:flex; align-items:center; gap:4px; flex-shrink:0; }
     .vial-status-toggle { font-size:.67rem; font-weight:700; padding:3px 8px; border-radius:8px; border:none; cursor:pointer; white-space:nowrap; }
     .vial-status-sel { font-size:.67rem; font-weight:700; padding:3px 6px; border-radius:8px; cursor:pointer; white-space:nowrap; border:1px solid transparent; -webkit-appearance:none; appearance:none; outline:none; }
@@ -4317,6 +4321,8 @@ alter table user_todos enable row level security;
           <li>PiP 浮動視窗：夕陽主題換為玫瑰配色（Blush / Antique Rose / Champagne / Dried Thyme / Bisque）</li>
           <!-- v2.33.2 -->
           <li>App Skin：暖·淺色主題換為玫瑰配色（primary #C87D87 Antique Rose，底色 #FBF2F4 Blush 系）</li>
+          <!-- v2.34.2 -->
+          <li>胰島素藥瓶列表：永遠顯示序號（空白顯示 —）與備註，方便在不進入編輯模式的情況下辨識藥瓶</li>
           <!-- v2.33.3 -->
           <li>玫瑰·淺色主題：Header 背景改為 #C87D87 Antique Rose 漸層</li>
           <!-- v2.33.4 -->
@@ -9636,7 +9642,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.34.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.34.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -10352,15 +10358,18 @@ function _vialItemHTML(v, idx, isEdit) {
            : '<button class="vial-deactivate-btn" data-vid="' + v.id + '" onclick="toggleVialActive(this.dataset.vid)">停用</button>')
       + '</div></div>';
   } else {
-    var noteHtml  = v.note ? '<div class="vial-note-view">📝 ' + v.note + '</div>' : '';
     var statusCls = v.active === false ? 'inactive' : (v.openDate ? 'opened' : 'sealed');
+    var serialVal = v.serialNo || '—';
+    var infoRow   = '<div class="vial-info-row">'
+      + '<span class="vial-serial-tag"><span class="sv-label">序號</span>' + serialVal + '</span>'
+      + (v.note ? '<span class="vial-note-tag">📝 ' + v.note + '</span>' : '')
+      + '</div>';
     return '<div class="vial-row vloc-' + loc + inactiveCls + '" id="vial-item-' + v.id + '">'
       + '<div class="vial-row-top">'
       +   '<div class="vial-row-left">'
       +     dot
       +     '<span class="vial-type-name">' + def.label + '</span>'
       +     '<span class="vial-loc-tag">' + locLabel + '</span>'
-      +     (v.serialNo ? '<span class="vial-serial-inline">' + v.serialNo + '</span>' : '')
       +   '</div>'
       +   '<div class="vial-row-right">'
       +     '<select class="vial-status-sel ' + statusCls + '" data-vid="' + v.id + '"'
@@ -10373,8 +10382,8 @@ function _vialItemHTML(v, idx, isEdit) {
       +     '<button class="vial-icon-btn danger" data-vid="' + v.id + '" onclick="deleteVial(this.dataset.vid)" title="刪除">🗑</button>'
       +   '</div>'
       + '</div>'
+      + infoRow
       + (badge ? '<div class="vial-row-badge">' + badge + '</div>' : '')
-      + noteHtml
       + '</div>';
   }
 }
