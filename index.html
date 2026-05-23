@@ -47,13 +47,13 @@
       --shadow: 0 2px 12px rgba(0,0,0,0.3);
     }
     body[data-skin="warm-light"] {
-      --bg: #faf6f2;       --card: #ffffff;
-      --primary: #b5703a;  --primary-dark: #9a5c2a;
-      --text: #2c1f14;     --text-muted: #7a5a40;
-      --border: #e8d9ca;   --input-bg: #ffffff;
-      --c-morning-bg: #fffbf0; --c-noon-bg: #f2fbf5;
-      --c-evening-bg: #fff5ee; --c-bedtime-bg: #f5f0ff;
-      --shadow: 0 2px 12px rgba(100,60,20,0.09);
+      --bg: #fbf2f4;       --card: #ffffff;
+      --primary: #c87d87;  --primary-dark: #a86272;
+      --text: #3d1e22;     --text-muted: #9a6870;
+      --border: #f0d0d5;   --input-bg: #ffffff;
+      --c-morning-bg: #fff5f7; --c-noon-bg: #f4f8f2;
+      --c-evening-bg: #fff9f5; --c-bedtime-bg: #f8f5ff;
+      --shadow: 0 2px 12px rgba(200,125,135,0.1);
     }
     body[data-skin="warm-dark"] {
       --bg: #1e1610;       --card: #2c2018;
@@ -2626,7 +2626,7 @@
     <div class="sk-dots">
       <button class="sk-dot" onclick="setSkin('cold-light')" data-sk="cold-light" title="冷色·淺色" style="background:#5b8db8;"></button>
       <button class="sk-dot" onclick="setSkin('cold-dark')" data-sk="cold-dark" title="冷色·深色" style="background:#243347;border-color:#7baed0;"></button>
-      <button class="sk-dot" onclick="setSkin('warm-light')" data-sk="warm-light" title="暖色·淺色" style="background:#c4844a;"></button>
+      <button class="sk-dot" onclick="setSkin('warm-light')" data-sk="warm-light" title="玫瑰·淺色" style="background:#c87d87;"></button>
       <button class="sk-dot" onclick="setSkin('warm-dark')" data-sk="warm-dark" title="暖色·深色" style="background:#2c2018;border-color:#d4925a;"></button>
     </div>
     <div id="sk-label"></div>
@@ -4219,6 +4219,8 @@ alter table user_todos enable row level security;
           <li>胰島素計算：新增春水堂套餐（功夫麵½＋奶酥厚片½，57g）；新增午/晚餐主餐春水堂功夫麵一份(64g)、奶酥厚片一份(50g)；套餐搜尋欄；🧮 浮動快速計算機</li>
           <!-- v2.33.1 -->
           <li>PiP 浮動視窗：夕陽主題換為玫瑰配色（Blush / Antique Rose / Champagne / Dried Thyme / Bisque）</li>
+          <!-- v2.33.2 -->
+          <li>App Skin：暖·淺色主題換為玫瑰配色（primary #C87D87 Antique Rose，底色 #FBF2F4 Blush 系）</li>
           <li>將 APP_VERSION 移至 init() 呼叫前，確保所有頁面正常初始化</li>
         </ul>
       </div>
@@ -8432,7 +8434,7 @@ function importUserId() {
 // ── Skin System ──────────────────────────────────────────────────────────
 var SKIN_LABELS = {
   'cold-light': '冷·淺', 'cold-dark': '冷·深',
-  'warm-light': '暖·淺', 'warm-dark': '暖·深'
+  'warm-light': '玫瑰·淺', 'warm-dark': '暖·深'
 };
 function setSkin(name) {
   document.body.dataset.skin = name;
@@ -9455,7 +9457,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.33.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.33.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
