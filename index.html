@@ -3496,6 +3496,20 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.36.4 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.36.4</span>
+          <span class="cl-date">2026-05-26</span>
+          <span class="cl-tag">事件雲端同步</span>
+        </div>
+        <ul class="cl-list">
+          <li>【事件】新增 loadEventsFromCloud()：頁面載入後 1.5s 從 Supabase ev_store 表拉取事件，以 updated_at 合併新舊版本；本機有但雲端沒有的事件自動補推上去</li>
+          <li>修正 _syncEventToCloud 使用未定義的 supabase 變數（改為正確的 sbClient）</li>
+          <li>需先在 Supabase SQL Editor 執行 ev_store_schema.sql 建表</li>
+        </ul>
+      </div>
+
       <!-- v2.36.3 -->
       <div class="cl-item">
         <div class="cl-header">
@@ -9878,7 +9892,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.36.3';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.36.4';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -12200,6 +12214,8 @@ function loadEvents() {
   updateEvUserBar();
   renderEventsPage();
   renderTodoCalendar();
+  // 非同步拉取雲端事件（不阻塞 UI）
+  setTimeout(function() { loadEventsFromCloud(); }, 1500);
 }
 
 function _migrateTodosToEvents() {
@@ -12275,10 +12291,86 @@ function _syncEventsToTodos() {
 
 async function _syncEventToCloud(ev) {
   try {
-    if (!supabase || !supabase.from) return;
-    var row = Object.assign({}, ev, { owner_user_sub: _eventsUserSub });
-    await supabase.from('events').upsert(row);
+    if (!sbClient || !currentUserId) return;
+    await sbClient.from('ev_store').upsert({
+      id:         ev.id,
+      family_id:  currentUserId,
+      data:       ev,
+      updated_at: ev.updated_at || new Date().toISOString(),
+    });
   } catch(e) { /* best-effort */ }
+}
+
+async function _pushAllEventsToCloud() {
+  if (!sbClient || !currentUserId) return;
+  var rows = _eventsCache.map(function(ev) {
+    return {
+      id:        ev.id,
+      family_id: currentUserId,
+      data:      ev,
+      updated_at: ev.updated_at || new Date().toISOString(),
+    };
+  });
+  if (!rows.length) return;
+  try { await sbClient.from('ev_store').upsert(rows); } catch(e) {}
+}
+
+async function loadEventsFromCloud() {
+  if (!sbClient || !currentUserId) return;
+  try {
+    var res = await sbClient
+      .from('ev_store')
+      .select('id, data, updated_at')
+      .eq('family_id', currentUserId);
+    if (res.error) throw res.error;
+    if (!res.data || !res.data.length) return;
+
+    var changed = false;
+    var localMap = {};
+    _eventsCache.forEach(function(e){ localMap[e.id] = e; });
+
+    res.data.forEach(function(row) {
+      var cloudEv = row.data;
+      if (!cloudEv || !cloudEv.id) return;
+      var localEv = localMap[cloudEv.id];
+      if (!localEv) {
+        // 雲端有，本機沒有 → 加入
+        _eventsCache.push(cloudEv);
+        localMap[cloudEv.id] = cloudEv;
+        changed = true;
+      } else {
+        // 比較 updated_at，取較新者
+        var cloudTs = new Date(cloudEv.updated_at || 0).getTime();
+        var localTs = new Date(localEv.updated_at || 0).getTime();
+        if (cloudTs > localTs) {
+          var idx = _eventsCache.indexOf(localEv);
+          if (idx >= 0) { _eventsCache[idx] = cloudEv; localMap[cloudEv.id] = cloudEv; changed = true; }
+        }
+      }
+    });
+
+    if (changed) {
+      _setEvCache(_eventsCache);
+      _syncEventsToTodos();
+      renderEventsPage();
+      renderTodoCalendar();
+      showToast('☁️ 事件已從雲端更新');
+    }
+
+    // 把本機有但雲端沒有的事件推上去
+    var cloudIds = {};
+    res.data.forEach(function(r){ cloudIds[r.id] = true; });
+    var toUpload = _eventsCache.filter(function(e){ return !cloudIds[e.id]; });
+    if (toUpload.length) {
+      var rows = toUpload.map(function(ev) {
+        return { id: ev.id, family_id: currentUserId, data: ev,
+                 updated_at: ev.updated_at || new Date().toISOString() };
+      });
+      try { await sbClient.from('ev_store').upsert(rows); } catch(e) {}
+    }
+  } catch(e) {
+    console.warn('[loadEventsFromCloud]', e);
+  }
 }
 
 // ─── Event UI ───────────────────────────────────────────────────
