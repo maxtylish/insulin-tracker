@@ -12056,15 +12056,20 @@ function loadEvents() {
   if (stored.length) {
     _eventsCache = stored;
   } else {
-    // First load: migrate from todos
     _migrateTodosToEvents();
   }
+  // Safety guard: ensure _eventsCache is always an array
+  // (var declaration runs after init() due to script order, so it may be undefined)
+  if (!Array.isArray(_eventsCache)) _eventsCache = [];
   renderEventsPage();
   renderTodoCalendar();
 }
 
 function _migrateTodosToEvents() {
-  if (localStorage.getItem('ev_migrated_v1')) return;
+  if (localStorage.getItem('ev_migrated_v1')) {
+    _eventsCache = _getEvCache();  // already migrated: load from cache
+    return;
+  }
   var todos = getTodos();
   _eventsCache = todos.map(function(t) {
     return _newEventObj({
