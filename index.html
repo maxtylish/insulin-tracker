@@ -3397,10 +3397,8 @@ alter table user_todos enable row level security;
       </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:14px;align-items:center;flex-wrap:wrap;">
-      <button class="settings-save-btn" onclick="saveMealParams()">預覽變更</button>
-      <div id="mp-confirm-row" style="display:none;">
-        <button class="mp-confirm-btn" onclick="confirmSaveMealParams()">✅ 確認儲存</button>
-      </div>
+      <button class="mp-confirm-btn" onclick="saveMealParams()">💾 儲存係數</button>
+      <div id="mp-confirm-row" style="display:none;"></div>
     </div>
   </div>
       </div>
@@ -3497,6 +3495,19 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.36.3 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.36.3</span>
+          <span class="cl-date">2026-05-26</span>
+          <span class="cl-tag">係數儲存修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【設定 → 餐前】「預覽變更 + 確認儲存」兩步驟合併為單一「💾 儲存係數」按鈕，點擊後彈窗確認數值，確認即存入；解決舊流程因 UX 不清造成的「沒反應」誤解</li>
+          <li>存入後若計算機已開啟，CIR / ISF / 目標血糖數值立即更新</li>
+        </ul>
+      </div>
 
       <!-- v2.36.2 -->
       <div class="cl-item">
@@ -7891,14 +7902,8 @@ function loadMealParamsUI() {
 }
 
 function saveMealParams() {
-  // Show confirm button as 2nd-step protection
-  var confirmRow = document.getElementById('mp-confirm-row');
-  if (confirmRow) confirmRow.style.display = 'flex';
-  showToast('⚠️ 請確認數值後點「確認儲存」');
-}
-
-function confirmSaveMealParams() {
   var meals = ['breakfast', 'lunch', 'dinner'];
+  var labels = { breakfast:'早餐', lunch:'午餐', dinner:'晚餐' };
   var mp = {};
   meals.forEach(function(m) {
     mp[m] = {
@@ -7907,14 +7912,24 @@ function confirmSaveMealParams() {
       target: parseFloat(document.getElementById('mp-target-' + m).value) || null,
     };
   });
+  // 組成確認訊息
+  var summary = meals.map(function(m) {
+    var p = mp[m];
+    return labels[m] + '：CIR=' + (p.cir||'-') + ' / ISF=' + (p.isf||'-') + ' / 目標=' + (p.target||'-');
+  }).join('\n');
+  if (!confirm('確認儲存以下係數？\n\n' + summary)) return;
   settings.mealParams = mp;
   saveSettingsToStorage();
-  // ⚠️ 獨立備份：insulin_meal_params 與 insulin_settings 解耦，避免整包設定被清除時重置
+  // ⚠️ 獨立備份：insulin_meal_params 與 insulin_settings 解耦
   try { localStorage.setItem('insulin_meal_params', JSON.stringify(mp)); } catch(e) {}
-  var confirmRow = document.getElementById('mp-confirm-row');
-  if (confirmRow) confirmRow.style.display = 'none';
-  showToast('✅ 餐前參數已儲存！（已加密備份）');
+  showToast('✅ 餐前係數已儲存！');
+  // 若計算機已開啟，立即更新顯示
+  if (typeof calcRecalc === 'function') {
+    try { calcRecalc(); } catch(e) {}
+  }
 }
+
+function confirmSaveMealParams() { saveMealParams(); }  // backward compat
 
 function loadSettingsUI() {
   document.getElementById('set-low').value        = settings.low;
@@ -9863,7 +9878,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.36.2';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.36.3';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
