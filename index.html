@@ -2527,6 +2527,17 @@
     .refill-chip.picked  { background:#f0fdf4; color:#16a34a; border-color:#86efac; }
     .refill-chip.pending { background:#f8fafc; color:#94a3b8; border-color:var(--border); }
     .refill-chip:active  { opacity:.75; }
+    /* 已全部領取的慢籤卡片 */
+    .rx-card.rx-card-completed { opacity:.6; }
+    .rx-card.rx-card-completed .rx-header {
+      background: linear-gradient(135deg,#94a3b8,#64748b) !important;
+    }
+    .rx-completed-banner {
+      display:flex; align-items:center; gap:6px;
+      background:#f0fdf4; border:1px solid #86efac;
+      border-radius:8px; padding:7px 12px; margin-bottom:8px;
+      font-size:.82rem; font-weight:600; color:#15803d;
+    }
     .refill-toggle-btn {
       padding:4px 12px; border-radius:20px; font-size:.8rem;
       font-weight:600; cursor:pointer; border:1.5px solid transparent; white-space:nowrap;
@@ -3486,6 +3497,19 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.36.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.36.2</span>
+          <span class="cl-date">2026-05-26</span>
+          <span class="cl-tag">慢籤領取完成</span>
+        </div>
+        <ul class="cl-list">
+          <li>【回診管理】慢籤全部勾選後跳出確認「此張慢籤已領取完畢」，確認後卡片變灰防誤操作</li>
+          <li>取消勾選時會再次確認是否撤銷，撤銷後卡片恢復正常色；卡片仍可點擊編輯修改</li>
+        </ul>
+      </div>
 
       <!-- v2.36.1 -->
       <div class="cl-item">
@@ -9839,7 +9863,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.36.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.36.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -11197,8 +11221,29 @@ function toggleRefillStatus(rxId, idx) {
   var rx = meds.find(function(r){ return r.id === rxId; });
   if (!rx || !rx.refillRecords || !rx.refillRecords[idx]) return;
   var rec = rx.refillRecords[idx];
-  if (rec.status === 'pending') { rec.status = 'picked'; if (!rec.date) rec.date = todayStr(); }
-  else { rec.status = 'pending'; }
+
+  if (rec.status === 'pending') {
+    // 勾選：標為已領
+    rec.status = 'picked';
+    if (!rec.date) rec.date = todayStr();
+
+    // 檢查是否全部都領完了
+    var allDone = rx.refillRecords.every(function(r){ return r.status === 'picked'; });
+    if (allDone && !rx.allPickedDone) {
+      if (confirm('\u2705 此張慢籤已全部領取完畢！\n確認後卡片將變為灰色防止誤操作（仍可點選編輯修改）')) {
+        rx.allPickedDone = true;
+      }
+    }
+  } else {
+    // 取消勾選
+    if (rx.allPickedDone) {
+      if (!confirm('此張慢籤已標記為領取完畢\n確定要撤銷其中一次領取紀錄嗎？')) return;
+      rx.allPickedDone = false;  // 重置完成狀態
+    }
+    rec.status = 'pending';
+    rec.date = '';
+  }
+
   setMedications(meds);
   renderPrescriptionList();
   refreshCarouselAlerts();
@@ -11273,8 +11318,9 @@ function renderPrescriptionList() {
     return;
   }
   el.innerHTML = meds.map(function(rx) {
-    var refillDays = rxDaysLeft(rx.nextRefill);
-    var apptDays   = rxDaysLeft(rx.nextAppointment);
+    var refillDays  = rxDaysLeft(rx.nextRefill);
+    var apptDays    = rxDaysLeft(rx.nextAppointment);
+    var rxCompleted = !!rx.allPickedDone;
 
     // ── Drug table display (matches real 慢性處方簽 layout) ──
     var drugsHTML = '';
@@ -11316,7 +11362,7 @@ function renderPrescriptionList() {
       if (m) expNote = '<div style="font-size:.78rem;color:#f59e0b;font-weight:600;margin-top:4px;">⏳ 有效期限：' + m[1] + '</div>';
     }
 
-    return '<div class="rx-card">'
+    return '<div class="rx-card' + (rxCompleted ? ' rx-card-completed' : '') + '">'
       + '<div class="rx-header">'
         + '<span class="rx-title">📋 ' + (rx.title || '慢性處方簽') + '</span>'
         + '<div class="rx-header-btns">'
@@ -11335,6 +11381,7 @@ function renderPrescriptionList() {
             if (rx.nextAppointment) btns += '<button class="suppl-add-btn" data-rxid="' + rx.id + '" onclick="openApptInGCal(this.dataset.rxid)">🏥 登記回診</button>';
             return btns ? '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">' + btns + '</div>' : '';
           })()
+        + (rxCompleted ? '<div class="rx-completed-banner">✅ 此張慢籤已全部領取完畢</div>' : '')
         + (function() {
             if (!rx.refillRecords || !rx.refillRecords.length) return '';
             var chips = rx.refillRecords.map(function(rec, i) {
