@@ -3529,6 +3529,19 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.37.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.37.1</span>
+          <span class="cl-date">2026-05-26</span>
+          <span class="cl-tag">設定雲端同步</span>
+        </div>
+        <ul class="cl-list">
+          <li>【設定同步】血糖範圍、CGM 網址、餐前係數（CIR/ISF/目標血糖）現在會跨裝置同步，儲存後自動上傳至 Supabase user_settings 表</li>
+          <li>啟動時自動比對本機與雲端時間戳，較新的版本優先；需先在 Supabase 建立 user_settings 表</li>
+        </ul>
+      </div>
+
       <!-- v2.37.0 -->
       <div class="cl-item">
         <div class="cl-header">
@@ -5055,6 +5068,48 @@ function initSupabase() {
   catch { allDataCache = {}; }
 }
 
+// ════════════════════════════════
+//  SETTINGS CLOUD SYNC
+// ════════════════════════════════
+async function syncSettingsToCloud() {
+  try {
+    if (!sbClient || !currentUserId) return;
+    await sbClient.from('user_settings').upsert({
+      user_id:    currentUserId,
+      data:       settings,
+      updated_at: settings._updatedAt || new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+  } catch(e) { console.warn('[syncSettingsToCloud]', e); }
+}
+
+async function loadSettingsFromCloud() {
+  try {
+    if (!sbClient || !currentUserId) return;
+    var res = await sbClient.from('user_settings')
+      .select('data, updated_at')
+      .eq('user_id', currentUserId)
+      .single();
+    if (res.error || !res.data) return;
+    var cloudData = res.data.data;
+    if (!cloudData) return;
+    // Compare timestamps — cloud wins if newer
+    var cloudTime = new Date(res.data.updated_at).getTime();
+    var localTime = settings._updatedAt ? new Date(settings._updatedAt).getTime() : 0;
+    if (cloudTime > localTime) {
+      // Protect sb_url/sb_key — they are NOT part of settings, safe to overwrite all
+      Object.assign(settings, cloudData);
+      saveSettingsToStorage();
+      if (typeof loadSettingsUI === 'function') loadSettingsUI();
+      if (typeof loadMealParamsUI === 'function') try { loadMealParamsUI(); } catch(e) {}
+      console.log('[loadSettingsFromCloud] applied cloud settings, updated_at:', res.data.updated_at);
+      showToast('☁️ 設定已從雲端同步');
+    } else if (localTime > cloudTime) {
+      // Local is newer — push up to cloud
+      syncSettingsToCloud();
+    }
+  } catch(e) { console.warn('[loadSettingsFromCloud]', e); }
+}
+
 async function loadFromCloud() {
   if (!sbClient || !currentUserId) {
     setSyncBadge('📱 本機模式', 'sync-err');
@@ -5198,6 +5253,7 @@ function loadSettings() {
   } catch { return { ...DEFAULT_SETTINGS }; }
 }
 function saveSettingsToStorage() {
+  settings._updatedAt = new Date().toISOString();
   localStorage.setItem('insulin_settings', JSON.stringify(settings));
 }
 
@@ -7985,6 +8041,7 @@ function saveMealParams() {
   // ⚠️ 獨立備份：insulin_meal_params 與 insulin_settings 解耦
   try { localStorage.setItem('insulin_meal_params', JSON.stringify(mp)); } catch(e) {}
   showToast('✅ 餐前係數已儲存！');
+  syncSettingsToCloud();
   // 若計算機已開啟，立即更新顯示
   if (typeof calcRecalc === 'function') {
     try { calcRecalc(); } catch(e) {}
@@ -8015,6 +8072,7 @@ function saveNSSettings() {
   settings.nsAutoFill = document.getElementById('set-ns-autofill').checked;
   saveSettingsToStorage();
   showToast('✅ CGM 設定已儲存！');
+  syncSettingsToCloud();
   startCGMPolling();  // restart polling with new settings
 }
 
@@ -8026,6 +8084,7 @@ function saveSettings() {
   settings.high       = parseFloat(document.getElementById('set-high').value)       || DEFAULT_SETTINGS.high;
   saveSettingsToStorage();
   showToast('✅ 設定已儲存！');
+  syncSettingsToCloud();
 }
 
 function clearAllData() {
@@ -8922,11 +8981,10 @@ function init() {
   var hadLocalDataToday = !!getAllData()[today];
   loadDayData();
   loadFromCloud().then(function(){
-    // P0 fix: 一律重新渲染，確保 cloud 帶來的 corrections/carbs/snacks 都顯示出來。
-    // hadLocalDataToday 舊條件會導致跨裝置補打在本裝置儲存時被 UI 空值覆蓋。
     loadDayData();
-    renderTodoPage();      // refresh todos with cloud data
-    renderInsulinVials();  // refresh vials with cloud data
+    renderTodoPage();
+    renderInsulinVials();
+    loadSettingsFromCloud();  // sync settings across devices
   });
   startCGMPolling();   // start real-time CGM widget
   loadEvents();        // load event store (migrates todos on first run)
@@ -9947,7 +10005,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.37.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.37.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';

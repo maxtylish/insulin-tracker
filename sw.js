@@ -1,7 +1,12 @@
-const CACHE = 'insulin-tracker-v6';
+const CACHE = 'insulin-tracker-v7';
 const CORE = [
   '/insulin-tracker/',
-  '/insulin-tracker/index.html'
+  '/insulin-tracker/index.html',
+  '/insulin-tracker/icon-192.png',
+  '/insulin-tracker/icon-512.png',
+  '/insulin-tracker/favicon.png',
+  '/insulin-tracker/apple-touch-icon.png',
+  '/insulin-tracker/manifest.json'
 ];
 
 self.addEventListener('install', e => {
