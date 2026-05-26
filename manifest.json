@@ -1,12 +1,12 @@
 {
   "name": "胰島素紀錄表",
-  "short_name": "胰島素",
+  "short_name": "Ms.Aududu",
   "description": "血糖與胰島素注射管理",
   "start_url": "/insulin-tracker/",
   "scope": "/insulin-tracker/",
   "display": "standalone",
-  "background_color": "#f0f4f8",
-  "theme_color": "#1d4ed8",
+  "background_color": "#ffd9d9",
+  "theme_color": "#dc4870",
   "lang": "zh-TW",
   "icons": [
     { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
