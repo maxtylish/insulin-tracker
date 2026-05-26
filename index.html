@@ -2653,6 +2653,42 @@
       border-radius: 50%; background: var(--primary);
     }
     .todo-cal-day.today.has-event::after { background: white; }
+    /* multi-source calendar dots */
+    .cal-dot-row { display:flex; gap:2px; justify-content:center; position:absolute; bottom:2px; left:0; right:0; pointer-events:none; }
+    .cal-dot-s { width:4px; height:4px; border-radius:50%; flex-shrink:0; }
+    .cal-dot-app     { background: var(--primary); }
+    .cal-dot-google  { background: #4285f4; }
+    .cal-dot-timetree{ background: #22c55e; }
+    .cal-dot-ai      { background: #9333ea; }
+    .todo-cal-day.today .cal-dot-s { background: rgba(255,255,255,.9) !important; }
+    /* events list */
+    .ev-user-bar { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .ev-user-chip { display:flex; align-items:center; gap:6px; }
+    .ev-user-name { font-size:.85rem; font-weight:600; color:var(--text); }
+    .ev-filter-bar { display:flex; gap:6px; flex-wrap:wrap; }
+    .ev-filter-btn { padding:5px 10px; border:1.5px solid var(--border); border-radius:20px; background:var(--bg); color:var(--text-muted); font-size:.78rem; cursor:pointer; }
+    .ev-filter-btn.active { border-color:var(--primary); color:var(--primary); font-weight:700; background:rgba(var(--primary-rgb),.08); }
+    .ev-empty { text-align:center; color:var(--text-muted); font-size:.85rem; padding:24px 0; }
+    .ev-card { border:1.5px solid var(--border); border-radius:10px; padding:10px 12px; margin-bottom:8px; background:var(--bg); position:relative; }
+    .ev-card.ev-done { opacity:.55; }
+    .ev-card-top { display:flex; align-items:flex-start; gap:8px; }
+    .ev-check { width:16px; height:16px; accent-color:var(--primary); flex-shrink:0; margin-top:2px; cursor:pointer; }
+    .ev-title { font-size:.88rem; font-weight:600; color:var(--text); flex:1; }
+    .ev-card.ev-done .ev-title { text-decoration:line-through; }
+    .ev-meta { font-size:.75rem; color:var(--text-muted); margin-top:3px; display:flex; flex-wrap:wrap; gap:6px; align-items:center; }
+    .ev-badge { padding:2px 7px; border-radius:10px; font-size:.7rem; font-weight:600; }
+    .ev-badge-health  { background:#fef2f2; color:#991b1b; }
+    .ev-badge-family  { background:#eff6ff; color:#1d4ed8; }
+    .ev-badge-general { background:#f8fafc; color:#475569; }
+    .ev-src-icon { font-size:.78rem; }
+    .ev-due { font-size:.76rem; }
+    .ev-due.overdue { color:#dc2626; font-weight:600; }
+    .ev-due.today   { color:#d97706; font-weight:600; }
+    .ev-actions { display:flex; gap:6px; margin-top:6px; justify-content:flex-end; }
+    .ev-btn { padding:3px 9px; border:1px solid var(--border); border-radius:7px; background:var(--bg); font-size:.76rem; cursor:pointer; color:var(--text-muted); }
+    .ev-btn:hover { border-color:var(--primary); color:var(--primary); }
+    /* visibility selector in modal */
+    .ev-vis-row { margin-bottom:12px; }
     .todo-cal-day.empty { cursor: default; color: transparent; }
     .cal-evt-row {
       display: flex; align-items: center; gap: 8px;
@@ -3111,47 +3147,42 @@
     <div id="calDayDetail"></div>
   </div>
 
-  <!-- 🔍 搜尋 + Filter -->
+  <!-- 👤 使用者身份列 + 新增按鈕 -->
   <div class="chart-card" style="margin-bottom:14px;">
-    <div class="todo-search-wrap">
-      <span class="todo-search-icon">🔍</span>
-      <input type="search" id="todo-search-input" class="todo-search-input"
-        placeholder="搜尋待辦事項…" oninput="setTodoSearch(this.value)">
+    <div class="ev-user-bar">
+      <div class="ev-user-chip">
+        <span style="font-size:1rem;">👤</span>
+        <span class="ev-user-name" id="ev-user-name">囉嗦把拔喵</span>
+      </div>
+      <button class="suppl-add-btn" onclick="openEventForm()">＋ 新增事件</button>
     </div>
-    <div class="todo-filter-bar">
-      <button class="todo-filter-btn active" data-filter="all" onclick="setTodoFilter('all')">全部</button>
-      <button class="todo-filter-btn" data-filter="health" onclick="setTodoFilter('health')">🏥 健康待辦</button>
-      <button class="todo-filter-btn" data-filter="general" onclick="setTodoFilter('general')">📝 一般待辦</button>
-      <button class="todo-filter-btn" id="hide-done-btn" onclick="toggleHideDone()">隱藏已完成</button>
+    <div class="ev-filter-bar">
+      <button class="ev-filter-btn active" data-evf="all"     onclick="setEvFilter('all')">全部</button>
+      <button class="ev-filter-btn"         data-evf="health"  onclick="setEvFilter('health')">❤️ 健康</button>
+      <button class="ev-filter-btn"         data-evf="family"  onclick="setEvFilter('family')">👨‍👩‍👧 家庭</button>
+      <button class="ev-filter-btn"         data-evf="pending" onclick="setEvFilter('pending')">⏳ 未完成</button>
+      <button class="ev-filter-btn"         data-evf="done"    onclick="setEvFilter('done')">✅ 已完成</button>
     </div>
   </div>
 
-  <!-- GCal 連結提示（未連結時顯示） -->
-  <div id="todo-gcal-hint" style="display:none;margin-bottom:12px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px 14px;align-items:center;justify-content:space-between;gap:10px;">
-    <span style="font-size:.83rem;color:#1d4ed8;">📅 連結 Google 行事曆後，待辦事項可自動同步</span>
-    <button onclick="switchTab('settings');setTimeout(function(){document.getElementById('gcal-auth-btn').scrollIntoView({behavior:'smooth',block:'center'});},300)"
-      style="flex-shrink:0;padding:5px 12px;background:#2563eb;color:#fff;border:none;border-radius:8px;font-size:.78rem;font-weight:700;cursor:pointer;">前往設定 →</button>
+  <!-- 📋 事件列表 -->
+  <div class="chart-card" style="margin-bottom:14px;">
+    <div id="ev-list"><div class="ev-empty">載入中…</div></div>
   </div>
 
-  <!-- 🏥 健康待辦 -->
-  <div id="todo-health-section" class="chart-card" style="margin-bottom:14px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <h3 style="margin:0;">🏥 健康待辦</h3>
-      <button class="suppl-add-btn" onclick="openTodoForm('health')">＋ 新增</button>
+  <!-- 🌳 ICS 匯入 -->
+  <div class="chart-card" style="margin-bottom:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <h4 style="margin:0;font-size:.88rem;">🌳 匯入 TimeTree / ICS</h4>
+      <button class="vial-btn" onclick="document.getElementById('ev-ics-input').click()">選擇檔案</button>
+      <input type="file" id="ev-ics-input" accept=".ics" style="display:none" onchange="importICS(this)">
     </div>
-    <div id="todo-health-list"><div class="suppl-empty">尚無健康待辦事項</div></div>
-    <div id="todo-health-pager" class="todo-pagination"></div>
+    <div id="ev-ics-status" style="font-size:.76rem;color:var(--text-muted);margin-top:6px;">支援 .ics 格式（TimeTree 匯出）</div>
   </div>
 
-  <!-- 📝 一般待辦 -->
-  <div id="todo-general-section" class="chart-card" style="margin-bottom:14px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-      <h3 style="margin:0;">📝 一般待辦</h3>
-      <button class="suppl-add-btn" onclick="openTodoForm('general')">＋ 新增</button>
-    </div>
-    <div id="todo-general-list"><div class="suppl-empty">尚無一般待辦事項</div></div>
-    <div id="todo-general-pager" class="todo-pagination"></div>
-  </div>
+  <!-- backward-compat hidden lists (for JS refs) -->
+  <div id="todo-health-section"  style="display:none"><div id="todo-health-list"></div><div id="todo-health-pager"></div></div>
+  <div id="todo-general-section" style="display:none"><div id="todo-general-list"></div><div id="todo-general-pager"></div></div>
 
   <!-- 返回首頁按鈕 -->
   <div class="back-home-wrap">
@@ -3425,11 +3456,27 @@ alter table user_todos enable row level security;
 <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.35.2</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.36.0</strong>
     </p>
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.36.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.36.0</span>
+          <span class="cl-date">2026-05-26</span>
+          <span class="cl-tag">Events System Phase 1</span>
+        </div>
+        <ul class="cl-list">
+          <li>【待辦事件】全新 EventStore 架構取代舊待辦系統；資料自動從 insulin_todos 遷移</li>
+          <li>【事件列表】支援分類（健康/家庭/一般）、filter bar（全部/健康/家庭/未完成/已完成）、星號、編輯、刪除</li>
+          <li>【行事曆小點】多來源彩色小點：藍色=Google、綠色=TimeTree、紫色=AI、主色=App</li>
+          <li>【ICS 匯入】支援 .ics 格式（TimeTree 匯出），解析後標記 source=timetree</li>
+          <li>【事件同步】App 為主要資料來源，GCal 為外部同步（單向 App→Google）</li>
+        </ul>
+      </div>
 
       <!-- v2.35.2 -->
       <div class="cl-item">
@@ -5723,17 +5770,28 @@ async function renderTodoCalendar() {
     await loadGCalEventsForMonth(calViewYM);
   }
 
-  var events = gcalEventsCache[calViewYM] || [];
+  var gcalEvs = gcalEventsCache[calViewYM] || [];
 
-  // Build set of dates that have events
-  var eventDates = {};
-  events.forEach(function(ev) {
+  // Build multi-source date map
+  var eventDateSources = {};
+  function _markSrc(dt, src) {
+    if (!dt) return;
+    var d = dt.slice(0, 10);
+    if (!eventDateSources[d]) eventDateSources[d] = {};
+    eventDateSources[d][src] = true;
+  }
+  // GCal events
+  gcalEvs.forEach(function(ev) {
     var dt = ev.start.date || (ev.start.dateTime || '').slice(0, 10);
-    if (dt) eventDates[dt] = true;
+    _markSrc(dt, 'google');
   });
-  // Also mark local todos with dueDate (shows dots even without GCal)
+  // App events (from EventStore)
+  _eventsCache.forEach(function(ev) {
+    if (!ev.deleted_at && ev.due_date) _markSrc(ev.due_date, ev.source_type || 'app');
+  });
+  // Legacy todos (backward compat, not yet migrated)
   getTodos().forEach(function(t) {
-    if (t.dueDate) eventDates[t.dueDate] = true;
+    if (t.dueDate) _markSrc(t.dueDate, 'app');
   });
 
   var today     = todayStr();
@@ -5749,8 +5807,16 @@ async function renderTodoCalendar() {
     var cls = 'todo-cal-day';
     if (ds === today)           cls += ' today';
     if (ds === calSelectedDate) cls += ' selected';
-    if (eventDates[ds])         cls += ' has-event';
-    html += '<div class="' + cls + '" data-date="' + ds + '">' + day + '</div>';
+    var srcs = eventDateSources[ds];
+    var dotHtml = '';
+    if (srcs) {
+      cls += ' has-event';
+      var dotSpans = Object.keys(srcs).map(function(s) {
+        return '<span class="cal-dot-s cal-dot-' + s + '"></span>';
+      }).join('');
+      dotHtml = '<div class="cal-dot-row">' + dotSpans + '</div>';
+    }
+    html += '<div class="' + cls + '" data-date="' + ds + '">' + day + dotHtml + '</div>';
   }
   grid.innerHTML = html;
 
@@ -8717,6 +8783,7 @@ function init() {
     renderInsulinVials();  // refresh vials with cloud data
   });
   startCGMPolling();   // start real-time CGM widget
+  loadEvents();        // load event store (migrates todos on first run)
   setTimeout(checkAndNotifyLowSupplies, 4000); // delayed supply check on load
   setTimeout(checkAndNotifyAppt, 4500);         // delayed appt reminder check
   // Handle Google Calendar OAuth2 callback
@@ -9734,7 +9801,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.35.2';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.36.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -11936,36 +12003,402 @@ function setTodos(a) {
 }
 
 // ── Form state ──
-var _todoCat = 'health';
 
-function openTodoForm(category, editId) {
-  _todoCat = category || 'health';
-  document.getElementById('todo-edit-id').value    = editId || '';
-  document.getElementById('todo-title').value      = '';
-  document.getElementById('todo-due-date').value   = '';
-  document.getElementById('todo-due-time').value   = '';
-  document.getElementById('todo-note').value       = '';
-  document.getElementById('todo-gcal-sync').checked = isGCalConnected();
-  document.getElementById('todo-health-type').value = '回診';
-  document.getElementById('todo-form-title').textContent =
-    editId ? '編輯待辦' : (_todoCat === 'health' ? '新增健康待辦' : '新增一般待辦');
+// ══════════════════════════════════════════
+//  EVENT STORE (v2.36.0)
+// ══════════════════════════════════════════
+var _eventsCache    = [];   // in-memory, source of truth
+var _eventsUserSub  = localStorage.getItem('ev_user_sub') || 'local_owner';
+var _evFilter       = 'all';
+var _evIds          = [];  // index→id lookup for card onclick
 
-  if (editId) {
-    var t = getTodos().find(function(x){ return x.id === editId; });
-    if (t) {
-      _todoCat = t.category;
-      document.getElementById('todo-title').value    = t.title    || '';
-      document.getElementById('todo-due-date').value = t.dueDate  || '';
-      document.getElementById('todo-due-time').value = t.dueTime  || '';
-      document.getElementById('todo-note').value     = t.note     || '';
-      document.getElementById('todo-gcal-sync').checked = !!t.gcalEventId;
-      if (t.healthType) document.getElementById('todo-health-type').value = t.healthType;
-    }
+var EV_SOURCE = { APP:'app', GOOGLE:'google', TIMETREE:'timetree', AI:'ai' };
+var EV_VIS    = { PRIVATE:'private', SPOUSE:'spouse', FAMILY:'family', PUBLIC:'public' };
+var EV_CAT    = { HEALTH:'health', FAMILY:'family', GENERAL:'general' };
+
+function _makeEventId() {
+  return 'ev_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+}
+
+function _newEventObj(data) {
+  var now = new Date().toISOString();
+  return {
+    id:             data.id          || _makeEventId(),
+    title:          data.title       || '',
+    description:    data.description || '',
+    category:       data.category    || EV_CAT.GENERAL,
+    health_type:    data.health_type || '',
+    visibility:     data.visibility  || EV_VIS.SPOUSE,
+    source_type:    data.source_type || EV_SOURCE.APP,
+    due_date:       data.due_date    || data.dueDate   || '',
+    due_time:       data.due_time    || data.dueTime   || '',
+    completed:      data.completed   || false,
+    starred:        data.starred     || false,
+    gcal_event_id:  data.gcal_event_id || data.gcalEventId || null,
+    sync_google:    data.sync_google || false,
+    sync_status:    data.sync_status || 'pending',
+    owner_user_sub: data.owner_user_sub || _eventsUserSub,
+    created_at:     data.created_at  || data.createdAt || now,
+    updated_at:     now,
+    deleted_at:     data.deleted_at  || null,
+  };
+}
+
+function _getEvCache() {
+  try { return JSON.parse(localStorage.getItem('ev_cache') || '[]'); } catch(e) { return []; }
+}
+function _setEvCache(arr) {
+  localStorage.setItem('ev_cache', JSON.stringify(arr));
+}
+
+function loadEvents() {
+  var stored = _getEvCache();
+  if (stored.length) {
+    _eventsCache = stored;
+  } else {
+    // First load: migrate from todos
+    _migrateTodosToEvents();
   }
-  setTodoCat(_todoCat);
+  renderEventsPage();
+  renderTodoCalendar();
+}
+
+function _migrateTodosToEvents() {
+  if (localStorage.getItem('ev_migrated_v1')) return;
+  var todos = getTodos();
+  _eventsCache = todos.map(function(t) {
+    return _newEventObj({
+      id:          t.id,
+      title:       t.title,
+      description: t.note || '',
+      category:    t.category === 'health' ? EV_CAT.HEALTH : EV_CAT.GENERAL,
+      health_type: t.healthType || '',
+      due_date:    t.dueDate || '',
+      due_time:    t.dueTime || '',
+      completed:   t.completed || false,
+      starred:     t.starred   || false,
+      gcal_event_id: t.gcalEventId || null,
+      sync_google:   !!t.gcalEventId,
+      created_at:  t.createdAt || new Date().toISOString(),
+      source_type: EV_SOURCE.APP,
+    });
+  });
+  _setEvCache(_eventsCache);
+  localStorage.setItem('ev_migrated_v1', '1');
+}
+
+function upsertEvent(ev) {
+  var idx = _eventsCache.findIndex(function(e){ return e.id === ev.id; });
+  ev.updated_at = new Date().toISOString();
+  if (idx >= 0) {
+    _eventsCache[idx] = ev;
+  } else {
+    _eventsCache.push(ev);
+  }
+  _setEvCache(_eventsCache);
+  _syncEventsToTodos();
+  // Best-effort Supabase sync
+  _syncEventToCloud(ev);
+}
+
+function softDeleteEvent(id) {
+  var idx = _eventsCache.findIndex(function(e){ return e.id === id; });
+  if (idx < 0) return;
+  _eventsCache[idx].deleted_at = new Date().toISOString();
+  _eventsCache[idx].updated_at = new Date().toISOString();
+  _setEvCache(_eventsCache);
+  _syncEventsToTodos();
+}
+
+function _syncEventsToTodos() {
+  var todos = _eventsCache
+    .filter(function(e){ return !e.deleted_at; })
+    .map(function(e){
+      return {
+        id:          e.id,
+        title:       e.title,
+        category:    e.category === EV_CAT.FAMILY ? 'general' : (e.category || 'general'),
+        healthType:  e.health_type || '',
+        dueDate:     e.due_date || '',
+        dueTime:     e.due_time || '',
+        note:        e.description || '',
+        completed:   e.completed   || false,
+        starred:     e.starred     || false,
+        gcalEventId: e.gcal_event_id || null,
+        createdAt:   e.created_at || new Date().toISOString(),
+      };
+    });
+  setTodos(todos);
+}
+
+async function _syncEventToCloud(ev) {
+  try {
+    if (!supabase || !supabase.from) return;
+    var row = Object.assign({}, ev, { owner_user_sub: _eventsUserSub });
+    await supabase.from('events').upsert(row);
+  } catch(e) { /* best-effort */ }
+}
+
+// ─── Event UI ───────────────────────────────────────────────────
+
+function setEvFilter(f) {
+  _evFilter = f;
+  document.querySelectorAll('.ev-filter-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.dataset.evf === f);
+  });
+  renderEventsPage();
+}
+
+function renderEventsPage() {
+  var listEl = document.getElementById('ev-list');
+  if (!listEl) return;
+
+  var items = _eventsCache.filter(function(e){ return !e.deleted_at; });
+
+  // Apply filter
+  if (_evFilter === 'health')  items = items.filter(function(e){ return e.category === EV_CAT.HEALTH; });
+  if (_evFilter === 'family')  items = items.filter(function(e){ return e.category === EV_CAT.FAMILY; });
+  if (_evFilter === 'pending') items = items.filter(function(e){ return !e.completed; });
+  if (_evFilter === 'done')    items = items.filter(function(e){ return !!e.completed; });
+
+  // Sort: undone → starred → latest → done
+  items = items.slice().sort(function(a, b) {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    if (!!a.starred !== !!b.starred) return a.starred ? -1 : 1;
+    var ta = a.created_at || '0', tb = b.created_at || '0';
+    return tb.localeCompare(ta);
+  });
+
+  if (!items.length) {
+    listEl.innerHTML = '<div class="ev-empty">尚無事件</div>';
+    _evIds = [];
+    return;
+  }
+  _evIds = items.map(function(e){ return e.id; });
+  listEl.innerHTML = items.map(function(ev, i){ return _renderEventCard(ev, i); }).join('');
+}
+
+function _renderEventCard(ev, idx) {
+  var today = todayStr();
+  var overdue  = ev.due_date && !ev.completed && ev.due_date < today;
+  var dueToday = ev.due_date && !ev.completed && ev.due_date === today;
+  var dueTxt = '';
+  if (ev.due_date) {
+    var prefix = overdue ? '⚠️ ' : dueToday ? '📅 今天 ' : '🗓 ';
+    var dueCls  = overdue ? ' overdue' : dueToday ? ' today' : '';
+    dueTxt = '<span class="ev-due' + dueCls + '">' + prefix + ev.due_date
+           + (ev.due_time ? ' ' + ev.due_time : '') + '</span>';
+  }
+  var catMap = { health:'健康', family:'家庭', general:'一般' };
+  var catBadge = '<span class="ev-badge ev-badge-' + (ev.category||'general') + '">'
+               + (catMap[ev.category] || '一般') + '</span>';
+  var htBadge = ev.health_type ? '<span class="ev-badge ev-badge-health">' + escapeHtml(ev.health_type) + '</span>' : '';
+  var srcIcons = { app:'📱', google:'📅', timetree:'🌳', ai:'🤖' };
+  var srcIcon  = '<span class="ev-src-icon" title="' + (ev.source_type||'app') + '">' + (srcIcons[ev.source_type]||'📱') + '</span>';
+  var noteTxt = ev.description ? '<div class="todo-note-txt">' + escapeHtml(ev.description) + '</div>' : '';
+  var starIcon = ev.starred ? '⭐' : '☆';
+  var doneCls  = ev.completed ? ' ev-done' : '';
+  var chk      = ev.completed ? ' checked' : '';
+  var i = idx;  // numeric index — no quote escaping needed in onclick
+  return '<div class="ev-card' + doneCls + '">'
+    + '<div class="ev-card-top">'
+      + '<input type="checkbox" class="ev-check"' + chk
+        + ' onchange="_evToggleDone(_evIds[' + i + '])">'
+      + '<div style="flex:1;">'
+        + '<div class="ev-title">' + escapeHtml(ev.title) + '</div>'
+        + '<div class="ev-meta">' + catBadge + htBadge + dueTxt + srcIcon + '</div>'
+        + noteTxt
+      + '</div>'
+    + '</div>'
+    + '<div class="ev-actions">'
+      + '<button class="ev-btn" onclick="_evToggleStar(_evIds[' + i + '])">' + starIcon + ' 星號</button>'
+      + '<button class="ev-btn" onclick="openEventForm(_evIds[' + i + '])">✏️ 編輯</button>'
+      + '<button class="ev-btn" onclick="_evDelete(_evIds[' + i + '])">🗑️</button>'
+    + '</div>'
+  + '</div>';
+}
+
+function _evToggleDone(id) {
+  var ev = _eventsCache.find(function(e){ return e.id === id; });
+  if (!ev) return;
+  ev.completed = !ev.completed;
+  upsertEvent(ev);
+  renderEventsPage();
+  checkTodoAlerts();
+}
+
+function _evToggleStar(id) {
+  var ev = _eventsCache.find(function(e){ return e.id === id; });
+  if (!ev) return;
+  ev.starred = !ev.starred;
+  upsertEvent(ev);
+  renderEventsPage();
+}
+
+function _evDelete(id) {
+  if (!confirm('確認刪除此事件？')) return;
+  var ev = _eventsCache.find(function(e){ return e.id === id; });
+  if (ev && ev.gcal_event_id) gcalDelete(ev.gcal_event_id).catch(function(){});
+  softDeleteEvent(id);
+  renderEventsPage();
+  renderTodoCalendar();
+  checkTodoAlerts();
+  showToast('🗑️ 事件已刪除');
+}
+
+// ─── Event Form ─────────────────────────────────────────────────
+
+function openEventForm(id, opts) {
+  var ev = id ? _eventsCache.find(function(e){ return e.id === id; }) : null;
+  // Populate using existing modal fields
+  document.getElementById('todo-edit-id').value  = id || '';
+  document.getElementById('todo-title').value    = ev ? ev.title        : '';
+  document.getElementById('todo-due-date').value = ev ? (ev.due_date||'') : '';
+  document.getElementById('todo-due-time').value = ev ? (ev.due_time||'') : '';
+  document.getElementById('todo-note').value     = ev ? (ev.description||'') : '';
+  document.getElementById('todo-gcal-sync').checked = ev ? !!ev.gcal_event_id : isGCalConnected();
+  var cat = ev ? ev.category : ((opts && opts.category) || EV_CAT.HEALTH);
+  if (cat === EV_CAT.FAMILY) cat = EV_CAT.GENERAL;
+  _todoCat = cat;
+  setTodoCat(cat);
+  if (ev && ev.health_type) document.getElementById('todo-health-type').value = ev.health_type;
+  document.getElementById('todo-form-title').textContent = id ? '編輯事件' : '新增事件';
   updateGCalUI();
   document.getElementById('todo-modal-overlay').style.display = 'block';
   setTimeout(function(){ document.getElementById('todo-title').focus(); }, 80);
+}
+
+async function saveEventForm() {
+  var title = (document.getElementById('todo-title').value || '').trim();
+  if (!title) { alert('請輸入標題'); return; }
+
+  var editId    = document.getElementById('todo-edit-id').value;
+  var dueDate   = document.getElementById('todo-due-date').value;
+  var dueTime   = document.getElementById('todo-due-time').value;
+  var note      = document.getElementById('todo-note').value.trim();
+  var gcalSync  = document.getElementById('todo-gcal-sync').checked;
+  var healthType = _todoCat === 'health' ? document.getElementById('todo-health-type').value : '';
+
+  if (gcalSync && !dueDate) {
+    showToast('⚠️ 請設定到期日期才能同步到 Google 行事曆');
+  }
+
+  var existing = editId ? _eventsCache.find(function(e){ return e.id === editId; }) : null;
+  var ev = _newEventObj(Object.assign({}, existing || {}, {
+    id:          editId || _makeEventId(),
+    title:       title,
+    description: note,
+    category:    _todoCat === 'general' ? EV_CAT.GENERAL : (_todoCat === 'family' ? EV_CAT.FAMILY : EV_CAT.HEALTH),
+    health_type: healthType,
+    due_date:    dueDate,
+    due_time:    dueTime,
+    sync_google: gcalSync,
+    source_type: (existing && existing.source_type) || EV_SOURCE.APP,
+  }));
+
+  // GCal sync
+  if (gcalSync && dueDate) {
+    var todoLike = { title: ev.title, dueDate: ev.due_date, dueTime: ev.due_time, note: ev.description };
+    if (existing && existing.gcal_event_id) {
+      await gcalUpdate(existing.gcal_event_id, todoLike);
+      ev.gcal_event_id = existing.gcal_event_id;
+    } else {
+      var gid = await gcalCreate(todoLike);
+      ev.gcal_event_id = gid || null;
+    }
+  } else if (!gcalSync && existing && existing.gcal_event_id) {
+    await gcalDelete(existing.gcal_event_id);
+    ev.gcal_event_id = null;
+  }
+
+  upsertEvent(ev);
+  closeTodoForm();
+  renderEventsPage();
+  renderTodoCalendar();
+  checkTodoAlerts();
+  showToast(editId ? '✅ 事件已更新' : '✅ 事件已新增');
+}
+
+// ─── ICS Import ─────────────────────────────────────────────────
+
+function importICS(inputEl) {
+  var file = inputEl.files[0];
+  if (!file) return;
+  var statusEl = document.getElementById('ev-ics-status');
+  if (statusEl) statusEl.textContent = '解析中…';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var events = _parseICS(e.target.result);
+      var added = 0;
+      events.forEach(function(ev) {
+        if (!_eventsCache.find(function(x){ return x.id === ev.id; })) {
+          _eventsCache.push(ev);
+          added++;
+        }
+      });
+      _setEvCache(_eventsCache);
+      _syncEventsToTodos();
+      renderEventsPage();
+      renderTodoCalendar();
+      if (statusEl) statusEl.textContent = '✅ 匯入完成，新增 ' + added + ' 個事件（共 ' + events.length + ' 個）';
+      showToast('✅ ICS 匯入：新增 ' + added + ' 個事件');
+    } catch(err) {
+      if (statusEl) statusEl.textContent = '❌ 解析失敗：' + err.message;
+    }
+    inputEl.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+function _parseICS(text) {
+  var lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  // Unfold continuation lines
+  lines = lines.replace(/\n[ \t]/g, '');
+  var evts = [];
+  var blocks = lines.split('BEGIN:VEVENT');
+  for (var i = 1; i < blocks.length; i++) {
+    var block = blocks[i];
+    function getVal(key) {
+      var re = new RegExp('(?:^|\\n)' + key + '[^:]*:([^\\n]*)', 'i');
+      var m = block.match(re);
+      return m ? m[1].trim() : '';
+    }
+    var title   = getVal('SUMMARY').replace(/\\n/g, ' ').replace(/\\,/g, ',');
+    var uid     = getVal('UID') || _makeEventId();
+    var dtstart = getVal('DTSTART');
+    var desc    = getVal('DESCRIPTION').replace(/\\n/g, '\n').replace(/\\,/g, ',');
+    // Parse date
+    var dueDate = '', dueTime = '';
+    if (dtstart) {
+      var ds = dtstart.replace(/[TZ]/g, '-').split('-');
+      if (ds[0] && ds[1] && ds[2]) {
+        dueDate = ds[0] + '-' + ds[1] + '-' + ds[2].slice(0,2);
+        if (ds[3] && ds[3].length >= 4) {
+          dueTime = ds[3].slice(0,2) + ':' + ds[3].slice(2,4);
+        }
+      }
+    }
+    if (!title) continue;
+    evts.push(_newEventObj({
+      id:          'ics_' + uid.replace(/[^a-zA-Z0-9_]/g, '_').slice(0, 40),
+      title:       title,
+      description: desc,
+      due_date:    dueDate,
+      due_time:    dueTime,
+      source_type: EV_SOURCE.TIMETREE,
+      category:    EV_CAT.FAMILY,
+      sync_google: false,
+    }));
+  }
+  return evts;
+}
+
+var _todoCat = 'health';
+
+function openTodoForm(category, editId) {
+  // Delegate to event-store openEventForm
+  return openEventForm(editId || null, { category: category || 'health' });
 }
 
 function closeTodoForm() {
@@ -11980,51 +12413,8 @@ function setTodoCat(cat) {
 }
 
 async function saveTodoForm() {
-  var title = (document.getElementById('todo-title').value||'').trim();
-  if (!title) { alert('請輸入標題'); return; }
-
-  var editId    = document.getElementById('todo-edit-id').value;
-  var dueDate   = document.getElementById('todo-due-date').value;
-  var dueTime   = document.getElementById('todo-due-time').value;
-  var note      = document.getElementById('todo-note').value.trim();
-  var gcalSync  = document.getElementById('todo-gcal-sync').checked;
-  var healthType= _todoCat==='health' ? document.getElementById('todo-health-type').value : '';
-  var todos     = getTodos();
-
-  if (gcalSync && !dueDate) {
-    showToast('⚠️ 請設定到期日期才能同步到 Google 行事曆');
-  }
-  if (editId) {
-    var idx = todos.findIndex(function(t){ return t.id===editId; });
-    if (idx >= 0) {
-      var old = todos[idx];
-      Object.assign(todos[idx], { title, category:_todoCat, healthType, dueDate, dueTime, note });
-      if (gcalSync && dueDate) {
-        if (old.gcalEventId) await gcalUpdate(old.gcalEventId, todos[idx]);
-        else { todos[idx].gcalEventId = await gcalCreate(todos[idx]); }
-      } else if (!gcalSync && old.gcalEventId) {
-        await gcalDelete(old.gcalEventId);
-        todos[idx].gcalEventId = null;
-      }
-    }
-  } else {
-    var todo = {
-      id: 'todo_' + Date.now(), title, category: _todoCat, healthType,
-      dueDate, dueTime, note, completed: false,
-      gcalEventId: null, createdAt: new Date().toISOString()
-    };
-    if (gcalSync && dueDate) todo.gcalEventId = await gcalCreate(todo);
-    todos.push(todo);
-    // 新增後回第一頁，確保最新項目可見
-    if (_todoCat === 'health') _healthTodoPage = 1;
-    else _generalTodoPage = 1;
-  }
-
-  setTodos(todos);
-  closeTodoForm();
-  renderTodoPage();
-  checkTodoAlerts();
-  showToast(editId ? '✅ 待辦已更新' : '✅ 待辦已新增');
+  // Delegate to event-store saveEventForm
+  return saveEventForm();
 }
 
 async function toggleTodoComplete(id) {
@@ -12055,42 +12445,11 @@ function escapeHtml(s) {
 }
 
 function renderTodoPage() {
-  var allTodos = getTodos();
-
-  // 搜尋篩選
-  var q = _todoSearchQuery;
-  var filtered = q ? allTodos.filter(function(t) {
-    return (t.title||'').toLowerCase().indexOf(q) >= 0
-        || (t.note||'').toLowerCase().indexOf(q) >= 0;
-  }) : allTodos;
-
-  // 隱藏已完成
-  if (_todoHideDone) filtered = filtered.filter(function(t){ return !t.completed; });
-
-  // 排序：未完成 → 星號 → 最新 createdAt → 已完成
-  filtered = filtered.slice().sort(function(a, b) {
-    if (a.completed !== b.completed) return a.completed ? 1 : -1;
-    if (!!a.starred !== !!b.starred) return a.starred ? -1 : 1;
-    var ta = a.createdAt || '0', tb = b.createdAt || '0';
-    return tb.localeCompare(ta);
-  });
-
-  var health  = filtered.filter(function(t){ return t.category === 'health'; });
-  var general = filtered.filter(function(t){ return t.category === 'general'; });
-
-  // Filter 顯示/隱藏各 section
-  var healthSec  = document.getElementById('todo-health-section');
-  var generalSec = document.getElementById('todo-general-section');
-  if (healthSec)  healthSec.style.display  = (_todoFilter === 'general') ? 'none' : '';
-  if (generalSec) generalSec.style.display = (_todoFilter === 'health')  ? 'none' : '';
-
-  _renderTodoList('todo-health-list',  'todo-health-pager',  health,  'health',  _healthTodoPage);
-  _renderTodoList('todo-general-list', 'todo-general-pager', general, 'general', _generalTodoPage);
-
+  // Delegate to event-store UI
+  renderEventsPage();
   updateGCalUI();
   var hint = document.getElementById('todo-gcal-hint');
   if (hint) hint.style.display = isGCalConnected() ? 'none' : 'flex';
-
   // 行事曆（置頂，第一次初始化）
   if (!calViewYM) {
     calViewYM = todayStr().slice(0, 7);
