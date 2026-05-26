@@ -2689,6 +2689,8 @@
     .ev-btn:hover { border-color:var(--primary); color:var(--primary); }
     /* visibility selector in modal */
     .ev-vis-row { margin-bottom:12px; }
+    .user-sw-btn.active { border-color:var(--primary) !important; background:rgba(var(--primary-rgb),.07) !important; }
+    .user-sw-btn.active div:first-child { filter: drop-shadow(0 0 4px rgba(var(--primary-rgb),.5)); }
     .todo-cal-day.empty { cursor: default; color: transparent; }
     .cal-evt-row {
       display: flex; align-items: center; gap: 8px;
@@ -3272,6 +3274,29 @@ alter table user_todos enable row level security;
 
       <!-- ── Panel: 帳號 + 血糖範圍 ── -->
       <div id="settings-panel-account" class="settings-panel" style="display:none">
+
+<div class="settings-section">
+  <h3>👤 使用者切換</h3>
+  <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:12px;">
+    選擇目前操作的身份，事件建立者會依此記錄。
+  </p>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;" id="user-switcher-btns">
+    <button class="user-sw-btn" id="user-sw-owner" onclick="switchAppUser('local_owner')"
+      style="flex:1;min-width:120px;padding:12px 10px;border:2px solid var(--border);border-radius:12px;background:var(--bg);cursor:pointer;text-align:center;">
+      <div style="font-size:1.4rem;">👨</div>
+      <div style="font-size:.85rem;font-weight:700;margin-top:4px;">囉嗦把拔喵</div>
+      <div style="font-size:.72rem;color:var(--text-muted);margin-top:2px;">爸爸</div>
+    </button>
+    <button class="user-sw-btn" id="user-sw-spouse" onclick="switchAppUser('local_spouse')"
+      style="flex:1;min-width:120px;padding:12px 10px;border:2px solid var(--border);border-radius:12px;background:var(--bg);cursor:pointer;text-align:center;">
+      <div style="font-size:1.4rem;">👩</div>
+      <div style="font-size:.85rem;font-weight:700;margin-top:4px;">貓谷太太</div>
+      <div style="font-size:.72rem;color:var(--text-muted);margin-top:2px;">媽媽</div>
+    </button>
+  </div>
+  <p id="user-sw-hint" style="font-size:.76rem;color:var(--text-muted);margin-top:8px;"></p>
+</div>
+
 <div class="settings-section">
     <h3>🔑 個人帳號 ID</h3>
     <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">
@@ -3461,6 +3486,19 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.36.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.36.1</span>
+          <span class="cl-date">2026-05-26</span>
+          <span class="cl-tag">使用者切換</span>
+        </div>
+        <ul class="cl-list">
+          <li>【設定 → 帳號】新增使用者切換：👨 囉嗦把拔喵 / 👩 貓谷太太，選擇後事件列顯示對應身份</li>
+          <li>事件卡片顯示建立者姓名（與目前使用者不同時才顯示）</li>
+        </ul>
+      </div>
 
       <!-- v2.36.0 -->
       <div class="cl-item">
@@ -6330,7 +6368,7 @@ function switchTab(tab) {
   if (tab === 'history')  renderHistory();
   if (tab === 'chart')    renderCharts();
   if (tab === 'todo')     renderTodoPage();
-  if (tab === 'settings') { loadSettingsUI(); loadCloudConfigUI(); updateGCalUI(); }
+  if (tab === 'settings') { loadSettingsUI(); loadCloudConfigUI(); updateGCalUI(); updateUserSwitcherUI(); }
 }
 
 // ══════════════════════════════════════════
@@ -9801,7 +9839,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.36.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.36.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -12052,6 +12090,41 @@ function _setEvCache(arr) {
   localStorage.setItem('ev_cache', JSON.stringify(arr));
 }
 
+// ─── User Switcher ─────────────────────────────────────────────
+
+var _appUsers = {
+  local_owner: { name: '囉嗦把拔喵', icon: '👨', label: '爸爸' },
+  local_spouse:{ name: '貓谷太太',   icon: '👩', label: '媽媽' },
+};
+
+function switchAppUser(sub) {
+  _eventsUserSub = sub;
+  localStorage.setItem('ev_user_sub', sub);
+  updateUserSwitcherUI();
+  updateEvUserBar();
+  showToast(_appUsers[sub] ? '👤 已切換為 ' + _appUsers[sub].name : '👤 已切換');
+}
+
+function updateUserSwitcherUI() {
+  var sub = _eventsUserSub;
+  Object.keys(_appUsers).forEach(function(k) {
+    var btn = document.getElementById('user-sw-' + k.replace('local_', ''));
+    if (btn) btn.classList.toggle('active', k === sub);
+  });
+  var hint = document.getElementById('user-sw-hint');
+  if (hint) {
+    var u = _appUsers[sub];
+    hint.textContent = u ? '目前身份：' + u.icon + ' ' + u.name + '（' + u.label + '）' : '目前身份：' + sub;
+  }
+}
+
+function updateEvUserBar() {
+  var sub  = _eventsUserSub;
+  var u    = _appUsers[sub];
+  var nameEl = document.getElementById('ev-user-name');
+  if (nameEl) nameEl.textContent = u ? u.name : sub;
+}
+
 function loadEvents() {
   var stored = _getEvCache();
   if (stored.length) {
@@ -12060,8 +12133,8 @@ function loadEvents() {
     _migrateTodosToEvents();
   }
   // Safety guard: ensure _eventsCache is always an array
-  // (var declaration runs after init() due to script order, so it may be undefined)
   if (!Array.isArray(_eventsCache)) _eventsCache = [];
+  updateEvUserBar();
   renderEventsPage();
   renderTodoCalendar();
 }
@@ -12202,6 +12275,9 @@ function _renderEventCard(ev, idx) {
   var srcIcons = { app:'📱', google:'📅', timetree:'🌳', ai:'🤖' };
   var srcIcon  = '<span class="ev-src-icon" title="' + (ev.source_type||'app') + '">' + (srcIcons[ev.source_type]||'📱') + '</span>';
   var noteTxt = ev.description ? '<div class="todo-note-txt">' + escapeHtml(ev.description) + '</div>' : '';
+  var creatorU = _appUsers[ev.owner_user_sub];
+  var creatorTxt = (ev.owner_user_sub && ev.owner_user_sub !== _eventsUserSub && creatorU)
+    ? '<span style="font-size:.7rem;color:var(--text-muted);">' + creatorU.icon + ' ' + creatorU.name + '</span>' : '';
   var starIcon = ev.starred ? '⭐' : '☆';
   var doneCls  = ev.completed ? ' ev-done' : '';
   var chk      = ev.completed ? ' checked' : '';
@@ -12212,7 +12288,7 @@ function _renderEventCard(ev, idx) {
         + ' onchange="_evToggleDone(_evIds[' + i + '])">'
       + '<div style="flex:1;">'
         + '<div class="ev-title">' + escapeHtml(ev.title) + '</div>'
-        + '<div class="ev-meta">' + catBadge + htBadge + dueTxt + srcIcon + '</div>'
+        + '<div class="ev-meta">' + catBadge + htBadge + dueTxt + srcIcon + creatorTxt + '</div>'
         + noteTxt
       + '</div>'
     + '</div>'
