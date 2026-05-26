@@ -9808,6 +9808,14 @@ const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
 const GCAL_SCOPE     = 'https://www.googleapis.com/auth/calendar.events';
 const GCAL_TOKEN_KEY = 'insulin_gcal_tokens';
 const GCAL_VERIFIER_KEY = 'gcal_pkce_verifier';
+// ── EventStore vars: must be before init() so loadEvents() can use them ──
+var _eventsCache    = [];
+var _eventsUserSub  = localStorage.getItem('ev_user_sub') || 'local_owner';
+var _evFilter       = 'all';
+var _evIds          = [];
+var EV_SOURCE = { APP:'app', GOOGLE:'google', TIMETREE:'timetree', AI:'ai' };
+var EV_VIS    = { PRIVATE:'private', SPOUSE:'spouse', FAMILY:'family', PUBLIC:'public' };
+var EV_CAT    = { HEALTH:'health', FAMILY:'family', GENERAL:'general' };
 init();
 
 // ── PWA Service Worker ──
@@ -12007,14 +12015,7 @@ function setTodos(a) {
 // ══════════════════════════════════════════
 //  EVENT STORE (v2.36.0)
 // ══════════════════════════════════════════
-var _eventsCache    = [];   // in-memory, source of truth
-var _eventsUserSub  = localStorage.getItem('ev_user_sub') || 'local_owner';
-var _evFilter       = 'all';
-var _evIds          = [];  // index→id lookup for card onclick
-
-var EV_SOURCE = { APP:'app', GOOGLE:'google', TIMETREE:'timetree', AI:'ai' };
-var EV_VIS    = { PRIVATE:'private', SPOUSE:'spouse', FAMILY:'family', PUBLIC:'public' };
-var EV_CAT    = { HEALTH:'health', FAMILY:'family', GENERAL:'general' };
+// EventStore vars declared before init() — see line before init() call
 
 function _makeEventId() {
   return 'ev_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
