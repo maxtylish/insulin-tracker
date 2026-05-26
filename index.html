@@ -1678,6 +1678,19 @@
     .sync-err  { background: rgba(255,255,255,0.2); color: #fca5a5; }
     .sync-busy { background: rgba(255,255,255,0.2); color: #fde68a; }
 
+    /* -- User Identity Dot -- */
+    .user-dot { display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:middle;flex-shrink:0; }
+    .user-dot-dad { background:#60a5fa; }
+    .user-dot-mom { background:#f9a8d4; }
+
+    /* -- Demo Mode Banner -- */
+    #demo-mode-banner { display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:#f59e0b;color:#fff;font-size:.8rem;font-weight:700;padding:6px 16px;align-items:center;justify-content:space-between;gap:10px; }
+    #demo-mode-banner.active { display:flex; }
+
+    /* -- Settings lock bar -- */
+    .settings-lock-bar { display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#fef9c3;border:1px solid #fde68a;border-radius:8px;margin-bottom:10px;font-size:.81rem;color:#92400e; }
+    .settings-lock-bar button { padding:3px 12px;background:#f59e0b;color:white;border:none;border-radius:6px;font-size:.78rem;cursor:pointer;font-weight:700; }
+
     /* ── Settings Cloud Section ── */
     .cloud-setup-box {
       background: #eff6ff;
@@ -2733,6 +2746,7 @@
 <body>
 <div id="scroll-track"><div id="scroll-thumb"></div></div>
 
+<div id="demo-mode-banner"><span>👁️ 展示模式中 — 敏感資料已遮蔽</span><button onclick="toggleDemoMode()" style="padding:3px 12px;background:rgba(0,0,0,.25);color:#fff;border:none;border-radius:6px;font-size:.78rem;cursor:pointer;font-weight:700;">關閉展示模式</button></div>
 <header>
   <!-- 左側：Skin 切換器 -->
   <div id="skin-switcher">
@@ -2754,7 +2768,7 @@
   <div class="header-right">
     <div id="headerDate">--</div>
     <div id="header-version"></div>
-    <div id="syncBadge" class="sync-badge sync-busy" style="display:inline-block;">⏳ 初始化</div>
+    <div style="display:flex;align-items:center;gap:2px;"><span id="userDot" class="user-dot user-dot-dad"></span><div id="syncBadge" class="sync-badge sync-busy" style="display:inline-block;">⏳ 初始化</div></div>
   </div>
 </header>
 
@@ -3266,6 +3280,7 @@ alter table user_todos enable row level security;
 -- create policy "allow all" on insulin_records for all using (true) with check (true);
 -- create policy "allow all" on user_todos      for all using (true) with check (true);</pre>
     </details>
+    <div class="settings-lock-bar" id="cloud-lock-bar"><span>🔒 敏感資料已隱藏</span><button onclick="unlockSettings()">👁 查看</button></div>
     <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
       <label style="font-size:0.83rem;font-weight:600;">Supabase Project URL</label>
       <input type="url" id="set-sb-url" class="settings-input-full"
@@ -3306,6 +3321,23 @@ alter table user_todos enable row level security;
     </button>
   </div>
   <p id="user-sw-hint" style="font-size:.76rem;color:var(--text-muted);margin-top:8px;"></p>
+</div>
+
+<div class="settings-section">
+  <h3>👁️ 展示模式</h3>
+  <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:12px;">開啟後，資料庫網址、Nightscout 網址、回診日期與數字將以 X 遮蔽，適合展示給他人觀看。</p>
+  <button id="demo-mode-toggle" onclick="toggleDemoMode()" style="padding:9px 20px;background:#64748b;color:#fff;border:none;border-radius:8px;font-size:.85rem;cursor:pointer;font-weight:700;">🟢 開啟展示模式</button>
+  <div style="margin-top:10px;font-size:.78rem;color:var(--text-muted);">💡 開啟展示模式後，修改設定仍需要密碼（預設：1973）</div>
+</div>
+
+<div class="settings-section">
+  <h3>🔒 設定密碼</h3>
+  <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:10px;">設定頁面的修改與敏感資料查看均需要輸入此密碼。</p>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <input type="password" id="new-app-pwd" placeholder="輸入新密碼" style="flex:1;padding:7px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:.9rem;outline:none;" />
+    <button onclick="changeAppPwd()" style="padding:7px 16px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:.84rem;cursor:pointer;font-weight:700;">變更密碼</button>
+  </div>
+  <p style="font-size:.75rem;color:var(--text-muted);margin-top:6px;">目前密碼：若未曾修改預設値為 1973</p>
 </div>
 
 <div class="settings-section">
@@ -3410,6 +3442,7 @@ alter table user_todos enable row level security;
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px;">
       連結 Nightscout 後，首頁即時顯示 CGM 血糖、點擊血糖欄位自動帶入、統計頁顯示連續曲線。
     </p>
+    <div class="settings-lock-bar" id="cgm-lock-bar"><span>🔒 CGM 網址已隱藏</span><button onclick="unlockSettings()">👁 查看</button></div>
     <div class="settings-field">
       <label>Nightscout 網址</label>
       <input type="url" id="set-ns-url" placeholder="https://yoursite.t1ns.tw"
@@ -3495,6 +3528,20 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.37.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.37.0</span>
+          <span class="cl-date">2026-05-26</span>
+          <span class="cl-tag">安全性 &amp; 展示模式</span>
+        </div>
+        <ul class="cl-list">
+          <li>【密碼保護】設定頁所有儲存操作、查看敏感資料均需輸入密碼（預設：1973），可在帳號頁變更</li>
+          <li>【展示模式】開啟後遮蔽資料庫網址、Nightscout 網址、回診日期與數字（以 X 顯示），適合向他人展示</li>
+          <li>【身份識別 Dot】右上角同步標誌旁顯示藍點（爸爸）或粉點（媽媽），一眼識別目前身份</li>
+        </ul>
+      </div>
 
       <!-- v2.36.4 -->
       <div class="cl-item">
@@ -7916,6 +7963,7 @@ function loadMealParamsUI() {
 }
 
 function saveMealParams() {
+  if (!requireAppPwd('🔒 修改餐前係數')) return;
   var meals = ['breakfast', 'lunch', 'dinner'];
   var labels = { breakfast:'早餐', lunch:'午餐', dinner:'晚餐' };
   var mp = {};
@@ -7950,8 +7998,9 @@ function loadSettingsUI() {
   document.getElementById('set-normalLow').value  = settings.normalLow;
   document.getElementById('set-normalHigh').value = settings.normalHigh;
   document.getElementById('set-high').value       = settings.high;
-  document.getElementById('set-ns-url').value     = settings.nsUrl    || '';
-  document.getElementById('set-ns-token').value   = settings.nsToken  || '';
+  var _nsOk = _sessionUnlocked && !_demoMode;
+  document.getElementById('set-ns-url').value   = _nsOk ? (settings.nsUrl   || '') : (settings.nsUrl   ? _maskUrl(settings.nsUrl)   : '');
+  document.getElementById('set-ns-token').value = _nsOk ? (settings.nsToken || '') : (settings.nsToken ? '••••••••••••••••' : '');
   document.getElementById('set-ns-autofill').checked = settings.nsAutoFill !== false;
   loadNotifSettingsUI();
   loadMealParamsUI();  // fix: 確保 ISF/CIR/目標血糖顯示已儲存的值，而非 HTML 預設值
@@ -7960,6 +8009,7 @@ function loadSettingsUI() {
 }
 
 function saveNSSettings() {
+  if (!requireAppPwd('🔒 儲存 CGM 設定')) return;
   settings.nsUrl      = (document.getElementById('set-ns-url').value || '').trim().replace(/\/$/, '');
   settings.nsToken    = (document.getElementById('set-ns-token').value || '').trim();
   settings.nsAutoFill = document.getElementById('set-ns-autofill').checked;
@@ -7969,6 +8019,7 @@ function saveNSSettings() {
 }
 
 function saveSettings() {
+  if (!requireAppPwd('🔒 儲存設定')) return;
   settings.low        = parseFloat(document.getElementById('set-low').value)        || DEFAULT_SETTINGS.low;
   settings.normalLow  = parseFloat(document.getElementById('set-normalLow').value)  || DEFAULT_SETTINGS.normalLow;
   settings.normalHigh = parseFloat(document.getElementById('set-normalHigh').value) || DEFAULT_SETTINGS.normalHigh;
@@ -8702,8 +8753,10 @@ function loadCloudConfigUI() {
   const el_url = document.getElementById('set-sb-url');
   const el_key = document.getElementById('set-sb-key');
   const el_id  = document.getElementById('myUserId');
-  if (el_url) el_url.value = url;
-  if (el_key) el_key.value = key;
+  var _showSens = _sessionUnlocked && !_demoMode;
+  if (el_url) el_url.value = _showSens ? url : (url ? _maskUrl(url) : '');
+  if (el_key) el_key.value = _showSens ? key : (key ? key.substring(0,6) + '•••••••••••••••••••••' : '');
+  _refreshLockBars();
   if (el_id)  el_id.value  = currentUserId || '';
   const dispEl = document.getElementById('currentIdDisplay');
   if (dispEl) dispEl.textContent = currentUserId || '尚未設定';
@@ -8724,6 +8777,7 @@ function loadCloudConfigUI() {
 }
 
 async function saveCloudConfig() {
+  if (!requireAppPwd('🔒 儲存雲端設定')) return;
   const url = (document.getElementById('set-sb-url').value || '').trim();
   const key = (document.getElementById('set-sb-key').value || '').trim();
   localStorage.setItem('sb_url', url);
@@ -8774,6 +8828,7 @@ function showCustomIdInput() {
 }
 
 async function applyCustomId() {
+  if (!requireAppPwd('🔒 修改帳號 ID')) return;
   const newId = (document.getElementById('customIdInput').value || '').trim();
   if (!newId) { showToast('⚠️ 請輸入帳號 ID'); return; }
   if (newId.length < 3) { showToast('⚠️ ID 至少需要 3 個字元'); return; }
@@ -9892,7 +9947,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.36.4';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.37.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -9911,6 +9966,9 @@ var _appUsers = {
   local_owner: { name: '囉嗦把拔喵', icon: '👨', label: '爸爸' },
   local_spouse:{ name: '貓谷太太',   icon: '👩', label: '媽媽' },
 };
+var _appPwd          = localStorage.getItem('app_pwd') || '1973';
+var _sessionUnlocked = false;
+var _demoMode        = false;
 init();
 
 // ── PWA Service Worker ──
@@ -11318,6 +11376,9 @@ function openApptInGCal(rxId) {
 
 function rxCountdownHTML(days, label, dateStr, type, session, apptClinic, apptRoom) {
   if (!dateStr) return '<div class="rx-date-chip ' + type + '"><span class="rx-date-label">' + label + '</span><span class="rx-date-countdown" style="font-size:.9rem;color:var(--text-muted)">未設定</span></div>';
+  if (_demoMode) {
+    return '<div class="rx-date-chip ' + type + '"><span class="rx-date-label">' + label + '</span><span class="rx-date-countdown warn">X 天</span><span class="rx-date-sub">XXXX-XX-XX</span></div>';
+  }
   var cls = days > 14 ? 'ok' : days > 3 ? 'warn' : 'past';
   var txt = days > 0 ? '剩 ' + days + ' 天' : days === 0 ? '今天' : '已過 ' + Math.abs(days) + ' 天';
   var sessionTxt = (type === 'appt' && session) ? (' ' + (session === 'morning' ? '🌅上午診' : '🌆下午診')) : '';
@@ -11375,12 +11436,12 @@ function renderPrescriptionList() {
             return '<tr style="border-top:1px solid var(--border);' + bg + '">'
               + '<td style="padding:5px 6px;white-space:nowrap;color:#0ea5e9;font-weight:600;">' + (dr.coverage||'健保') + '</td>'
               + '<td style="padding:5px 6px;color:var(--text);line-height:1.4;">' + (dr.name||'—') + '</td>'
-              + '<td style="padding:5px 6px;text-align:center;white-space:nowrap;font-weight:700;">' + (dr.dose||'') + ' <span style="font-weight:400;color:var(--text-muted);">' + (dr.unit||'') + '</span></td>'
+              + '<td style="padding:5px 6px;text-align:center;white-space:nowrap;font-weight:700;">' + (_demoMode ? 'X' : (dr.dose||'')) + ' <span style="font-weight:400;color:var(--text-muted);">' + (dr.unit||'') + '</span></td>'
               + '<td style="padding:5px 6px;text-align:center;white-space:nowrap;color:#6366f1;font-weight:600;">' + (dr.usage||'—') + '</td>'
               + '<td style="padding:5px 6px;text-align:center;white-space:nowrap;">' + (dr.route||'—') + '</td>'
-              + '<td style="padding:5px 6px;text-align:center;white-space:nowrap;">' + (dr.days||'—') + '</td>'
-              + '<td style="padding:5px 6px;text-align:right;white-space:nowrap;font-weight:600;">' + (dr.totalQty||'—') + '</td>'
-              + '<td style="padding:5px 6px;text-align:right;white-space:nowrap;color:#64748b;">' + (dr.amount ? dr.amount + ' 元' : '—') + '</td>'
+              + '<td style="padding:5px 6px;text-align:center;white-space:nowrap;">' + (_demoMode ? 'X' : (dr.days||'—')) + '</td>'
+              + '<td style="padding:5px 6px;text-align:right;white-space:nowrap;font-weight:600;">' + (_demoMode ? 'X' : (dr.totalQty||'—')) + '</td>'
+              + '<td style="padding:5px 6px;text-align:right;white-space:nowrap;color:#64748b;">' + (_demoMode ? 'X 元' : (dr.amount ? dr.amount + ' 元' : '—')) + '</td>'
             + '</tr>';
           }).join('')
         + '</tbody></table>';
@@ -11421,7 +11482,7 @@ function renderPrescriptionList() {
               var n = i + 1;
               var cls = rec.status === 'picked' ? 'picked' : 'pending';
               var label = rec.status === 'picked'
-                ? '✅ 第' + n + '次 ' + (rec.date ? rec.date.slice(5).replace('-','/') : '')
+                ? ('✅ 第' + n + '次 ' + (_demoMode ? 'XX/XX' : (rec.date ? rec.date.slice(5).replace('-','/') : '')))
                 : '⬜ 第' + n + '次 待領';
               return '<button class="refill-chip ' + cls + '" data-rxid="' + rx.id + '" data-idx="' + i + '" onclick="toggleRefillStatus(this.dataset.rxid,parseInt(this.dataset.idx))">' + label + '</button>';
             }).join('');
@@ -12174,6 +12235,69 @@ function _setEvCache(arr) {
 
 // _appUsers declared before init() — see near APP_VERSION
 
+// ════════════════════════════════
+//  PASSWORD PROTECTION & DEMO MODE
+// ════════════════════════════════
+function requireAppPwd(msg) {
+  if (_sessionUnlocked) return true;
+  var p = prompt((msg || '\U0001f512 請輸入設定密碼') + '\n（預設密碼：1973）');
+  if (p === null) return false;
+  if (p === _appPwd) { _sessionUnlocked = true; _refreshLockBars(); return true; }
+  showToast('❌ 密碼錯誤');
+  return false;
+}
+
+function unlockSettings() {
+  if (!requireAppPwd('\U0001f512 查看敏感資料')) return;
+  loadCloudConfigUI();
+  loadSettingsUI();
+}
+
+function _refreshLockBars() {
+  var show = !(_sessionUnlocked && !_demoMode);
+  ['cloud-lock-bar','cgm-lock-bar'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = show ? 'flex' : 'none';
+  });
+}
+
+function _maskUrl(url) {
+  if (!url) return '';
+  try {
+    var u = new URL(url);
+    var host = u.hostname.replace(/^([^.]{3})[^.]*(\..*)$/, '$1•••$2');
+    return u.protocol + '//' + host;
+  } catch(e) { return '••••••••'; }
+}
+
+function changeAppPwd() {
+  if (!requireAppPwd('\U0001f512 變更密碼需先驗證目前密碼')) return;
+  var el = document.getElementById('new-app-pwd');
+  var np = (el ? el.value : '').trim();
+  if (!np || np.length < 4) { showToast('⚠️ 新密碼至少 4 個字元'); return; }
+  _appPwd = np;
+  localStorage.setItem('app_pwd', np);
+  if (el) el.value = '';
+  showToast('✅ 密碼已變更！');
+}
+
+function toggleDemoMode() {
+  _demoMode = !_demoMode;
+  if (_demoMode) { _sessionUnlocked = false; }
+  var banner = document.getElementById('demo-mode-banner');
+  if (banner) banner.classList.toggle('active', _demoMode);
+  var btn = document.getElementById('demo-mode-toggle');
+  if (btn) {
+    btn.textContent = _demoMode ? '\U0001f534 關閉展示模式' : '\U0001f7e2 開啟展示模式';
+    btn.style.background = _demoMode ? '#ef4444' : '#64748b';
+  }
+  _refreshLockBars();
+  loadCloudConfigUI();
+  loadSettingsUI();
+  renderPrescriptionList();
+  showToast(_demoMode ? '\U0001f441️ 展示模式已開啟' : '✅ 展示模式已關閉');
+}
+
 function switchAppUser(sub) {
   _eventsUserSub = sub;
   localStorage.setItem('ev_user_sub', sub);
@@ -12193,6 +12317,8 @@ function updateUserSwitcherUI() {
     var u = _appUsers[sub];
     hint.textContent = u ? '目前身份：' + u.icon + ' ' + u.name + '（' + u.label + '）' : '目前身份：' + sub;
   }
+  var dot = document.getElementById('userDot');
+  if (dot) dot.className = 'user-dot ' + (sub === 'local_spouse' ? 'user-dot-mom' : 'user-dot-dad');
 }
 
 function updateEvUserBar() {
