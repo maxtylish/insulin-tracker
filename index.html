@@ -9878,6 +9878,10 @@ var _evIds          = [];
 var EV_SOURCE = { APP:'app', GOOGLE:'google', TIMETREE:'timetree', AI:'ai' };
 var EV_VIS    = { PRIVATE:'private', SPOUSE:'spouse', FAMILY:'family', PUBLIC:'public' };
 var EV_CAT    = { HEALTH:'health', FAMILY:'family', GENERAL:'general' };
+var _appUsers = {
+  local_owner: { name: '囉嗦把拔喵', icon: '👨', label: '爸爸' },
+  local_spouse:{ name: '貓谷太太',   icon: '👩', label: '媽媽' },
+};
 init();
 
 // ── PWA Service Worker ──
@@ -12139,10 +12143,7 @@ function _setEvCache(arr) {
 
 // ─── User Switcher ─────────────────────────────────────────────
 
-var _appUsers = {
-  local_owner: { name: '囉嗦把拔喵', icon: '👨', label: '爸爸' },
-  local_spouse:{ name: '貓谷太太',   icon: '👩', label: '媽媽' },
-};
+// _appUsers declared before init() — see near APP_VERSION
 
 function switchAppUser(sub) {
   _eventsUserSub = sub;
