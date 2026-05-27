@@ -34,21 +34,21 @@
       --shadow: 0 2px 12px rgba(0,0,0,0.08);
     }
     body[data-skin="cold-dark"] {
-      --bg: #2f2963;       --card: #454372;
-      --primary: #ef946c;  --primary-dark: #d07850;
-      --text: #f5ede8;     --text-muted: #c4a77d;
-      --border: #3a375e;   --input-bg: #2a265a;
-      --normal: #4ade80;   --normal-bg: #162818;
-      --warn: #fbbf24;     --warn-bg: #261e08;
-      --danger: #f87171;   --danger-bg: #280e10;
-      --low: #c4b5fd;      --low-bg: #221e3a;
-      --c-morning-bg: #362a30; --c-noon-bg: #1a2e25;
-      --c-evening-bg: #2e2218; --c-bedtime-bg: #22203c;
-      --shadow: 0 2px 12px rgba(0,0,0,0.45);
+      --bg: #fffaf5;       --card: #ffffff;
+      --primary: #FF928B;  --primary-dark: #e87870;
+      --text: #2d1a15;     --text-muted: #a07060;
+      --border: #f5d8cc;   --input-bg: #fff8f5;
+      --normal: #4a8a5a;   --normal-bg: #f4faf4;
+      --warn: #c8890a;     --warn-bg: #fffef0;
+      --danger: #e03535;   --danger-bg: #fff0f0;
+      --low: #8a60d0;      --low-bg: #f5f0ff;
+      --c-morning-bg: #fff4ef; --c-noon-bg: #f4faf4;
+      --c-evening-bg: #fff2f0; --c-bedtime-bg: #fffef5;
+      --shadow: 0 2px 12px rgba(255,146,139,0.14);
     }
     body[data-skin="cold-dark"] header {
-      background: linear-gradient(135deg, #2f2963 0%, #454372 100%);
-      box-shadow: 0 2px 8px rgba(47,41,99,0.55);
+      background: linear-gradient(135deg, #FF928B 0%, #FFAC81 100%);
+      box-shadow: 0 2px 8px rgba(255,146,139,0.28);
     }
     body[data-skin="warm-light"] {
       --bg: #fbf2f4;       --card: #ffffff;
@@ -1446,9 +1446,7 @@
     .qc-btn.qc-fn { background:#e2e8f0; color:#374151; }
     .qc-btn.qc-op { background:#f97316; color:#fff; }
     .qc-btn.qc-eq { background:var(--primary); color:#fff; }
-    body[data-skin='cold-dark'] .qc-btn,
     body[data-skin='warm-dark'] .qc-btn { background:#2d3748; color:#e2e8f0; }
-    body[data-skin='cold-dark'] .qc-btn.qc-fn,
     body[data-skin='warm-dark'] .qc-btn.qc-fn { background:#4a5568; color:#e2e8f0; }
 
     .danger-btn {
@@ -2346,7 +2344,6 @@
       border-radius:20px; background:#e5e7eb; color:#6b7280;
       border:1px solid #d1d5db; letter-spacing:.2px;
     }
-    body[data-skin='cold-dark'] .vial-disabled-badge,
     body[data-skin='warm-dark'] .vial-disabled-badge {
       background:#374151; color:#9ca3af; border-color:#4b5563;
     }
@@ -2387,20 +2384,14 @@
     .vial-status-sel.sealed   { background:#e0f2fe; color:#0369a1; border-color:#bae6fd; }
     .vial-status-sel.opened   { background:#dcfce7; color:#15803d; border-color:#bbf7d0; }
     .vial-status-sel.inactive { background:#f1f5f9; color:#94a3b8; border-color:#e2e8f0; }
-    body[data-skin='cold-dark'] .vial-status-sel.sealed,
     body[data-skin='warm-dark'] .vial-status-sel.sealed   { background:#0c4a6e; color:#7dd3fc; border-color:#0c4a6e; }
-    body[data-skin='cold-dark'] .vial-status-sel.opened,
     body[data-skin='warm-dark'] .vial-status-sel.opened   { background:#14532d; color:#86efac; border-color:#14532d; }
-    body[data-skin='cold-dark'] .vial-status-sel.inactive,
     body[data-skin='warm-dark'] .vial-status-sel.inactive { background:#334155; color:#64748b; border-color:#334155; }
     .vial-status-toggle.sealed  { background:#e0f2fe; color:#0369a1; }
     .vial-status-toggle.opened  { background:#dcfce7; color:#15803d; }
     .vial-status-toggle.inactive { background:#f1f5f9; color:#94a3b8; }
-    body[data-skin='cold-dark'] .vial-status-toggle.sealed,
     body[data-skin='warm-dark'] .vial-status-toggle.sealed  { background:#0c4a6e; color:#7dd3fc; }
-    body[data-skin='cold-dark'] .vial-status-toggle.opened,
     body[data-skin='warm-dark'] .vial-status-toggle.opened  { background:#14532d; color:#86efac; }
-    body[data-skin='cold-dark'] .vial-status-toggle.inactive,
     body[data-skin='warm-dark'] .vial-status-toggle.inactive { background:#334155; color:#64748b; }
     .vial-icon-btn { font-size:.78rem; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); cursor:pointer; }
     .vial-icon-btn:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
@@ -2436,11 +2427,8 @@
     .vloc-home   { background:#eff6ff !important; }
     .vloc-rental { background:#fff1f2 !important; }
     .vloc-carry  { background:#f0fdf4 !important; }
-    body[data-skin='cold-dark'] .vloc-home,
     body[data-skin='warm-dark'] .vloc-home   { background:#1e3a5f !important; }
-    body[data-skin='cold-dark'] .vloc-rental,
     body[data-skin='warm-dark'] .vloc-rental { background:#3f1515 !important; }
-    body[data-skin='cold-dark'] .vloc-carry,
     body[data-skin='warm-dark'] .vloc-carry  { background:#14301e !important; }
     .vial-summary { background:var(--bg); border-radius:8px; padding:8px 10px; margin-bottom:10px; border:1px solid var(--border); }
     .vial-sum-header { display:grid; grid-template-columns:38px repeat(var(--sum-cols,2),1fr); gap:4px; margin-bottom:4px; }
@@ -2821,7 +2809,7 @@
   <div id="skin-switcher">
     <div class="sk-dots">
       <button class="sk-dot" onclick="setSkin('cold-light')" data-sk="cold-light" title="冷色·淺色" style="background:#5b8db8;"></button>
-      <button class="sk-dot" onclick="setSkin('cold-dark')" data-sk="cold-dark" title="靛夜·深色" style="background:#454372;border-color:#ef946c;"></button>
+      <button class="sk-dot" onclick="setSkin('cold-dark')" data-sk="cold-dark" title="蜜桃·淺色" style="background:#FF928B;border-color:#FFAC81;"></button>
       <button class="sk-dot" onclick="setSkin('warm-light')" data-sk="warm-light" title="玫瑰·淺色" style="background:#c87d87;"></button>
       <button class="sk-dot" onclick="setSkin('warm-dark')" data-sk="warm-dark" title="炭橘·深色" style="background:#262626;border-color:#FF7F11;"></button>
     </div>
@@ -3597,6 +3585,19 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.39.3 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.39.3</span>
+          <span class="cl-date">2026-05-27</span>
+          <span class="cl-tag">主視窗主題</span>
+        </div>
+        <ul class="cl-list">
+          <li>【主視窗主題】「靛夜·深色」換為「蜜桃·淺色」：Tangerine Dream #FFAC81 · Sweet Salmon #FF928B · Peach Fuzz #FEC3A6 · Vanilla Custard #EFE9AE · Tea Green #CDEAC0</li>
+          <li>移除蜜桃主題的暗色 override（qc-btn / vial-status / vloc），改用淺色預設樣式</li>
+        </ul>
+      </div>
 
       <!-- v2.39.2 -->
       <div class="cl-item">
@@ -9165,7 +9166,7 @@ function importUserId() {
 // ════════════════════════════════
 // ── Skin System ──────────────────────────────────────────────────────────
 var SKIN_LABELS = {
-  'cold-light': '冷·淺', 'cold-dark': '靛夜',
+  'cold-light': '冷·淺', 'cold-dark': '蜜桃',
   'warm-light': '玫瑰·淺', 'warm-dark': '炭橘'
 };
 function setSkin(name) {
@@ -10238,7 +10239,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.39.2';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.39.3';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
