@@ -3532,6 +3532,18 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.37.6 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.37.6</span>
+          <span class="cl-date">2026-05-27</span>
+          <span class="cl-tag">主題調整</span>
+        </div>
+        <ul class="cl-list">
+          <li>PiP 主題：最右側改為「暖陽」配色（F2F3AE / EDD382 / FC9E4F / F4442E）</li>
+        </ul>
+      </div>
+
       <!-- v2.37.5 -->
       <div class="cl-item">
         <div class="cl-header">
@@ -9577,9 +9589,9 @@ var PIP_THEMES = {
   navy:    { bg:'#0f172a', text:'#e2e8f0', sub:'#64748b', ring:'#94a3b8',
              low:'#c4b5fd', normal:'#6ee7b7', warn:'#fcd34d', high:'#fca5a5',
              spark:'#6ee7b7', band:'rgba(255,255,255,0.05)', dot:'#1d4ed8', label:'深藍' },
-  violet:  { bg:'#0d2229', text:'#E2DBBE', sub:'#769FB6', ring:'#188FA7',
+  violet:  { bg:'#1e0800', text:'#F2F3AE', sub:'#EDD382', ring:'#FC9E4F',
              low:'#c4b5fd', normal:'#6ee7b7', warn:'#fcd34d', high:'#f87171',
-             spark:'#188FA7', band:'rgba(255,255,255,0.05)', dot:'#188FA7', label:'海洋' }
+             spark:'#FC9E4F', band:'rgba(255,255,255,0.06)', dot:'#F4442E', label:'暖陽' }
 };
 
 // ── IOB calculation for PiP ──────────────────────────────────────────────────
@@ -10056,7 +10068,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.37.5';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.37.6';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
