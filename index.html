@@ -71,17 +71,17 @@
       box-shadow: 0 6px 18px rgba(200,125,135,0.5);
     }
     body[data-skin="warm-dark"] {
-      --bg: #1e1610;       --card: #2c2018;
-      --primary: #d4925a;  --primary-dark: #c07a40;
-      --text: #e8d8c8;     --text-muted: #b0855a;
-      --border: #3a2a18;   --input-bg: #261c10;
-      --normal: #4ade80;   --normal-bg: #0e2016;
-      --warn: #fbbf24;     --warn-bg: #2a2208;
-      --danger: #f87171;   --danger-bg: #2a1010;
+      --bg: #1a1a1a;       --card: #262626;
+      --primary: #FF7F11;  --primary-dark: #e06d0a;
+      --text: #E2E8CE;     --text-muted: #ACBFA4;
+      --border: #383838;   --input-bg: #1e1e1e;
+      --normal: #ACBFA4;   --normal-bg: #1e231e;
+      --warn: #FF7F11;     --warn-bg: #2a1600;
+      --danger: #FF1B1C;   --danger-bg: #2a0808;
       --low: #c4b5fd;      --low-bg: #1c1428;
-      --c-morning-bg: #2a2208; --c-noon-bg: #0e2016;
-      --c-evening-bg: #281508; --c-bedtime-bg: #1c1428;
-      --shadow: 0 2px 12px rgba(0,0,0,0.35);
+      --c-morning-bg: #2a1600; --c-noon-bg: #1e231e;
+      --c-evening-bg: #2a0f00; --c-bedtime-bg: #1c1428;
+      --shadow: 0 2px 12px rgba(0,0,0,0.45);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -2823,7 +2823,7 @@
       <button class="sk-dot" onclick="setSkin('cold-light')" data-sk="cold-light" title="冷色·淺色" style="background:#5b8db8;"></button>
       <button class="sk-dot" onclick="setSkin('cold-dark')" data-sk="cold-dark" title="靛夜·深色" style="background:#454372;border-color:#ef946c;"></button>
       <button class="sk-dot" onclick="setSkin('warm-light')" data-sk="warm-light" title="玫瑰·淺色" style="background:#c87d87;"></button>
-      <button class="sk-dot" onclick="setSkin('warm-dark')" data-sk="warm-dark" title="暖色·深色" style="background:#2c2018;border-color:#d4925a;"></button>
+      <button class="sk-dot" onclick="setSkin('warm-dark')" data-sk="warm-dark" title="炭橘·深色" style="background:#262626;border-color:#FF7F11;"></button>
     </div>
     <div id="sk-label"></div>
   </div>
@@ -3597,6 +3597,18 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.39.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.39.2</span>
+          <span class="cl-date">2026-05-27</span>
+          <span class="cl-tag">主視窗主題</span>
+        </div>
+        <ul class="cl-list">
+          <li>【主視窗主題】最右佈景「暖·深」換為「炭橘」：Carbon Black #1a1a1a · Ash Grey #ACBFA4 · Beige #E2E8CE · Vivid Tangerine #FF7F11 · Red #FF1B1C</li>
+        </ul>
+      </div>
 
       <!-- v2.39.1 -->
       <div class="cl-item">
@@ -9154,7 +9166,7 @@ function importUserId() {
 // ── Skin System ──────────────────────────────────────────────────────────
 var SKIN_LABELS = {
   'cold-light': '冷·淺', 'cold-dark': '靛夜',
-  'warm-light': '玫瑰·淺', 'warm-dark': '暖·深'
+  'warm-light': '玫瑰·淺', 'warm-dark': '炭橘'
 };
 function setSkin(name) {
   document.body.dataset.skin = name;
@@ -10226,7 +10238,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.39.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.39.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
