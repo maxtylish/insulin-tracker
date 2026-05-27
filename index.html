@@ -18,20 +18,20 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     :root {
-      --bg: #f4f6f9;       --card: #ffffff;
-      --primary: #5b8db8;  --primary-dark: #4a7aa0;
-      --text: #1e2d3d;     --text-muted: #5a7080;
-      --border: #dde3ed;   --input-bg: #ffffff;
-      --normal: #22c55e;   --normal-bg: #f0fdf4;
-      --warn: #f59e0b;     --warn-bg: #fffbeb;
-      --danger: #ef4444;   --danger-bg: #fef2f2;
-      --low: #8b5cf6;      --low-bg: #f5f3ff;
+      --bg: #f0faf7;       --card: #ffffff;
+      --primary: #5C6F68;  --primary-dark: #4a5c56;
+      --text: #1e2e28;     --text-muted: #8AA39B;
+      --border: #c0ddd4;   --input-bg: #ffffff;
+      --normal: #3a9070;   --normal-bg: #e8faf3;
+      --warn: #b07a10;     --warn-bg: #fffbeb;
+      --danger: #d03535;   --danger-bg: #fef2f2;
+      --low: #7055c8;      --low-bg: #f3f0ff;
       --c-morning: #c49a3c;  --c-morning-bg: #fffbf2;
-      --c-noon:    #3a9e72;  --c-noon-bg:    #f0faf5;
+      --c-noon:    #3a9e72;  --c-noon-bg:    #e8faf3;
       --c-evening: #c0672a;  --c-evening-bg: #fff6f0;
       --c-bedtime: #7a6bb5;  --c-bedtime-bg: #f4f0ff;
       --radius: 12px;
-      --shadow: 0 2px 12px rgba(0,0,0,0.08);
+      --shadow: 0 2px 12px rgba(92,111,104,0.1);
     }
     body[data-skin="cold-dark"] {
       --bg: #fffaf5;       --card: #ffffff;
@@ -102,13 +102,13 @@
 
     /* ── Header ── */
     header {
-      background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+      background: linear-gradient(135deg, #5C6F68 0%, #8AA39B 100%);
       color: white;
       padding: 16px 20px;
       display: grid;
       grid-template-columns: 1fr auto 1fr;
       align-items: center;
-      box-shadow: 0 2px 8px rgba(29,78,216,0.3);
+      box-shadow: 0 2px 8px rgba(92,111,104,0.35);
     }
     header h1 {
       font-family: 'Pacifico', cursive;
@@ -2815,7 +2815,7 @@
   <!-- 左側：Skin 切換器 -->
   <div id="skin-switcher">
     <div class="sk-dots">
-      <button class="sk-dot" onclick="setSkin('cold-light')" data-sk="cold-light" title="冷色·淺色" style="background:#5b8db8;"></button>
+      <button class="sk-dot" onclick="setSkin('cold-light')" data-sk="cold-light" title="松石·淺色" style="background:#5C6F68;border-color:#95D9C3;"></button>
       <button class="sk-dot" onclick="setSkin('cold-dark')" data-sk="cold-dark" title="蜜桃·淺色" style="background:#FF928B;border-color:#FFAC81;"></button>
       <button class="sk-dot" onclick="setSkin('warm-light')" data-sk="warm-light" title="玫瑰·淺色" style="background:#c87d87;"></button>
       <button class="sk-dot" onclick="setSkin('warm-dark')" data-sk="warm-dark" title="炭橘·深色" style="background:#262626;border-color:#FF7F11;"></button>
@@ -3592,6 +3592,19 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.39.5 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.39.5</span>
+          <span class="cl-date">2026-05-28</span>
+          <span class="cl-tag">松石主題</span>
+        </div>
+        <ul class="cl-list">
+          <li>【松石主題】最左邊預設佈景主題換為 Granite #5C6F68 / Muted Teal #8AA39B / Pearl Aqua #95D9C3 / Aquamarine #A4F9C8 / Soft Cyan #A7FFF6 調色盤</li>
+          <li>更新 :root CSS 變數、header 漸層、skin dot 按鈕；SKIN_LABELS 改為「松石」</li>
+        </ul>
+      </div>
 
       <!-- v2.39.4 -->
       <div class="cl-item">
@@ -9185,7 +9198,7 @@ function importUserId() {
 // ════════════════════════════════
 // ── Skin System ──────────────────────────────────────────────────────────
 var SKIN_LABELS = {
-  'cold-light': '冷·淺', 'cold-dark': '蜜桃',
+  'cold-light': '松石', 'cold-dark': '蜜桃',
   'warm-light': '玫瑰·淺', 'warm-dark': '炭橘'
 };
 function setSkin(name) {
@@ -10258,7 +10271,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.39.4';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.39.5';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
