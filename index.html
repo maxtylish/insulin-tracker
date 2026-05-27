@@ -1943,9 +1943,9 @@
     }
     /* insulin stacked rows */
     .cgm-ins-header { font-size: .72rem; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .cgm-ins-time { font-size: .92rem; font-weight: 800; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: cgm-time-glow 2.4s ease-in-out infinite; }
+    .cgm-ins-time { font-size: .92rem; font-weight: 800; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: cgm-time-glow 5s ease-in-out infinite; }
     .cgm-ins-bar-track { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.18); margin-top: 2px; }
-    .cgm-ins-bar-fill { height: 3px; border-radius: 2px; transition: width .4s; animation: cgm-bar-pulse 2.4s ease-in-out infinite; }
+    .cgm-ins-bar-fill { height: 3px; border-radius: 2px; transition: width .4s; animation: cgm-bar-pulse 5s ease-in-out infinite; }
     /* cgm events carousel — 3 rows */
     .cgm-carousel {
       display: flex; flex-direction: column; gap: 2px;
@@ -1990,6 +1990,22 @@
       0%,100% { filter: brightness(1) drop-shadow(0 0 0px currentColor); }
       50%      { filter: brightness(1.3) drop-shadow(0 0 4px currentColor); }
     }
+    /* ── Insulin Quick Timer Sheet ── */
+    #ins-timer-sheet-backdrop { position:fixed; inset:0; z-index:9998; background:rgba(0,0,0,0.48); animation:ins-sheet-fade .2s ease; }
+    #ins-timer-sheet { position:fixed; bottom:0; left:0; right:0; z-index:9999; background:var(--surface,#1e293b); border-radius:18px 18px 0 0; padding:18px 18px 36px; box-shadow:0 -6px 40px rgba(0,0,0,0.45); animation:ins-sheet-up .25s cubic-bezier(.22,.68,0,1.2); }
+    @keyframes ins-sheet-up   { from{transform:translateY(100%)} to{transform:translateY(0)} }
+    @keyframes ins-sheet-fade { from{opacity:0} to{opacity:1} }
+    .ins-sheet-title  { font-size:.95rem; font-weight:700; color:var(--text-primary,#f1f5f9); margin-bottom:3px; }
+    .ins-sheet-sub    { font-size:.74rem; color:var(--text-muted,#94a3b8); margin-bottom:14px; }
+    .ins-sheet-btns   { display:flex; gap:10px; }
+    .ins-sheet-btn    { flex:1; padding:13px 8px; border-radius:13px; border:none; cursor:pointer; font-size:.82rem; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:5px; transition:opacity .15s, transform .1s; }
+    .ins-sheet-btn:active { transform:scale(.96); }
+    .ins-sheet-btn:disabled { opacity:.32; cursor:not-allowed; }
+    .ins-sheet-btn-onset { background:linear-gradient(135deg,#f97316,#fb923c); color:#fff; }
+    .ins-sheet-btn-end   { background:linear-gradient(135deg,#6366f1,#818cf8); color:#fff; }
+    .ins-sheet-btn-time  { font-size:.7rem; font-weight:600; opacity:.88; }
+    .ins-sheet-close { position:absolute; top:13px; right:15px; background:none; border:none; cursor:pointer; font-size:1.05rem; color:var(--text-muted,#94a3b8); padding:4px 6px; border-radius:6px; }
+    .ins-quick-timer-badge { display:inline-flex; align-items:center; gap:4px; font-size:.68rem; font-weight:700; background:rgba(99,102,241,.22); color:#a5b4fc; border-radius:6px; padding:2px 7px; margin-top:3px; border:1px solid rgba(99,102,241,.38); animation:cgm-time-glow 2s ease-in-out infinite; }
     .cgm-value {
       font-size: 2.4rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums;
       --cv1: #EDD382; --cv2: #fff8d4; --cv3: #FC9E4F;
@@ -3581,6 +3597,22 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.39.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.39.0</span>
+          <span class="cl-date">2026-05-27</span>
+          <span class="cl-tag">計時器 + 同步修復</span>
+        </div>
+        <ul class="cl-list">
+          <li>【修復 P1】softDeleteEvent 推送刪除至雲端，解決跨裝置待辦「復活」問題</li>
+          <li>【修復 P1】deleteTodo 改用 softDeleteEvent 確保 EventStore 同步</li>
+          <li>【修復 P2】syncDayToCloud 失敗時加入 _pendingSyncs 佇列，連線恢復後自動補推</li>
+          <li>【視覺】cgm-ins-time / cgm-bar-fill 輝光動畫由 2.4s 減慢至 5s</li>
+          <li>【新功能】點選 CGM widget 胰島素列 → 快捷倒數計時器：起效開始提醒 / 效力結束提醒</li>
+        </ul>
+      </div>
 
       <!-- v2.38.0 -->
       <div class="cl-item">
@@ -5305,8 +5337,31 @@ async function syncDayToCloud(date, dayData) {
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id,date' });
     setSyncBadge('☁️ 已同步', 'sync-ok');
+    // Flush pending syncs on successful connection
+    if (_pendingSyncs.length) {
+      var queue = _pendingSyncs.splice(0);
+      for (var _pi = 0; _pi < queue.length; _pi++) {
+        try {
+          await sbClient.from('insulin_records').upsert({
+            user_id: currentUserId,
+            date:    queue[_pi].date,
+            data:    queue[_pi].data,
+            updated_at: queue[_pi].ts
+          }, { onConflict: 'user_id,date' });
+        } catch(e2) {
+          _pendingSyncs.push(queue[_pi]); // re-queue if still failing
+        }
+      }
+    }
   } catch(e) {
     setSyncBadge('⚠️ 同步失敗', 'sync-err');
+    // Queue for retry — deduplicate by date
+    var _pIdx = _pendingSyncs.findIndex(function(p){ return p.date === date; });
+    if (_pIdx >= 0) {
+      _pendingSyncs[_pIdx] = { date: date, data: dayData, ts: new Date().toISOString() };
+    } else {
+      _pendingSyncs.push({ date: date, data: dayData, ts: new Date().toISOString() });
+    }
   }
 }
 
@@ -10157,7 +10212,9 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.38.0';  // must be before init() to avoid TDZ
+var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
+var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
+const APP_VERSION    = 'v2.39.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -10177,6 +10234,109 @@ var _appUsers = {
   local_spouse:{ name: '貓谷太太',   icon: '👩', label: '媽媽' },
 };
 var _appPwd          = localStorage.getItem('app_pwd') || '1973';
+
+// ─── Insulin Quick Timer ──────────────────────────────────────────────────────
+function showInsTimerSheet(type, injectMs, onsetMin, durationH) {
+  closeInsTimerSheet();
+  var nowMs   = Date.now();
+  var onsetTs = injectMs + onsetMin * 60000;
+  var endTs   = injectMs + (onsetMin + durationH * 60) * 60000;
+
+  function fmtRem(ms) {
+    if (ms <= 0) return '已過';
+    var s = Math.ceil(ms / 1000), h = Math.floor(s/3600),
+        m = Math.floor((s%3600)/60), ss = s % 60;
+    return h > 0 ? (h+'h'+m+'m') : (m>0 ? m+'m'+String(ss).padStart(2,'0')+'s' : ss+'s');
+  }
+
+  var typeName = type === 'rapid' ? '⚡ 速效' : '💉 長效';
+  var injD     = new Date(injectMs);
+  var injStr   = String(injD.getHours()).padStart(2,'0')+':'+String(injD.getMinutes()).padStart(2,'0');
+  var onsetRem = onsetTs - nowMs, endRem = endTs - nowMs;
+
+  var backdrop = document.createElement('div');
+  backdrop.id  = 'ins-timer-sheet-backdrop';
+  backdrop.onclick = closeInsTimerSheet;
+
+  var sheet = document.createElement('div');
+  sheet.id  = 'ins-timer-sheet';
+  sheet.innerHTML =
+    '<button class="ins-sheet-close" onclick="closeInsTimerSheet()">✕</button>' +
+    '<div class="ins-sheet-title">' + typeName + ' 計時提醒</div>' +
+    '<div class="ins-sheet-sub">' + injStr + ' 施打 · 起效約 ' + onsetMin + ' 分 · 總效約 ' + durationH + 'h</div>' +
+    '<div class="ins-sheet-btns">' +
+      '<button class="ins-sheet-btn ins-sheet-btn-onset"' + (onsetRem <= 0 ? ' disabled' : '') +
+        ' onclick="startInsQuickTimer(' + onsetTs + ',0,' + (type==="rapid"?1:0) + ')">' +
+        '🚀 起效開始提醒' +
+        '<span class="ins-sheet-btn-time">' + (onsetRem>0 ? '⏱ 剩 '+fmtRem(onsetRem) : '✅ 已起效') + '</span>' +
+      '</button>' +
+      '<button class="ins-sheet-btn ins-sheet-btn-end"' + (endRem <= 0 ? ' disabled' : '') +
+        ' onclick="startInsQuickTimer(' + endTs + ',1,' + (type==="rapid"?1:0) + ')">' +
+        '🏁 效力結束提醒' +
+        '<span class="ins-sheet-btn-time">' + (endRem>0 ? '⏱ 剩 '+fmtRem(endRem) : '✅ 已結束') + '</span>' +
+      '</button>' +
+    '</div>';
+
+  document.body.appendChild(backdrop);
+  document.body.appendChild(sheet);
+}
+
+function closeInsTimerSheet() {
+  ['ins-timer-sheet','ins-timer-sheet-backdrop'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.remove();
+  });
+}
+
+function startInsQuickTimer(targetTs, timing, isRapid) {
+  var label = (isRapid ? '⚡ 速效' : '💉 長效') + (timing ? ' 效力結束' : ' 起效開始');
+  if (_insQuickTimer && _insQuickTimer.timerId) {
+    clearInterval(_insQuickTimer.timerId);
+    _insQuickTimer = null;
+  }
+  var rem = targetTs - Date.now();
+  if (rem <= 0) { showToast('⚠️ 時間已過'); closeInsTimerSheet(); return; }
+
+  closeInsTimerSheet();
+  _insQuickTimer = { targetTs: targetTs, label: label, timerId: null };
+
+  _insQuickTimer.timerId = setInterval(function() {
+    var r = targetTs - Date.now();
+    if (r <= 0) {
+      clearInterval(_insQuickTimer.timerId);
+      _insQuickTimer = null;
+      // Beep
+      try {
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        [523, 659, 784, 1047].forEach(function(f, i) {
+          var osc = ctx.createOscillator(), g = ctx.createGain();
+          osc.connect(g); g.connect(ctx.destination);
+          osc.type = 'sine'; osc.frequency.value = f;
+          var t = ctx.currentTime + i * 0.18;
+          g.gain.setValueAtTime(0.5, t);
+          g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+          osc.start(t); osc.stop(t + 0.17);
+        });
+      } catch(e) {}
+      try { if (navigator.vibrate) navigator.vibrate([200,80,300,80,500]); } catch(e) {}
+      showToast('⏰ ' + label);
+      if (Notification.permission === 'granted') {
+        try {
+          navigator.serviceWorker.ready.then(function(reg){
+            reg.showNotification('⏰ ' + label, {
+              body: '胰島素計時提醒',
+              icon: '/insulin-tracker/apple-touch-icon.png',
+              vibrate: [200,80,300,80,500],
+              requireInteraction: true
+            });
+          }).catch(function(){ try{ new Notification('⏰ '+label,{body:'胰島素計時提醒'}); }catch(e){} });
+        } catch(e) { try{ new Notification('⏰ '+label,{body:'胰島素計時提醒'}); }catch(e2){} }
+      }
+      return;
+    }
+  }, 1000);
+
+  showToast('⏰ 已設定：' + label);
+}
 var _sessionUnlocked = false;
 var _demoMode        = false;
 init();
@@ -12055,9 +12215,18 @@ function updateBasalTimeBar() {
           pct = (remainMs / (durationH * 3600000) * 100).toFixed(1);
           headerStr = emoji + ' ' + shortLabel + ' 起效中' + (last.site ? ' · ' + last.site : '');
         }
-        return '<div class="cgm-insulin-row">'
+        var _timerBadge = '';
+        if (_insQuickTimer && !isExp) {
+          var _tr = _insQuickTimer.targetTs - Date.now();
+          if (_tr > 0) {
+            var _ts = Math.ceil(_tr/1000), _tm = Math.floor(_ts/60), _tss = _ts % 60;
+            _timerBadge = '<div class="ins-quick-timer-badge">⏱ ' + (_tm>0?_tm+'m':'')+String(_tss).padStart(2,'0')+'s</div>';
+          }
+        }
+        return '<div class="cgm-insulin-row" onclick="showInsTimerSheet(\'' + (durationH<=4?'rapid':'basal') + '\',' + injectMs + ',' + onsetMin + ',' + durationH + ')" style="cursor:pointer;">'
           + '<div class="cgm-ins-header">' + headerStr + '</div>'
           + '<div class="cgm-ins-time" style="color:' + (isExp ? 'rgba(255,255,255,0.4)' : color) + ';">' + timeStr + '</div>'
+          + _timerBadge
           + '<div class="cgm-ins-bar-track"><div class="cgm-ins-bar-fill" style="background:' + color + ';width:' + pct + '%;"></div></div>'
           + '</div>';
       }
@@ -12602,6 +12771,7 @@ function softDeleteEvent(id) {
   _eventsCache[idx].updated_at = new Date().toISOString();
   _setEvCache(_eventsCache);
   _syncEventsToTodos();
+  _syncEventToCloud(_eventsCache[idx]); // push deletion to cloud for cross-device sync
 }
 
 function _syncEventsToTodos() {
@@ -13006,7 +13176,12 @@ async function deleteTodo(id) {
   var todos = getTodos();
   var t = todos.find(function(x){ return x.id===id; });
   if (t && t.gcalEventId) await gcalDelete(t.gcalEventId);
-  setTodos(todos.filter(function(x){ return x.id!==id; }));
+  // Use softDeleteEvent for EventStore items (ensures cloud sync of deletion)
+  if (_eventsCache.some(function(e){ return e.id === id; })) {
+    softDeleteEvent(id);
+  } else {
+    setTodos(todos.filter(function(x){ return x.id!==id; }));
+  }
   renderTodoPage();
   checkTodoAlerts();
   showToast('🗑️ 待辦已刪除');
