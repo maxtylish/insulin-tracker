@@ -2683,40 +2683,61 @@
     }
     .todo-tab.active { background: var(--primary); color: white; box-shadow: 0 2px 6px rgba(59,130,246,.4); }
 
-    /* ── GCal mini calendar ── */
+    /* ── Timetree-style calendar ── */
     .todo-cal-dow {
       display: grid; grid-template-columns: repeat(7,1fr);
-      margin-bottom: 4px;
+      margin-bottom: 0;
     }
     .todo-cal-dow span {
-      text-align: center; font-size: .7rem; font-weight: 600;
-      color: var(--text-muted); padding: 4px 0;
+      text-align: center; font-size: .68rem; font-weight: 600;
+      color: var(--text-muted); padding: 5px 0; letter-spacing: .04em;
     }
+    .todo-cal-dow span:last-child { color: #ef4444; }
     .todo-cal-grid {
-      display: grid; grid-template-columns: repeat(7,1fr); gap: 3px;
+      display: grid; grid-template-columns: repeat(7,1fr); gap: 0;
+      border: 0.5px solid var(--border); border-radius: 10px; overflow: hidden;
     }
     .todo-cal-day {
-      position: relative; text-align: center; padding: 7px 2px 10px;
-      font-size: .82rem; border-radius: 8px; cursor: pointer;
-      color: var(--text); transition: background .15s; user-select: none;
+      position: relative; padding: 4px 3px 3px;
+      min-height: 72px; cursor: pointer;
+      background: var(--bg);
+      border-right: 0.5px solid var(--border);
+      border-bottom: 0.5px solid var(--border);
+      display: flex; flex-direction: column; gap: 2px;
+      transition: background .12s; user-select: none; overflow: hidden;
     }
+    .todo-cal-day:nth-child(7n) { border-right: none; }
     .todo-cal-day:hover:not(.empty) { background: var(--hover); }
-    .todo-cal-day.today { background: var(--primary); color: white; font-weight: 700; }
-    .todo-cal-day.selected:not(.today) { background: #dbeafe; color: #1d4ed8; }
-    .todo-cal-day.has-event::after {
-      content: ''; position: absolute; bottom: 3px; left: 50%;
-      transform: translateX(-50%); width: 4px; height: 4px;
-      border-radius: 50%; background: var(--primary);
+    .todo-cal-day.selected { background: rgba(220,72,112,.06); }
+    .todo-cal-day.empty { cursor: default; background: var(--surface); opacity: .55; min-height: 72px; }
+    .todo-cal-day.has-event::after { display: none; }
+    .cal-dot-row { display: none; }
+    /* date number circle */
+    .tc-num {
+      width: 20px; height: 20px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: .72rem; font-weight: 600; flex-shrink: 0;
+      color: var(--text); line-height: 1;
     }
-    .todo-cal-day.today.has-event::after { background: white; }
-    /* multi-source calendar dots */
-    .cal-dot-row { display:flex; gap:2px; justify-content:center; position:absolute; bottom:2px; left:0; right:0; pointer-events:none; }
-    .cal-dot-s { width:4px; height:4px; border-radius:50%; flex-shrink:0; }
-    .cal-dot-app     { background: var(--primary); }
-    .cal-dot-google  { background: #4285f4; }
-    .cal-dot-timetree{ background: #22c55e; }
-    .cal-dot-ai      { background: #9333ea; }
-    .todo-cal-day.today .cal-dot-s { background: rgba(255,255,255,.9) !important; }
+    .tc-num.tc-today { background: var(--primary); color: white; }
+    .tc-num.tc-sun   { color: #ef4444; }
+    .tc-num.tc-sat   { color: #3b82f6; }
+    .tc-num.tc-other { opacity: .38; }
+    /* event chips */
+    .tc-bar {
+      border-radius: 3px; padding: 1px 4px;
+      font-size: .65rem; font-weight: 600; color: white;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      line-height: 1.5; flex-shrink: 0;
+    }
+    .tc-dot {
+      display: flex; align-items: center; gap: 3px;
+      font-size: .65rem; line-height: 1.4; overflow: hidden; flex-shrink: 0;
+    }
+    .tc-dot-mark { width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+    .tc-dot-lbl  { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+    .tc-dot-time { font-size: .6rem; color: var(--text-muted); flex-shrink: 0; }
+    .tc-more { font-size: .62rem; color: var(--text-muted); padding: 0 2px; }
     /* events list */
     .ev-user-bar { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
     .ev-user-chip { display:flex; align-items:center; gap:6px; }
@@ -3560,6 +3581,19 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.38.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.38.0</span>
+          <span class="cl-date">2026-05-27</span>
+          <span class="cl-tag">月曆改版</span>
+        </div>
+        <ul class="cl-list">
+          <li>待辦月曆改版為 Timetree 欄位風格：每格直接顯示事件標題 + 顏色 chip，全天事件為色條、有時間事件為點+標題+時間，超出顯示 +N 更多</li>
+          <li>今天日期粉紅圓點；週日紅字；週六藍字；GCal 與 App 事件顏色區分</li>
+        </ul>
+      </div>
 
       <!-- v2.37.9 -->
       <div class="cl-item">
@@ -6036,7 +6070,6 @@ async function renderTodoCalendar() {
   var grid = document.getElementById('calDaysGrid');
   if (!grid) return;
 
-  // Show loading if not cached
   if (!gcalEventsCache[calViewYM]) {
     grid.innerHTML = '<div class="cal-loading">載入中…</div>';
     await loadGCalEventsForMonth(calViewYM);
@@ -6044,62 +6077,99 @@ async function renderTodoCalendar() {
 
   var gcalEvs = gcalEventsCache[calViewYM] || [];
 
-  // Build multi-source date map
-  var eventDateSources = {};
-  function _markSrc(dt, src) {
+  // ── GCal color map ──
+  var GCAL_COLORS = {
+    '1':'#ef4444','2':'#f43f5e','3':'#f97316','4':'#eab308',
+    '5':'#22c55e','6':'#16a34a','7':'#0ea5e9','8':'#3b82f6',
+    '9':'#a78bfa','10':'#a855f7','11':'#6b7280'
+  };
+  var EV_COLORS = { health:'#ef4444', family:'#3b82f6', general:'#22c55e' };
+
+  // ── Build per-day event list ──
+  var dayEvMap = {};  // { 'YYYY-MM-DD': [{label, color, time, isBar}] }
+  function _addEv(dt, obj) {
     if (!dt) return;
     var d = dt.slice(0, 10);
-    if (!eventDateSources[d]) eventDateSources[d] = {};
-    eventDateSources[d][src] = true;
+    if (!dayEvMap[d]) dayEvMap[d] = [];
+    dayEvMap[d].push(obj);
   }
+
   // GCal events
   gcalEvs.forEach(function(ev) {
-    var dt = ev.start.date || (ev.start.dateTime || '').slice(0, 10);
-    _markSrc(dt, 'google');
+    var dt      = ev.start.date || (ev.start.dateTime || '').slice(0, 10);
+    var isAllDay= !!ev.start.date;
+    var t       = '';
+    if (!isAllDay && ev.start.dateTime) {
+      var d2 = new Date(ev.start.dateTime);
+      t = (d2.getHours() < 12 ? '上午' : '下午') + ' ' +
+          (d2.getHours() % 12 || 12) + ':' + String(d2.getMinutes()).padStart(2,'0');
+    }
+    var c = ev.backgroundColor || GCAL_COLORS[ev.colorId] || '#4285f4';
+    _addEv(dt, { label: ev.summary || '（無標題）', color: c, time: t, isBar: isAllDay });
   });
-  // App events (from EventStore)
+  // App events
   _eventsCache.forEach(function(ev) {
-    if (!ev.deleted_at && ev.due_date) _markSrc(ev.due_date, ev.source_type || 'app');
-  });
-  // Legacy todos (backward compat, not yet migrated)
-  getTodos().forEach(function(t) {
-    if (t.dueDate) _markSrc(t.dueDate, 'app');
+    if (ev.deleted_at || !ev.due_date) return;
+    var c = EV_COLORS[ev.category] || EV_COLORS.general;
+    var t = ev.due_time ? (function(){
+      var h = parseInt(ev.due_time); var m = ev.due_time.slice(3);
+      return (h < 12 ? '上午' : '下午') + ' ' + (h % 12 || 12) + ':' + m;
+    })() : '';
+    _addEv(ev.due_date, { label: ev.title, color: c, time: t, isBar: !ev.due_time });
   });
 
-  var today     = todayStr();
-  var firstDay  = new Date(year, month - 1, 1);
-  var lastDate  = new Date(year, month, 0).getDate();
-  // Mon=0 … Sun=6  (JS getDay: 0=Sun … 6=Sat → (d+6)%7)
-  var startDow  = (firstDay.getDay() + 6) % 7;
+  var today    = todayStr();
+  var firstDay = new Date(year, month - 1, 1);
+  var lastDate = new Date(year, month, 0).getDate();
+  var startDow = (firstDay.getDay() + 6) % 7;  // Mon=0 … Sun=6
+
+  var MAX_EV = 2;
+  function _chip(ev) {
+    var lbl = (ev.label || '').replace(/</g,'&lt;');
+    if (ev.isBar) {
+      return '<div class="tc-bar" style="background:' + ev.color + ';">' + lbl + '</div>';
+    }
+    return '<div class="tc-dot">' +
+      '<span class="tc-dot-mark" style="background:' + ev.color + ';"></span>' +
+      '<span class="tc-dot-lbl">' + lbl + '</span>' +
+      (ev.time ? '<span class="tc-dot-time">' + ev.time + '</span>' : '') +
+      '</div>';
+  }
 
   var html = '';
+  // Leading empty cells (prev month)
   for (var i = 0; i < startDow; i++) html += '<div class="todo-cal-day empty"></div>';
+
   for (var day = 1; day <= lastDate; day++) {
-    var ds = year + '-' + String(month).padStart(2, '0') + '-' + String(day).padStart(2, '0');
+    var ds  = year + '-' + String(month).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+    var dow = new Date(year, month-1, day).getDay();  // 0=Sun 6=Sat
+    var isSun = dow === 0;
+    var isSat = dow === 6;
     var cls = 'todo-cal-day';
-    if (ds === today)           cls += ' today';
     if (ds === calSelectedDate) cls += ' selected';
-    var srcs = eventDateSources[ds];
-    var dotHtml = '';
-    if (srcs) {
-      cls += ' has-event';
-      var dotSpans = Object.keys(srcs).map(function(s) {
-        return '<span class="cal-dot-s cal-dot-' + s + '"></span>';
-      }).join('');
-      dotHtml = '<div class="cal-dot-row">' + dotSpans + '</div>';
-    }
-    html += '<div class="' + cls + '" data-date="' + ds + '">' + day + dotHtml + '</div>';
+    var numCls = 'tc-num';
+    if (ds === today)    numCls += ' tc-today';
+    else if (isSun)      numCls += ' tc-sun';
+    else if (isSat)      numCls += ' tc-sat';
+
+    var evs    = dayEvMap[ds] || [];
+    var shown  = evs.slice(0, MAX_EV);
+    var more   = evs.length - shown.length;
+    var chipsH = shown.map(_chip).join('');
+    if (more > 0) chipsH += '<div class="tc-more">+' + more + ' 更多</div>';
+
+    html += '<div class="' + cls + '" data-date="' + ds + '">' +
+      '<div class="' + numCls + '">' + day + '</div>' +
+      chipsH + '</div>';
   }
   grid.innerHTML = html;
 
-  // Attach click via event delegation (avoids onclick quote issues)
   grid.querySelectorAll('.todo-cal-day:not(.empty)').forEach(function(cell) {
     cell.addEventListener('click', function() { selectCalDay(this.dataset.date); });
   });
 
-  // Refresh detail panel if a date is already selected
   if (calSelectedDate && calSelectedDate.startsWith(calViewYM)) {
-    _renderCalDetail(calSelectedDate, events);
+    _renderCalDetail(calSelectedDate, gcalEvs);
   }
 }
 
@@ -10087,7 +10157,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.37.9';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.38.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
