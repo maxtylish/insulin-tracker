@@ -1918,10 +1918,10 @@
 
     /* ── CGM Real-time Widget ── */
     .cgm-widget {
-      background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%);
+      background: linear-gradient(135deg, #3d0c1f 0%, #7c1e45 100%);
       color: white; border-radius: 14px; padding: 14px 18px;
       display: flex; flex-direction: row; align-items: stretch;
-      margin-bottom: 12px; box-shadow: 0 4px 16px rgba(30,64,175,0.3);
+      margin-bottom: 12px; box-shadow: 0 4px 16px rgba(124,30,69,0.3);
       gap: 0; position: relative; overflow: hidden; transition: box-shadow 0.5s ease;
     }
     .cgm-widget[data-bg-status="low"]    { box-shadow: 0 4px 20px rgba(139,92,246,0.38); }
@@ -3528,6 +3528,18 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.37.3 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.37.3</span>
+          <span class="cl-date">2026-05-27</span>
+          <span class="cl-tag">視覺調整</span>
+        </div>
+        <ul class="cl-list">
+          <li>CGM widget 背景由深藍漸層改為深玫瑰漸層（#3d0c1f → #7c1e45），與 Ms.Aududu 品牌主題色一致</li>
+        </ul>
+      </div>
 
       <!-- v2.37.2 -->
       <div class="cl-item">
@@ -10017,7 +10029,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.37.2';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.37.3';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
