@@ -1943,9 +1943,9 @@
     }
     /* insulin stacked rows */
     .cgm-ins-header { font-size: .72rem; color: rgba(255,255,255,0.6); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .cgm-ins-time { font-size: .92rem; font-weight: 800; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .cgm-ins-time { font-size: .92rem; font-weight: 800; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: cgm-time-glow 2.4s ease-in-out infinite; }
     .cgm-ins-bar-track { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.18); margin-top: 2px; }
-    .cgm-ins-bar-fill { height: 3px; border-radius: 2px; transition: width .4s; }
+    .cgm-ins-bar-fill { height: 3px; border-radius: 2px; transition: width .4s; animation: cgm-bar-pulse 2.4s ease-in-out infinite; }
     /* cgm events carousel — 3 rows */
     .cgm-carousel {
       display: flex; flex-direction: column; gap: 2px;
@@ -1978,10 +1978,39 @@
     }
     .cgm-pip-btn:hover { background: rgba(255,255,255,0.3); }
     .cgm-pip-btn.active { background: rgba(255,255,255,0.35); }
-    .cgm-value { font-size: 2.4rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums;
-      background: linear-gradient(135deg, #EDD382 0%, #FC9E4F 100%);
+    @keyframes cgm-shimmer {
+      0%   { background-position: 200% center; }
+      100% { background-position: -200% center; }
+    }
+    @keyframes cgm-bar-pulse {
+      0%,100% { filter: brightness(1); }
+      50%      { filter: brightness(1.55); }
+    }
+    @keyframes cgm-time-glow {
+      0%,100% { filter: brightness(1) drop-shadow(0 0 0px currentColor); }
+      50%      { filter: brightness(1.3) drop-shadow(0 0 4px currentColor); }
+    }
+    .cgm-value {
+      font-size: 2.4rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums;
+      --cv1: #EDD382; --cv2: #fff8d4; --cv3: #FC9E4F;
+      background: linear-gradient(90deg, var(--cv1) 0%, var(--cv2) 40%, var(--cv3) 60%, var(--cv1) 100%);
+      background-size: 300% auto;
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      background-clip: text; }
+      background-clip: text;
+      animation: cgm-shimmer 3s linear infinite;
+    }
+    .cgm-widget[data-bg-status="normal"] .cgm-value {
+      --cv1: #4ade80; --cv2: #dcfce7; --cv3: #86efac;
+    }
+    .cgm-widget[data-bg-status="warn"] .cgm-value {
+      --cv1: #fbbf24; --cv2: #fef9c3; --cv3: #fde68a;
+    }
+    .cgm-widget[data-bg-status="high"] .cgm-value {
+      --cv1: #f87171; --cv2: #ffe4e1; --cv3: #fca5a5;
+    }
+    .cgm-widget[data-bg-status="low"] .cgm-value {
+      --cv1: #a78bfa; --cv2: #ede9fe; --cv3: #c4b5fd;
+    }
     .cgm-trend { font-size: 1.6rem; font-weight: 900; line-height: 1; }
     .cgm-sub-row { display: flex; align-items: center; gap: 4px; margin-top: 4px; opacity: 0.85; }
     .cgm-delta { font-size: 0.88rem; font-weight: 700; }
@@ -3531,6 +3560,19 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.37.9 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.37.9</span>
+          <span class="cl-date">2026-05-27</span>
+          <span class="cl-tag">視覺動效</span>
+        </div>
+        <ul class="cl-list">
+          <li>CGM 血糖數字跟隨狀態變色（NORMAL 綠 / WARN 黃 / HIGH 紅 / LOW 紫），並加入流動光澤動畫</li>
+          <li>速效長效倒計時文字、進度條加入輝光脈動效果</li>
+        </ul>
+      </div>
 
       <!-- v2.37.8 -->
       <div class="cl-item">
@@ -10045,7 +10087,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.37.8';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.37.9';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
