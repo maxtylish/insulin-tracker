@@ -3598,6 +3598,18 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.39.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.39.1</span>
+          <span class="cl-date">2026-05-27</span>
+          <span class="cl-tag">PIP 主題</span>
+        </div>
+        <ul class="cl-list">
+          <li>【PIP 主題】最右佈景主題「暖陽」更換為「炭橘」：Carbon Black #262626 · Ash Grey #ACBFA4 · Beige #E2E8CE · Vivid Tangerine #FF7F11 · Red #FF1B1C</li>
+        </ul>
+      </div>
+
       <!-- v2.39.0 -->
       <div class="cl-item">
         <div class="cl-header">
@@ -9733,9 +9745,9 @@ var PIP_THEMES = {
   navy:    { bg:'#0f172a', text:'#e2e8f0', sub:'#64748b', ring:'#94a3b8',
              low:'#c4b5fd', normal:'#6ee7b7', warn:'#fcd34d', high:'#fca5a5',
              spark:'#6ee7b7', band:'rgba(255,255,255,0.05)', dot:'#1d4ed8', label:'深藍' },
-  violet:  { bg:'#1e0800', text:'#F2F3AE', sub:'#EDD382', ring:'#FC9E4F',
-             low:'#c4b5fd', normal:'#6ee7b7', warn:'#fcd34d', high:'#f87171',
-             spark:'#FC9E4F', band:'rgba(255,255,255,0.06)', dot:'#F4442E', label:'暖陽' }
+  tangerine:{ bg:'#262626', text:'#E2E8CE', sub:'#ACBFA4', ring:'#FF7F11',
+             low:'#c4b5fd', normal:'#ACBFA4', warn:'#FF7F11', high:'#FF1B1C',
+             spark:'#FF7F11', band:'rgba(255,255,255,0.07)', dot:'#FF1B1C', label:'炭橘' }
 };
 
 // ── IOB calculation for PiP ──────────────────────────────────────────────────
@@ -10214,7 +10226,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.39.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.39.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
