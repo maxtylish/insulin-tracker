@@ -3532,51 +3532,16 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
-      <!-- v2.37.7 -->
+      <!-- v2.37.8 -->
       <div class="cl-item">
         <div class="cl-header">
-          <span class="cl-badge cl-badge-patch">v2.37.7</span>
+          <span class="cl-badge cl-badge-patch">v2.37.8</span>
           <span class="cl-date">2026-05-27</span>
-          <span class="cl-tag">套餐調整</span>
+          <span class="cl-tag">修復 / 視覺</span>
         </div>
         <ul class="cl-list">
-          <li>計算劑量：午餐「學校午餐」套餐白飯份量由 ×1.6 調整為 ×1.7</li>
-        </ul>
-      </div>
-
-      <!-- v2.37.6 -->
-      <div class="cl-item">
-        <div class="cl-header">
-          <span class="cl-badge cl-badge-patch">v2.37.6</span>
-          <span class="cl-date">2026-05-27</span>
-          <span class="cl-tag">主題調整</span>
-        </div>
-        <ul class="cl-list">
-          <li>PiP 主題：最右側改為「暖陽」配色（F2F3AE / EDD382 / FC9E4F / F4442E）</li>
-        </ul>
-      </div>
-
-      <!-- v2.37.5 -->
-      <div class="cl-item">
-        <div class="cl-header">
-          <span class="cl-badge cl-badge-patch">v2.37.5</span>
-          <span class="cl-date">2026-05-27</span>
-          <span class="cl-tag">主題調整</span>
-        </div>
-        <ul class="cl-list">
-          <li>PiP 主題：最右側「紫羅蘭」改為「海洋」配色（E2DBBE / 9DBBAE / 769FB6 / 188FA7）</li>
-        </ul>
-      </div>
-
-      <!-- v2.37.4 -->
-      <div class="cl-item">
-        <div class="cl-header">
-          <span class="cl-badge cl-badge-patch">v2.37.4</span>
-          <span class="cl-date">2026-05-27</span>
-          <span class="cl-tag">視覺調整</span>
-        </div>
-        <ul class="cl-list">
-          <li>CGM widget 改用暖棕四色主題（#1e0800→#7a3500），血糖數值改為金橙漸層字（EDD382→FC9E4F），進度條同步套用 palette 色</li>
+          <li>修復：v2.37.5 patch 截斷 HTML，導致計算劑量 modal 遺失（Cannot set properties of null）</li>
+          <li>補齊：CGM widget 暖棕四色主題、PiP 暖陽主題、學校午餐 ×1.7</li>
         </ul>
       </div>
 
@@ -10080,7 +10045,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.37.7';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.37.8';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -13109,4 +13074,269 @@ function checkTodoAlerts() {
       </div>
       <div class="calc-result-box">
         <div class="calc-result-label">建議補糖量</div>
-        <div class="calc-result-value"><span id="cc-result">—</span> <span class="cal
+        <div class="calc-result-value"><span id="cc-result">—</span> <span class="calc-result-unit">克</span></div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;">公式：(目標血糖 − 目前血糖) ÷ (ISF ÷ CIR)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="calcOverlay" class="calc-overlay" onclick="calcOverlayClick(event)">
+  <div class="calc-modal">
+    <div class="calc-modal-header">
+      <h2 id="calc-modal-title">💊 餐前劑量計算</h2>
+      <button class="calc-close-btn" type="button" onclick="closeCalcModal()">✕</button>
+    </div>
+    <div class="calc-body">
+
+      <!-- 基本資訊 -->
+      <div class="calc-section">
+        <div class="calc-section-title">基本資訊</div>
+        <div class="calc-grid-2">
+          <div class="calc-field">
+            <label>餐別</label>
+            <select id="calc-meal-period" onchange="calcUpdateMeal()">
+              <option value="breakfast">🌅 早餐</option>
+              <option value="lunch">☀️ 午餐</option>
+              <option value="dinner">🌙 晚餐</option>
+            </select>
+          </div>
+          <div class="calc-field">
+            <label>目前血糖 (mg/dL)</label>
+            <input type="number" id="calc-bg" min="0" step="1" value="180" oninput="calcRecalc()" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 飲食紀錄 -->
+      <div class="calc-section">
+        <div class="calc-section-title">飲食紀錄</div>
+        <div class="calc-food-row" style="align-items:flex-start;">
+          <span class="calc-food-badge badge-set" style="margin-top:4px;">套餐</span>
+          <div style="flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;">
+            <input type="search" id="calc-set-search" class="calc-set-search"
+              placeholder="🔍 搜尋套餐名稱…" oninput="calcFilterMealSets(this.value)">
+            <select id="calc-meal-set" onchange="calcApplyMealSet(this.value)" style="width:100%;">
+              <option value="">── 選擇套餐（自動填入）──</option>
+            </select>
+          </div>
+        </div>
+        <hr class="calc-set-divider">
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-main">主餐</span>
+          <select id="calc-food-1" onchange="calcUpdateFood1()"></select>
+          <input type="number" id="calc-qty-1" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-side">餐食2</span>
+          <select id="calc-food-2" onchange="calcRecalc()"></select>
+          <input type="number" id="calc-qty-2" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-fruit">甜點</span>
+          <select id="calc-food-3" onchange="calcRecalc()">
+            <option value="">不選擇</option>
+            <option value="guava">芭樂 100公克 (碳水10.6克)</option>
+            <option value="apple">蘋果 100公克 (碳水11.9克)</option>
+            <option value="cherry">櫻桃 100公克 (碳水19.12克)</option>
+            <option value="banana_peel">香蕉帶皮 100公克 (碳水10.6克)</option>
+            <option value="banana">香蕉去皮 100公克 (碳水22.1克)</option>
+            <option value="pineapple">鳳梨 100公克 (碳水13.6克)</option>
+            <option value="dragon_fruit">火龍果 100公克 (碳水12.36克)</option>
+            <option value="strawberry">草莓去蒂 100公克 (碳水9.3克)</option>
+            <option value="kiwi">奇異果 100公克 (碳水14.6克)</option>
+          </select>
+          <input type="number" id="calc-qty-3" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-drink">飲品</span>
+          <select id="calc-food-4" onchange="calcRecalc()">
+            <option value="">不選擇</option>
+            <option value="milk_100">牛奶 100公克 (碳水4.8克)</option>
+            <option value="milk_150">牛奶 150公克 (碳水7克)</option>
+            <option value="milk_200">牛奶 200公克 (碳水10克)</option>
+            <option value="yogurt_100">優酪乳 100公克 (碳水12克)</option>
+            <option value="yakult">養樂多 90ML (碳水14.7克)</option>
+          </select>
+          <input type="number" id="calc-qty-4" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-other">其他</span>
+          <input type="text" id="calc-other-name" placeholder="食物名稱（選填）"
+                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 8px;font-size:0.8rem;outline:none;width:100%;color:var(--text);" />
+          <input type="number" id="calc-other-carbs" min="0" step="1" placeholder="克"
+                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 4px;font-size:0.82rem;outline:none;text-align:center;width:100%;"
+                 oninput="calcRecalc()" />
+        </div>
+      </div>
+
+      <!-- 劑量計算 -->
+      <div class="calc-section">
+        <div class="calc-section-title">劑量計算</div>
+        <div class="calc-grid-2">
+          <div class="calc-field">
+            <label>預計碳水量 (克)</label>
+            <input type="number" id="calc-carbs" min="0" step="1" value="60" oninput="calcRecalc()" />
+          </div>
+          <div class="calc-field">
+            <label>有效胰島素 IOB (單位)</label>
+            <input type="number" id="calc-iob" min="0" step="0.1" value="0" oninput="calcRecalc()" />
+          </div>
+        </div>
+        <div class="calc-preset-row">
+          <div class="calc-preset-item">
+            <span>CIR 醣類係數</span>
+            <strong id="calc-cir-display">10</strong>
+            <span>g / 單位</span>
+          </div>
+          <div class="calc-preset-item">
+            <span>ISF 敏感係數</span>
+            <strong id="calc-isf-display">50</strong>
+            <span>mg/dL / 單位</span>
+          </div>
+          <div class="calc-preset-item">
+            <span>目標血糖</span>
+            <strong id="calc-target-display">110</strong>
+            <span>mg/dL</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 警示 -->
+      <div id="calc-warnings"></div>
+
+      <!-- 計算結果 -->
+      <div class="calc-result-box">
+        <div class="calc-result-main"><span id="calc-result-dose">0</span><small> 單位</small></div>
+        <div class="calc-result-label">建議估算劑量</div>
+        <div class="calc-breakdown">
+          <div class="calc-breakdown-item"><span>碳水劑量</span><strong id="calc-meal-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>血糖校正</span><strong id="calc-corr-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>扣除 IOB</span><strong id="calc-iob-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>計算值</span><strong id="calc-raw-dose">0</strong></div>
+        </div>
+      </div>
+
+      <!-- 餐別備註 -->
+      <div id="calc-meal-notes" class="calc-notes" style="display:none"></div>
+
+      <!-- 進位提示 -->
+      <div id="calc-round-hint"></div>
+
+      <!-- 帶入按鈕 -->
+      <button class="calc-apply-btn" type="button" onclick="calcApply()">✅ 帶入紀錄表</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ══ Quick Calculator Modal ══ -->
+<div id="quickCalcOverlay" class="calc-overlay" style="display:none"
+  onclick="if(event.target.id==='quickCalcOverlay')closeQuickCalc()">
+  <div class="calc-modal" style="max-width:290px;">
+    <div class="calc-modal-header">
+      <h2>🧮 快速計算機</h2>
+      <button class="calc-close-btn" type="button" onclick="closeQuickCalc()">✕</button>
+    </div>
+    <div style="padding:14px 12px 16px;">
+      <div id="qc-display"
+        style="text-align:right;font-size:2rem;font-weight:700;
+        min-height:54px;padding:8px 12px;background:var(--bg);
+        border-radius:10px;margin-bottom:12px;color:var(--text);
+        word-break:break-all;letter-spacing:0.01em;">0</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+        <button class="qc-btn qc-fn" onclick="qcClear()">AC</button>
+        <button class="qc-btn qc-fn" onclick="qcToggleSign()">±</button>
+        <button class="qc-btn qc-fn" onclick="qcPercent()">%</button>
+        <button class="qc-btn qc-op" onclick="qcOp('/')">÷</button>
+        <button class="qc-btn" onclick="qcDigit(7)">7</button>
+        <button class="qc-btn" onclick="qcDigit(8)">8</button>
+        <button class="qc-btn" onclick="qcDigit(9)">9</button>
+        <button class="qc-btn qc-op" onclick="qcOp('*')">×</button>
+        <button class="qc-btn" onclick="qcDigit(4)">4</button>
+        <button class="qc-btn" onclick="qcDigit(5)">5</button>
+        <button class="qc-btn" onclick="qcDigit(6)">6</button>
+        <button class="qc-btn qc-op" onclick="qcOp('-')">−</button>
+        <button class="qc-btn" onclick="qcDigit(1)">1</button>
+        <button class="qc-btn" onclick="qcDigit(2)">2</button>
+        <button class="qc-btn" onclick="qcDigit(3)">3</button>
+        <button class="qc-btn qc-op" onclick="qcOp('+')">+</button>
+        <button class="qc-btn" style="grid-column:span 2" onclick="qcDigit(0)">0</button>
+        <button class="qc-btn" onclick="qcDot()">.</button>
+        <button class="qc-btn qc-eq" onclick="qcEquals()">=</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Prescription Modal ══ -->
+<div id="rxModalOverlay" class="rx-modal-overlay" onclick="if(event.target===this)closeRxModal()">
+  <div class="rx-modal">
+    <h3>📋 處方資料</h3>
+    <div class="rx-field">
+      <label>處方名稱</label>
+      <input id="rx-modal-title-input" placeholder="例：台大內分泌科 慢性處方簽">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="rx-field">
+        <label>💊 下次領藥日期</label>
+        <input id="rx-modal-refill" type="date">
+      </div>
+      <div class="rx-field">
+        <label>📅 下次回診日期</label>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input id="rx-modal-appt" type="date" style="flex:1;min-width:0;">
+          <select id="rx-modal-appt-session" style="width:94px;padding:6px 4px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-size:.85rem;flex:none;">
+            <option value="">時段</option>
+            <option value="morning">🌅 上午診</option>
+            <option value="afternoon">🌆 下午診</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <input id="rx-modal-appt-clinic" placeholder="科別（如：小兒科）"
+            style="flex:1;min-width:0;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:.84rem;background:var(--card);color:var(--text);">
+          <input id="rx-modal-appt-room" placeholder="診間（如：209診）"
+            style="width:100px;flex:none;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:.84rem;background:var(--card);color:var(--text);">
+        </div>
+      </div>
+    </div>
+    <div class="rx-field">
+      <label>📋 可調劑次數 &amp; 領藥紀錄</label>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <select id="rx-modal-refill-total" onchange="onRefillTotalChange()" style="width:72px;padding:5px 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-size:.84rem;">
+          <option value="1">1 次</option>
+          <option value="2">2 次</option>
+          <option value="3">3 次</option>
+          <option value="4">4 次</option>
+        </select>
+        <span style="font-size:.75rem;color:var(--text-muted);">次（點 ⬜ 可標記已領並自動填入今日日期）</span>
+      </div>
+      <div id="rx-refill-records-editor"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="rx-field">
+        <label>科別</label>
+        <input id="rx-modal-clinic" placeholder="內分泌科">
+      </div>
+      <div class="rx-field">
+        <label>醫院</label>
+        <input id="rx-modal-hospital" placeholder="台大醫院">
+      </div>
+    </div>
+    <div class="rx-field">
+      <label>藥品列表</label>
+      <div id="rx-drug-editor-area"></div>
+    </div>
+    <div class="rx-field">
+      <label>備註</label>
+      <textarea id="rx-modal-note" placeholder="預約號碼、注意事項…"></textarea>
+    </div>
+    <div class="rx-modal-btns">
+      <button class="rx-cancel-btn" onclick="closeRxModal()">取消</button>
+      <button class="rx-save-btn" onclick="saveRxModal()">儲存</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
