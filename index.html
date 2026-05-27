@@ -67,6 +67,13 @@
       background: linear-gradient(135deg, #c87d87 0%, #d4919a 100%);
       box-shadow: 0 4px 12px rgba(200,125,135,0.4);
     }
+    body[data-skin="cold-dark"] .save-btn {
+      background: linear-gradient(135deg, #FF928B 0%, #FFAC81 100%);
+      box-shadow: 0 4px 12px rgba(255,146,139,0.4);
+    }
+    body[data-skin="cold-dark"] .save-btn:hover {
+      box-shadow: 0 6px 18px rgba(255,146,139,0.55);
+    }
     body[data-skin="warm-light"] .save-btn:hover {
       box-shadow: 0 6px 18px rgba(200,125,135,0.5);
     }
@@ -3585,6 +3592,18 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.39.4 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.39.4</span>
+          <span class="cl-date">2026-05-27</span>
+          <span class="cl-tag">蜜桃主題</span>
+        </div>
+        <ul class="cl-list">
+          <li>【蜜桃主題】「儲存今日紀錄」按鈕改為蜜桃漸層（#FF928B → #FFAC81），與「儲存早餐」視覺統一</li>
+        </ul>
+      </div>
 
       <!-- v2.39.3 -->
       <div class="cl-item">
@@ -10239,7 +10258,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.39.3';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.39.4';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
