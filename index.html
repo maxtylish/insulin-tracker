@@ -3529,6 +3529,18 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.37.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.37.2</span>
+          <span class="cl-date">2026-05-27</span>
+          <span class="cl-tag">套餐調整</span>
+        </div>
+        <ul class="cl-list">
+          <li>計算劑量：午餐「學校午餐」套餐白飯份量由 ×1.4 調整為 ×1.6</li>
+        </ul>
+      </div>
+
       <!-- v2.37.1 -->
       <div class="cl-item">
         <div class="cl-header">
@@ -9104,8 +9116,8 @@ const CALC_MEAL_SETS = {
     },
   ],
   lunch: [
-    { label: '🍱 學校午餐（白飯×1.4）',
-      items: [{ slot: 1, food: 'white_rice', qty: 1.4 }]
+    { label: '🍱 學校午餐（白飯×1.6）',
+      items: [{ slot: 1, food: 'white_rice', qty: 1.6 }]
     },
     { label: '🍔 麥當勞組合1（鱈魚堡＋玉米杯＋牛奶）',
       items: [{ slot: 'other', name: '麥當勞組合1', carb: 66 }]
@@ -10005,7 +10017,7 @@ function calcApply() {
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
-const APP_VERSION    = 'v2.37.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.37.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
