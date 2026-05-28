@@ -1944,8 +1944,8 @@
     }
     body[data-skin="cold-dark"]  .cgm-widget { background: linear-gradient(135deg, #2a0f0a 0%, #5a1a10 100%); box-shadow: 0 4px 16px rgba(255,146,139,0.22); }
     body[data-skin="warm-light"] .cgm-widget { background: linear-gradient(135deg, #2a0810 0%, #5a1828 100%); box-shadow: 0 4px 16px rgba(200,125,135,0.22); }
-    body[data-skin="midnight"]    .cgm-widget { background: linear-gradient(135deg, #090909 0%, #141414 100%); box-shadow: 0 4px 16px rgba(74,222,128,0.15);   }
-    body[data-skin="warm-dark"]  .cgm-widget { background: linear-gradient(135deg, #1e1205 0%, #413620 100%); box-shadow: 0 4px 16px rgba(156,102,21,0.22);  }
+    body[data-skin="midnight"]    .cgm-widget { background: linear-gradient(135deg, #090909 0%, #141414 100%); box-shadow: 0 4px 16px rgba(74,222,128,0.15); border: 1px solid rgba(74,222,128,0.22); }
+    body[data-skin="warm-dark"]  .cgm-widget { background: linear-gradient(135deg, #1e1205 0%, #413620 100%); box-shadow: 0 4px 16px rgba(156,102,21,0.22); border: 1px solid rgba(255,215,145,0.22); }
     .cgm-widget[data-bg-status="low"]    { box-shadow: 0 4px 20px rgba(139,92,246,0.38); }
     .cgm-widget[data-bg-status="normal"] { box-shadow: 0 4px 20px rgba(34,197,94,0.32); }
     .cgm-widget[data-bg-status="warn"]   { box-shadow: 0 4px 20px rgba(245,158,11,0.38); }
@@ -1968,6 +1968,14 @@
     .cgm-ins-time { font-size: .92rem; font-weight: 800; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; animation: cgm-time-glow 5s ease-in-out infinite; }
     .cgm-ins-bar-track { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.18); margin-top: 2px; }
     .cgm-ins-bar-fill { height: 3px; border-radius: 2px; transition: width .4s; animation: cgm-bar-pulse 5s ease-in-out infinite; }
+    @media (max-width: 420px) {
+      .cgm-widget      { padding: 10px 12px; }
+      .cgm-value       { font-size: 2rem; }
+      .cgm-trend       { font-size: 1.3rem; }
+      .cgm-divider     { margin: 0 8px; }
+      .cgm-ins-time    { font-size: .82rem; }
+      .cgm-ins-header  { font-size: .66rem; }
+    }
     /* cgm events carousel — 3 rows */
     .cgm-carousel {
       display: flex; flex-direction: column; gap: 2px;
@@ -3682,6 +3690,19 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.42.5 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.42.5</span>
+          <span class="cl-date">2026-05-28</span>
+          <span class="cl-tag">HUD 邊框 / 手機版</span>
+        </div>
+        <ul class="cl-list">
+          <li>【暗色 HUD】黃土／深夜主題的 CGM 抬頭顯示器加細邊框（rgba 白/金邊）提升辨識度</li>
+          <li>【手機版】螢幕 ≤420px 時縮小 CGM widget padding、數字字號與分隔線間距，右側胰島素欄不再被擠壓</li>
+        </ul>
+      </div>
 
       <!-- v2.42.4 -->
       <div class="cl-item">
@@ -10445,7 +10466,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.42.4';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.42.5';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
