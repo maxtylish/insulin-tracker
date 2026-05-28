@@ -2219,6 +2219,7 @@
     .bg-warning.hypo-urgent { background: linear-gradient(135deg,#991b1b,#dc2626); color:#fff; animation-duration:.9s; }
     .bg-warning.hyper-warn  { background: linear-gradient(135deg,#b45309,#f59e0b); color:#fff; }
     .bg-warning.hyper-urgent{ background: linear-gradient(135deg,#7c2d12,#ea580c); color:#fff; animation-duration:.9s; }
+    .bg-warning.hypo-predict{ background: linear-gradient(135deg,#1e3a5f,#2563eb); color:#fff; animation-duration:2.4s; }
     @keyframes warn-pulse {
       0%,100%{ opacity:1; }
       50%    { opacity:.88; }
@@ -3690,6 +3691,20 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.43.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.43.0</span>
+          <span class="cl-date">2026-05-28</span>
+          <span class="cl-tag">IOB 低血糖預測</span>
+        </div>
+        <ul class="cl-list">
+          <li>》IOB 預測「：新增 IOB+趨勢複合預測，最遠可提前 90 分鐘警示。🚨 ≪15min／⚠️ ≪35min／🔮 ≪90min 三段等級</li>
+          <li>演算法：當前血糖趨勢 + 未來 IOB 衰減（NovoRapid 活性曲線 × ISF）計算預估血糖，每 5 分鐘掃描找最早低血糖時間點</li>
+          <li>🔮 預測警示為藍紫色低頻脈動，不影響正常睡眠；🚨 緊急警示維持原紅色高頻動畫</li>
+        </ul>
+      </div>
 
       <!-- v2.42.5 -->
       <div class="cl-item">
@@ -5887,25 +5902,23 @@ function updateCGMWidget(entry) {
   var high = settings.high || 250;
   var WARN = 20;  // minutes
 
-  // ── Hypo banner ──────────────────────────────────────
+  // ── Hypo banner (IOB-aware, 趨勢+IOB複合預測) ───────────────────────────
   if (sgv <= low) {
     warnDismissed.hypo = null;
     showBanner('hypo','hypo-urgent','🚨 目前已低血糖！',
       '當前 '+sgv+' mg/dL · 警戒 '+low+' mg/dL · 請立即補糖');
-  } else if (rawDelta !== null && rawDelta < 0) {
-    var minsLow = (sgv - low) / (-rawDelta / 5);
-    if (minsLow <= WARN) {
-      if (warnDismissed.hypo !== null && sgv < warnDismissed.hypo + 5) {
-        hideBanner('hypo');
-      } else {
-        warnDismissed.hypo = null;
-        var lvl = minsLow <= 10 ? 'hypo-urgent' : 'hypo-warn';
-        showBanner('hypo', lvl,
-          '⚠️ 預計 '+Math.round(minsLow)+' 分鐘後低血糖',
-          '當前 '+sgv+' mg/dL　'+deltaStr+'/5min　警戒 '+low+' mg/dL');
-      }
+  } else {
+    var _hypoHat = _findPredictedLow(sgv, rawDelta, low);
+    if (_hypoHat && !(warnDismissed.hypo !== null && sgv < warnDismissed.hypo + 5)) {
+      warnDismissed.hypo = null;
+      var _ht = _hypoHat.minsToLow;
+      var _hlvl = _ht <= 15 ? 'hypo-urgent' : (_ht <= 35 ? 'hypo-warn' : 'hypo-predict');
+      var _hicon = _ht <= 35 ? '⚠️' : '🔮';
+      showBanner('hypo', _hlvl,
+        _hicon + ' 預計 ' + _ht + ' 分鐘後低血糖',
+        '當前 '+sgv+' mg/dL　'+deltaStr+'　IOB+趨勢→ '+_hypoHat.predictedBG+' mg/dL');
     } else { hideBanner('hypo'); }
-  } else { hideBanner('hypo'); }
+  }
 
   // ── Hyper banner ─────────────────────────────────────
   if (sgv >= high) {
@@ -6267,15 +6280,18 @@ function checkAndNotify(entry) {
   var low      = settings.low  || 80;
   var high     = settings.high || 250;
 
-  // Hypo
+  // Hypo (IOB-aware)
   if (sgv <= low) {
     sendPushNotif('hypo','🚨 低血糖警報',
       '目前血糖 '+sgv+' mg/dL，低於警戒值 '+low+' mg/dL，請立即補糖！', true);
-  } else if (rawDelta !== null && rawDelta < 0) {
-    var mL = (sgv - low) / (-rawDelta / 5);
-    if (mL <= 20) sendPushNotif('hypo',
-      '⚠️ 預計 '+Math.round(mL)+' 分鐘後低血糖',
-      '當前 '+sgv+' mg/dL　趨勢 '+Math.round(rawDelta*10)/10+' mg/5min', mL <= 10);
+  } else {
+    var _nHat = _findPredictedLow(sgv, rawDelta, low);
+    if (_nHat) {
+      var _nt = _nHat.minsToLow;
+      sendPushNotif('hypo',
+        (_nt <= 35 ? '⚠️' : '🔮') + ' 預計 '+_nt+' 分鐘後低血糖',
+        'IOB+趨勢→ '+_nHat.predictedBG+' mg/dL　當前 '+sgv+' mg/dL', _nt <= 15);
+    }
   }
 
   // Hyper
@@ -10093,6 +10109,52 @@ function calcCurrentIOB() {
     addInj(rec.time, parseFloat(rec.dose), 'noverapid');
   });
   return Math.max(0, total);
+
+// ── IOB-aware 低血糖預測 ───────────────────────────────────────────
+function _calcIOBatOffset(offsetMins) {
+  var targetTime = Date.now() + offsetMins * 60000;
+  var total = 0;
+  var today = todayStr();
+  for (var _oi = 0; _oi < 2; _oi++) {
+    var _od = new Date(today + 'T00:00:00'); _od.setDate(_od.getDate() - _oi);
+    var _ods = _od.getFullYear() + '-' + String(_od.getMonth()+1).padStart(2,'0') + '-' + String(_od.getDate()).padStart(2,'0');
+    (function(ds, day) {
+      function _addR(ts, dose) {
+        if (!ts || !(parseFloat(dose) > 0)) return;
+        var injMs = new Date(ds + 'T' + ts + ':00').getTime();
+        var tH = (targetTime - injMs) / 3600000;
+        if (tH < 0) return;
+        total += parseFloat(dose) * novoRapidActivity(tH);
+      }
+      ['morning','noon','evening'].forEach(function(pid) {
+        var rec = day[pid]; if (rec && rec.insulin && rec.time) _addR(rec.time, rec.insulin);
+      });
+      (day.corrections || []).forEach(function(r) { if (r.dose && r.time) _addR(r.time, r.dose); });
+      ['snack-morning-noon','snack-noon-evening','snack-evening-bedtime'].forEach(function(sid) {
+        (day[sid] || []).forEach(function(sk) { if (sk.dose && sk.time) _addR(sk.time, sk.dose); });
+      });
+    })(_ods, getAllData()[_ods] || {});
+  }
+  return Math.max(0, total);
+}
+
+function _predictBGat(currentSGV, deltaPerFiveMin, tMins) {
+  var h = new Date().getHours();
+  var pk = (h >= 6 && h < 11) ? 'breakfast' : (h >= 11 && h < 15) ? 'lunch' : 'dinner';
+  var ISF = (typeof CALC_MEAL_PRESETS !== 'undefined' && CALC_MEAL_PRESETS[pk] && CALC_MEAL_PRESETS[pk].isf) || 110;
+  var iobDrop = Math.max(0, _calcIOBatOffset(0) - _calcIOBatOffset(tMins)) * ISF;
+  return currentSGV + (deltaPerFiveMin / 5) * tMins - iobDrop;
+}
+
+function _findPredictedLow(currentSGV, deltaPerFiveMin, lowThreshold) {
+  var delta = deltaPerFiveMin || 0;
+  for (var t = 5; t <= 90; t += 5) {
+    var bg = _predictBGat(currentSGV, delta, t);
+    if (bg <= lowThreshold) return { minsToLow: t, predictedBG: Math.round(bg) };
+  }
+  return null;
+}
+
 }
 
 // ── Sparkline SVG builder ─────────────────────────────────────────────────────
@@ -10466,7 +10528,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.42.5';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.43.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
