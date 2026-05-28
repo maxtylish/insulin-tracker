@@ -63,18 +63,39 @@
       background: linear-gradient(135deg, #c87d87 0%, #d4919a 100%);
       box-shadow: 0 2px 8px rgba(200,125,135,0.35);
     }
+    body[data-skin="warm-dark"] header {
+      background: linear-gradient(135deg, #413620 0%, #9C6615 100%);
+      box-shadow: 0 2px 8px rgba(156,102,21,0.35);
+    }
+    body[data-skin="midnight"] {
+      --bg: #111111;       --card: #1a1a1a;
+      --primary: #4ade80;  --primary-dark: #22c55e;
+      --text: #f0f0f0;     --text-muted: #777777;
+      --border: #2a2a2a;   --input-bg: #1a1a1a;
+      --normal: #4ade80;   --normal-bg: #0a1f0e;
+      --warn: #fbbf24;     --warn-bg: #1f1500;
+      --danger: #f87171;   --danger-bg: #1f0808;
+      --low: #a78bfa;      --low-bg: #160d2a;
+      --c-morning-bg: #1f1200; --c-noon-bg: #0a1f0e;
+      --c-evening-bg: #1a0e00; --c-bedtime-bg: #160d2a;
+      --shadow: 0 2px 12px rgba(0,0,0,0.6);
+    }
+    body[data-skin="midnight"] header {
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+      box-shadow: 0 2px 8px rgba(74,222,128,0.20);
+    }
     body[data-skin="warm-dark"] {
-      --bg: #1a1a1a;       --card: #262626;
-      --primary: #FF7F11;  --primary-dark: #e06d0a;
-      --text: #E2E8CE;     --text-muted: #ACBFA4;
-      --border: #383838;   --input-bg: #1e1e1e;
-      --normal: #ACBFA4;   --normal-bg: #1e231e;
-      --warn: #FF7F11;     --warn-bg: #2a1600;
-      --danger: #FF1B1C;   --danger-bg: #2a0808;
+      --bg: #2a1f0e;       --card: #362812;
+      --primary: #9C6615;  --primary-dark: #7a5010;
+      --text: #FFD791;     --text-muted: #9F7833;
+      --border: #4a3218;   --input-bg: #2a1f0e;
+      --normal: #86efac;   --normal-bg: #0a1f0e;
+      --warn: #FFD791;     --warn-bg: #2a1500;
+      --danger: #f87171;   --danger-bg: #2a0808;
       --low: #c4b5fd;      --low-bg: #1c1428;
-      --c-morning-bg: #2a1600; --c-noon-bg: #1e231e;
-      --c-evening-bg: #2a0f00; --c-bedtime-bg: #1c1428;
-      --shadow: 0 2px 12px rgba(0,0,0,0.45);
+      --c-morning-bg: #2a1500; --c-noon-bg: #0a1f0e;
+      --c-evening-bg: #2a0e00; --c-bedtime-bg: #1c1428;
+      --shadow: 0 2px 12px rgba(65,54,32,0.6);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -425,7 +446,8 @@
     .today-bm-btn.active.bm-corrections { background:#0891b2; border-color:#0891b2; border-right-color:var(--card); }
     .today-bm-btn.active.bm-carbs { background:#d97706; border-color:#d97706; border-right-color:var(--card); }
     body[data-skin='cold-dark'] .today-bm-btn,
-    body[data-skin='warm-dark'] .today-bm-btn { border-right-color:var(--card); }
+    body[data-skin='warm-dark'] .today-bm-btn,
+    body[data-skin='midnight']  .today-bm-btn { border-right-color:var(--card); }
     .today-content {
       flex:1; min-width:0;
       background:var(--card); border-radius:0 var(--radius) var(--radius) 0;
@@ -457,7 +479,8 @@
       z-index:1; position:relative; margin-right:-1px;
     }
     body[data-skin='cold-dark'] .stats-bm-btn,
-    body[data-skin='warm-dark'] .stats-bm-btn { border-right-color:var(--card); }
+    body[data-skin='warm-dark'] .stats-bm-btn,
+    body[data-skin='midnight']  .stats-bm-btn { border-right-color:var(--card); }
     .stats-content {
       flex:1; min-width:0;
       background:var(--card); border-radius:0 var(--radius) var(--radius) 0;
@@ -493,7 +516,8 @@
       z-index:1; position:relative; margin-right:-1px;
     }
     body[data-skin='cold-dark'] .manage-bm-btn,
-    body[data-skin='warm-dark'] .manage-bm-btn { border-right-color:var(--card); }
+    body[data-skin='warm-dark'] .manage-bm-btn,
+    body[data-skin='midnight']  .manage-bm-btn { border-right-color:var(--card); }
     .manage-content {
       flex:1; min-width:0;
       background:var(--card); border-radius:0 var(--radius) var(--radius) 0;
@@ -525,7 +549,8 @@
       z-index:1; position:relative; margin-right:-1px;
     }
     body[data-skin='cold-dark'] .settings-bm-btn,
-    body[data-skin='warm-dark'] .settings-bm-btn { border-right-color:var(--card); }
+    body[data-skin='warm-dark'] .settings-bm-btn,
+    body[data-skin='midnight']  .settings-bm-btn { border-right-color:var(--card); }
     .settings-content {
       flex:1; min-width:0;
       background:var(--card); border-radius:0 var(--radius) var(--radius) 0;
@@ -1439,8 +1464,10 @@
     .qc-btn.qc-fn { background:#e2e8f0; color:#374151; }
     .qc-btn.qc-op { background:#f97316; color:#fff; }
     .qc-btn.qc-eq { background:var(--primary); color:#fff; }
-    body[data-skin='warm-dark'] .qc-btn { background:#2d3748; color:#e2e8f0; }
-    body[data-skin='warm-dark'] .qc-btn.qc-fn { background:#4a5568; color:#e2e8f0; }
+    body[data-skin='warm-dark'] .qc-btn { background:#2a1f0e; color:#FFD791; }
+    body[data-skin='warm-dark'] .qc-btn.qc-fn { background:#362812; color:#FFD791; }
+    body[data-skin='midnight']  .qc-btn { background:#1e1e1e; color:#e2e8f0; }
+    body[data-skin='midnight']  .qc-btn.qc-fn { background:#2a2a2a; color:#e2e8f0; }
 
     .danger-btn {
       width: 100%;
@@ -1917,7 +1944,8 @@
     }
     body[data-skin="cold-dark"]  .cgm-widget { background: linear-gradient(135deg, #2a0f0a 0%, #5a1a10 100%); box-shadow: 0 4px 16px rgba(255,146,139,0.22); }
     body[data-skin="warm-light"] .cgm-widget { background: linear-gradient(135deg, #2a0810 0%, #5a1828 100%); box-shadow: 0 4px 16px rgba(200,125,135,0.22); }
-    body[data-skin="warm-dark"]  .cgm-widget { background: linear-gradient(135deg, #1e0800 0%, #7a3500 100%); box-shadow: 0 4px 16px rgba(252,158,79,0.22);  }
+    body[data-skin="midnight"]    .cgm-widget { background: linear-gradient(135deg, #090909 0%, #141414 100%); box-shadow: 0 4px 16px rgba(74,222,128,0.15);   }
+    body[data-skin="warm-dark"]  .cgm-widget { background: linear-gradient(135deg, #1e1205 0%, #413620 100%); box-shadow: 0 4px 16px rgba(156,102,21,0.22);  }
     .cgm-widget[data-bg-status="low"]    { box-shadow: 0 4px 20px rgba(139,92,246,0.38); }
     .cgm-widget[data-bg-status="normal"] { box-shadow: 0 4px 20px rgba(34,197,94,0.32); }
     .cgm-widget[data-bg-status="warn"]   { box-shadow: 0 4px 20px rgba(245,158,11,0.38); }
@@ -2011,7 +2039,8 @@
     }
     body[data-skin="cold-dark"]  .cgm-value { --cv1: #FFAC81; --cv2: #fff0e8; --cv3: #FF928B; }
     body[data-skin="warm-light"] .cgm-value { --cv1: #e8a0a8; --cv2: #fff0f2; --cv3: #c87d87; }
-    body[data-skin="warm-dark"]  .cgm-value { --cv1: #EDD382; --cv2: #fff8d4; --cv3: #FC9E4F; }
+    body[data-skin="midnight"]    .cgm-value { --cv1: #4ade80; --cv2: #dcfce7; --cv3: #86efac; }
+    body[data-skin="warm-dark"]  .cgm-value { --cv1: #FFD791; --cv2: #fff3c4; --cv3: #9C6615; }
     .cgm-widget[data-bg-status="normal"] .cgm-value {
       --cv1: #4ade80; --cv2: #dcfce7; --cv3: #86efac;
     }
@@ -2344,7 +2373,10 @@
       border:1px solid #d1d5db; letter-spacing:.2px;
     }
     body[data-skin='warm-dark'] .vial-disabled-badge {
-      background:#374151; color:#9ca3af; border-color:#4b5563;
+      background:#362812; color:#9F7833; border-color:#4a3218;
+    }
+    body[data-skin='midnight'] .vial-disabled-badge {
+      background:#1e1e1e; color:#6b7280; border-color:#374151;
     }
     /* 重新啟用 / 停用 按鈕 */
     .vial-deactivate-btn {
@@ -2386,12 +2418,18 @@
     body[data-skin='warm-dark'] .vial-status-sel.sealed   { background:#0c4a6e; color:#7dd3fc; border-color:#0c4a6e; }
     body[data-skin='warm-dark'] .vial-status-sel.opened   { background:#14532d; color:#86efac; border-color:#14532d; }
     body[data-skin='warm-dark'] .vial-status-sel.inactive { background:#334155; color:#64748b; border-color:#334155; }
+    body[data-skin='midnight']  .vial-status-sel.sealed   { background:#0c4a6e; color:#7dd3fc; border-color:#0c4a6e; }
+    body[data-skin='midnight']  .vial-status-sel.opened   { background:#14532d; color:#86efac; border-color:#14532d; }
+    body[data-skin='midnight']  .vial-status-sel.inactive { background:#1e1e1e; color:#6b7280; border-color:#374151; }
     .vial-status-toggle.sealed  { background:#e0f2fe; color:#0369a1; }
     .vial-status-toggle.opened  { background:#dcfce7; color:#15803d; }
     .vial-status-toggle.inactive { background:#f1f5f9; color:#94a3b8; }
     body[data-skin='warm-dark'] .vial-status-toggle.sealed  { background:#0c4a6e; color:#7dd3fc; }
     body[data-skin='warm-dark'] .vial-status-toggle.opened  { background:#14532d; color:#86efac; }
     body[data-skin='warm-dark'] .vial-status-toggle.inactive { background:#334155; color:#64748b; }
+    body[data-skin='midnight']  .vial-status-toggle.sealed  { background:#0c4a6e; color:#7dd3fc; }
+    body[data-skin='midnight']  .vial-status-toggle.opened  { background:#14532d; color:#86efac; }
+    body[data-skin='midnight']  .vial-status-toggle.inactive { background:#1e1e1e; color:#6b7280; }
     .vial-icon-btn { font-size:.78rem; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); cursor:pointer; }
     .vial-icon-btn:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
     .vial-icon-btn.danger { border-color:#ef4444; color:#ef4444; }
@@ -2414,7 +2452,8 @@
     .vlf-btn-disabled { border-color:#94a3b8; color:#64748b; }
     .vlf-btn-disabled.active { background:#64748b; color:#fff; }
     body[data-skin='cold-dark'] .vlf-btn,
-    body[data-skin='warm-dark'] .vlf-btn { background:var(--card); }
+    body[data-skin='warm-dark'] .vlf-btn,
+    body[data-skin='midnight']  .vlf-btn { background:var(--card); }
     .vlf-hide-row { display:flex; align-items:center; gap:5px; margin-left:auto; font-size:.72rem; color:var(--text-muted); cursor:pointer; user-select:none; white-space:nowrap; }
     .vlf-hide-row input[type='checkbox'] { width:15px; height:15px; cursor:pointer; accent-color:var(--primary); }
     .vlf-hide-row.dimmed { opacity:.4; pointer-events:none; }
@@ -2426,9 +2465,12 @@
     .vloc-home   { background:#eff6ff !important; }
     .vloc-rental { background:#fff1f2 !important; }
     .vloc-carry  { background:#f0fdf4 !important; }
-    body[data-skin='warm-dark'] .vloc-home   { background:#1e3a5f !important; }
-    body[data-skin='warm-dark'] .vloc-rental { background:#3f1515 !important; }
-    body[data-skin='warm-dark'] .vloc-carry  { background:#14301e !important; }
+    body[data-skin='warm-dark'] .vloc-home   { background:#0e1a2e !important; }
+    body[data-skin='warm-dark'] .vloc-rental { background:#2a0e10 !important; }
+    body[data-skin='warm-dark'] .vloc-carry  { background:#0e2a14 !important; }
+    body[data-skin='midnight']  .vloc-home   { background:#0a1a2e !important; }
+    body[data-skin='midnight']  .vloc-rental { background:#1f0a0a !important; }
+    body[data-skin='midnight']  .vloc-carry  { background:#0a1f10 !important; }
     .vial-summary { background:var(--bg); border-radius:8px; padding:8px 10px; margin-bottom:10px; border:1px solid var(--border); }
     .vial-sum-header { display:grid; grid-template-columns:38px repeat(var(--sum-cols,2),1fr); gap:4px; margin-bottom:4px; }
     .vial-sum-col-label { font-size:.64rem; font-weight:700; color:var(--text-muted); text-align:center; text-transform:uppercase; display:flex; align-items:center; justify-content:center; gap:3px; }
@@ -2810,7 +2852,8 @@
       <button class="sk-dot" onclick="setSkin('cold-light')" data-sk="cold-light" title="松石·淺色" style="background:#5C6F68;border-color:#95D9C3;"></button>
       <button class="sk-dot" onclick="setSkin('cold-dark')" data-sk="cold-dark" title="蜜桃·淺色" style="background:#FF928B;border-color:#FFAC81;"></button>
       <button class="sk-dot" onclick="setSkin('warm-light')" data-sk="warm-light" title="玫瑰·淺色" style="background:#c87d87;"></button>
-      <button class="sk-dot" onclick="setSkin('warm-dark')" data-sk="warm-dark" title="炭橘·深色" style="background:#262626;border-color:#FF7F11;"></button>
+      <button class="sk-dot" onclick="setSkin('warm-dark')" data-sk="warm-dark" title="黃土·深色" style="background:#413620;border-color:#9C6615;"></button>
+      <button class="sk-dot" onclick="setSkin('midnight')" data-sk="midnight" title="深夜·暗色" style="background:#111111;border-color:#4ade80;"></button>
     </div>
     <div id="sk-label"></div>
   </div>
@@ -3584,6 +3627,32 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.42.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.42.1</span>
+          <span class="cl-date">2026-05-28</span>
+          <span class="cl-tag">黃土主題</span>
+        </div>
+        <ul class="cl-list">
+          <li>【黃土主題】原炭橘主題換色為 Dark Khaki #413620 / Golden Earth #9C6615 / #9F7833 / Apricot Cream #FFD791 / Pale Slate #CDD1DE 調色盤</li>
+          <li>SKIN_LABELS 由「炭橘」改為「黃土」，HUD/PIP/dot 全部同步更新</li>
+        </ul>
+      </div>
+
+      <!-- v2.42.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.42.0</span>
+          <span class="cl-date">2026-05-28</span>
+          <span class="cl-tag">深夜主題</span>
+        </div>
+        <ul class="cl-list">
+          <li>【深夜主題】新增第 5 個皮膚 "midnight"：炭黑底色 / 綠色主色調，完整支援 HUD 抬頭顯示器、PIP 浮動視窗、全部深色 UI override</li>
+          <li>PIP 配色保留原 "black" 主題精髓：bg #111111 / spark #4ade80 / warn #fbbf24</li>
+        </ul>
+      </div>
 
       <!-- v2.41.0 -->
       <div class="cl-item">
@@ -9218,7 +9287,7 @@ function importUserId() {
 // ── Skin System ──────────────────────────────────────────────────────────
 var SKIN_LABELS = {
   'cold-light': '松石', 'cold-dark': '蜜桃',
-  'warm-light': '玫瑰·淺', 'warm-dark': '炭橘'
+  'warm-light': '玫瑰·淺', 'warm-dark': '黃土', 'midnight': '深夜'
 };
 function setSkin(name) {
   document.body.dataset.skin = name;
@@ -9787,9 +9856,12 @@ var PIP_SKIN_THEMES = {
   'warm-light': { bg:'#2a1018', text:'#fce7ea', sub:'#e8a0a8', ring:'#c87d87',
                   low:'#c4b5fd', normal:'#a8e6cf', warn:'#fbbf24', high:'#f87171',
                   spark:'#c87d87', band:'rgba(200,125,135,0.07)', dot:'#c87d87', label:'玫瑰' },
-  'warm-dark':  { bg:'#1a1a1a', text:'#E2E8CE', sub:'#ACBFA4', ring:'#FF7F11',
-                  low:'#c4b5fd', normal:'#ACBFA4', warn:'#FF7F11', high:'#FF1B1C',
-                  spark:'#FF7F11', band:'rgba(255,127,17,0.10)', dot:'#FF1B1C', label:'炭橘' },
+  'warm-dark':  { bg:'#2a1f0e', text:'#FFD791', sub:'#9F7833', ring:'#9C6615',
+                  low:'#c4b5fd', normal:'#86efac', warn:'#FFD791', high:'#f87171',
+                  spark:'#9C6615', band:'rgba(156,102,21,0.12)', dot:'#9C6615', label:'黃土' },
+  'midnight':   { bg:'#111111', text:'#f0f0f0', sub:'#777777', ring:'#dddddd',
+                  low:'#a78bfa', normal:'#4ade80', warn:'#fbbf24', high:'#f87171',
+                  spark:'#4ade80', band:'rgba(255,255,255,0.07)', dot:'#374151', label:'深夜' },
 };
 
 // 取得當前 skin 對應的 PIP 主題
@@ -10268,7 +10340,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.41.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.42.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -12230,7 +12302,8 @@ function updateBasalTimeBar() {
         'cold-light': { rapid: '#95D9C3', basal: '#A4F9C8' },
         'cold-dark':  { rapid: '#FF928B', basal: '#FFAC81' },
         'warm-light': { rapid: '#e8a0a8', basal: '#f5c5cb' },
-        'warm-dark':  { rapid: '#FC9E4F', basal: '#EDD382' },
+        'warm-dark':  { rapid: '#FFD791', basal: '#9C6615' },
+        'midnight':   { rapid: '#4ade80', basal: '#86efac' },
       };
       var _cgmColors = _cgmSkinColors[(document.body && document.body.dataset.skin) || 'cold-light'] || _cgmSkinColors['cold-light'];
       function _compactInsRow(last, durationH, color, emoji, shortLabel) {
