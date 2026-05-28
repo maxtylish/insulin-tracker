@@ -71,7 +71,7 @@
       --bg: #111111;       --card: #1a1a1a;
       --primary: #4ade80;  --primary-dark: #22c55e;
       --text: #f0f0f0;     --text-muted: #777777;
-      --border: #2a2a2a;   --input-bg: #1a1a1a;
+      --border: rgba(255,255,255,0.18); --input-bg: #1a1a1a;
       --normal: #4ade80;   --normal-bg: #0a1f0e;
       --warn: #fbbf24;     --warn-bg: #1f1500;
       --danger: #f87171;   --danger-bg: #1f0808;
@@ -88,7 +88,7 @@
       --bg: #2a1f0e;       --card: #362812;
       --primary: #9C6615;  --primary-dark: #7a5010;
       --text: #FFD791;     --text-muted: #9F7833;
-      --border: #4a3218;   --input-bg: #2a1f0e;
+      --border: rgba(255,215,145,0.22); --input-bg: #2a1f0e;
       --normal: #86efac;   --normal-bg: #0a1f0e;
       --warn: #FFD791;     --warn-bg: #2a1500;
       --danger: #f87171;   --danger-bg: #2a0808;
@@ -3627,6 +3627,19 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.42.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.42.2</span>
+          <span class="cl-date">2026-05-28</span>
+          <span class="cl-tag">深色邊框</span>
+        </div>
+        <ul class="cl-list">
+          <li>【深夜主題】--border 改為 rgba(255,255,255,0.18)，細白邊勾勒視窗邊界</li>
+          <li>【黃土主題】--border 改為 rgba(255,215,145,0.22)，暖白細邊符合配色</li>
+        </ul>
+      </div>
 
       <!-- v2.42.1 -->
       <div class="cl-item">
@@ -10340,7 +10353,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.42.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.42.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
