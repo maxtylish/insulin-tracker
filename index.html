@@ -3683,6 +3683,18 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.42.4 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.42.4</span>
+          <span class="cl-date">2026-05-28</span>
+          <span class="cl-tag">Mini CGM 主題色</span>
+        </div>
+        <ul class="cl-list">
+          <li>【Mini CGM 圖表】折線、填充、格線、刻度顏色跟隨主題 skin，深色主題（深夜／黃土）顯著提升可讀性；格線改為半透明白邊，折線加粗至 2px</li>
+        </ul>
+      </div>
+
       <!-- v2.42.3 -->
       <div class="cl-item">
         <div class="cl-header">
@@ -6856,6 +6868,17 @@ async function renderMiniCGMChart() {
   card.style.display = 'block';
   if (miniCgmChart) { miniCgmChart.destroy(); miniCgmChart = null; }
 
+  // ── skin-aware chart colors ──────────────────────────────────────────
+  var _mcSkin = (document.body && document.body.dataset.skin) || 'cold-light';
+  var _mcColors = {
+    'cold-light': { line:'#3b82f6', fill:'rgba(59,130,246,0.08)',  grid:'rgba(0,0,0,0.07)',          tick:'#8AA39B', lw:1.5 },
+    'cold-dark':  { line:'#FF928B', fill:'rgba(255,146,139,0.10)', grid:'rgba(255,146,139,0.12)',     tick:'#FFAC81', lw:1.5 },
+    'warm-light': { line:'#c87d87', fill:'rgba(200,125,135,0.10)', grid:'rgba(200,125,135,0.12)',     tick:'#e8a0a8', lw:1.5 },
+    'warm-dark':  { line:'#FFD791', fill:'rgba(255,215,145,0.12)', grid:'rgba(255,215,145,0.15)',     tick:'#9F7833', lw:2   },
+    'midnight':   { line:'#4ade80', fill:'rgba(74,222,128,0.12)',  grid:'rgba(255,255,255,0.12)',     tick:'#777777', lw:2   },
+  };
+  var _mc = _mcColors[_mcSkin] || _mcColors['cold-light'];
+
   miniCgmChart = new Chart(canvas, {
     type: 'line',
     data: {
@@ -6863,9 +6886,9 @@ async function renderMiniCGMChart() {
       datasets: [{
         label: 'CGM',
         data: values,
-        borderColor: '#3b82f6',
-        backgroundColor: 'rgba(59,130,246,0.07)',
-        borderWidth: 1.5,
+        borderColor: _mc.line,
+        backgroundColor: _mc.fill,
+        borderWidth: _mc.lw,
         pointRadius: 0,
         pointHoverRadius: 3,
         pointBackgroundColor: pointColors,
@@ -6892,6 +6915,7 @@ async function renderMiniCGMChart() {
           ticks: {
             autoSkip: false,
             maxRotation: 0,
+            color: _mc.tick,
             font: { size: 9 },
             callback: function(_, i) {
               var lbl = labels[i];
@@ -6906,8 +6930,8 @@ async function renderMiniCGMChart() {
         },
         y: {
           min: 40, suggestedMax: 300,
-          ticks: { font: { size: 9 }, maxTicksLimit: 4 },
-          grid: { color: '#f1f5f9' },
+          ticks: { font: { size: 9 }, maxTicksLimit: 4, color: _mc.tick },
+          grid: { color: _mc.grid },
         }
       },
       plugins2: [{
@@ -10421,7 +10445,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.42.3';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.42.4';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
