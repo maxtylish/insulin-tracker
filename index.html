@@ -63,20 +63,6 @@
       background: linear-gradient(135deg, #c87d87 0%, #d4919a 100%);
       box-shadow: 0 2px 8px rgba(200,125,135,0.35);
     }
-    body[data-skin="warm-light"] .save-btn {
-      background: linear-gradient(135deg, #c87d87 0%, #d4919a 100%);
-      box-shadow: 0 4px 12px rgba(200,125,135,0.4);
-    }
-    body[data-skin="cold-dark"] .save-btn {
-      background: linear-gradient(135deg, #FF928B 0%, #FFAC81 100%);
-      box-shadow: 0 4px 12px rgba(255,146,139,0.4);
-    }
-    body[data-skin="cold-dark"] .save-btn:hover {
-      box-shadow: 0 6px 18px rgba(255,146,139,0.55);
-    }
-    body[data-skin="warm-light"] .save-btn:hover {
-      box-shadow: 0 6px 18px rgba(200,125,135,0.5);
-    }
     body[data-skin="warm-dark"] {
       --bg: #1a1a1a;       --card: #262626;
       --primary: #FF7F11;  --primary-dark: #e06d0a;
@@ -930,7 +916,7 @@
     /* ── Save Button ── */
     .save-btn {
       width: 100%;
-      background: linear-gradient(135deg, #2563eb, #3b82f6);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
       color: white;
       border: none;
       border-radius: var(--radius);
@@ -940,11 +926,11 @@
       cursor: pointer;
       margin-top: 4px;
       margin-bottom: 16px;
-      box-shadow: 0 4px 12px rgba(59,130,246,0.4);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.22);
       transition: all 0.2s;
       letter-spacing: 0.5px;
     }
-    .save-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(59,130,246,0.5); }
+    .save-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0,0,0,0.30); }
     .save-btn:active { transform: translateY(0); }
 
     /* ── Blood Sugar Legend ── */
@@ -3592,6 +3578,19 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.40.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.40.0</span>
+          <span class="cl-date">2026-05-28</span>
+          <span class="cl-tag">主題聯動</span>
+        </div>
+        <ul class="cl-list">
+          <li>【PIP 視窗】主題自動跟隨主要 App Skin：松石／蜜桃／玫瑰／炭橘四套專屬 PIP 配色，切換主題即時生效</li>
+          <li>【儲存今日紀錄】按鈕改用 var(--primary) CSS 變數，永遠跟隨當前主題色彩，移除所有皮膚專用 hardcode</li>
+        </ul>
+      </div>
 
       <!-- v2.39.5 -->
       <div class="cl-item">
@@ -9757,15 +9756,32 @@ var _pipCarouselIdx = 0;      // PiP event carousel current index
 var _pipLastRapid = null;     // last rapid injection {dt, site} for PiP display
 var _pipLastBasal = null;     // last basal injection {dt, site} for PiP display
 
-// ── PIP 背景隨 App Skin 改變的對應表 ──────────────────────────────────────
-var PIP_SKIN_BG = {
-  'cold-dark':  '#2f2963',  // 靛夜·深色（Space Indigo）
+// ── PIP 主題隨 App Skin 自動切換 ──────────────────────────────────────────
+var PIP_SKIN_THEMES = {
+  'cold-light': { bg:'#1a2822', text:'#A7FFF6', sub:'#8AA39B', ring:'#95D9C3',
+                  low:'#c4b5fd', normal:'#A4F9C8', warn:'#fbbf24', high:'#f87171',
+                  spark:'#95D9C3', band:'rgba(164,249,200,0.07)', dot:'#5C6F68', label:'松石' },
+  'cold-dark':  { bg:'#2a1515', text:'#FEC3A6', sub:'#FFAC81', ring:'#FF928B',
+                  low:'#c4b5fd', normal:'#CDEAC0', warn:'#fbbf24', high:'#f87171',
+                  spark:'#FF928B', band:'rgba(255,172,129,0.07)', dot:'#FF928B', label:'蜜桃' },
+  'warm-light': { bg:'#2a1018', text:'#fce7ea', sub:'#e8a0a8', ring:'#c87d87',
+                  low:'#c4b5fd', normal:'#a8e6cf', warn:'#fbbf24', high:'#f87171',
+                  spark:'#c87d87', band:'rgba(200,125,135,0.07)', dot:'#c87d87', label:'玫瑰' },
+  'warm-dark':  { bg:'#1a1a1a', text:'#E2E8CE', sub:'#ACBFA4', ring:'#FF7F11',
+                  low:'#c4b5fd', normal:'#ACBFA4', warn:'#FF7F11', high:'#FF1B1C',
+                  spark:'#FF7F11', band:'rgba(255,127,17,0.10)', dot:'#FF1B1C', label:'炭橘' },
 };
 
-// 取得考慮 skin 後的 PIP 背景色
-function _getPipBgHex(tKey) {
+// 取得當前 skin 對應的 PIP 主題
+function _getPipSkinTheme() {
   var skinName = (document.body && document.body.dataset.skin) || 'cold-light';
-  return PIP_SKIN_BG[skinName] || (PIP_THEMES[tKey] || PIP_THEMES.white).bg;
+  return PIP_SKIN_THEMES[skinName] || null;
+}
+
+// 取得 PIP 背景色（向後相容）
+function _getPipBgHex(tKey) {
+  var st = _getPipSkinTheme();
+  return st ? st.bg : (PIP_THEMES[tKey] || PIP_THEMES.white).bg;
 }
 
 var PIP_THEMES = {
@@ -9936,8 +9952,9 @@ function _getPipBgAlpha() {
   try { var v = parseFloat(localStorage.getItem('pip_alpha')); return (!isNaN(v) && v >= 0 && v <= 1) ? v : 1; } catch(e) { return 1; }
 }
 function _buildPipStyle(tKey) {
-  var t = PIP_THEMES[tKey] || PIP_THEMES.white;
-  var rgb = _hexToRgb(_getPipBgHex(tKey));  // skin-aware bg
+  var st = _getPipSkinTheme();
+  var t = st || PIP_THEMES[tKey] || PIP_THEMES.white;
+  var rgb = _hexToRgb(t.bg);
   var alpha = _getPipBgAlpha();
   var bgRgba = 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + alpha + ')';
   return [
@@ -9983,8 +10000,9 @@ function _buildPipHTML(tKey) {
     return '<span class="pip-dot' + sel + '" onclick="window._pipSetTheme(\'' + k + '\')" style="background:' + PIP_THEMES[k].dot + ';cursor:pointer;" title="' + PIP_THEMES[k].label + '"></span>';
   }).join('');
   var alpha = _getPipBgAlpha();
-  var t2 = PIP_THEMES[tKey] || PIP_THEMES.white;
-  var rgb2 = _hexToRgb(_getPipBgHex(tKey));  // skin-aware bg
+  var st2 = _getPipSkinTheme();
+  var t2 = st2 || PIP_THEMES[tKey] || PIP_THEMES.white;
+  var rgb2 = _hexToRgb(t2.bg);
   var rgbStr = rgb2[0] + ',' + rgb2[1] + ',' + rgb2[2];
   return '<div class="pip-alpha-bar">' +
       '<input type="range" id="pip-alpha" min="0" max="100" value="' + Math.round(alpha * 100) + '"' +
@@ -10271,7 +10289,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.39.5';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.40.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
