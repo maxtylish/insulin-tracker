@@ -12,8 +12,11 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout repo
+      - name: Checkout backup branch
         uses: actions/checkout@v4
+        with:
+          ref: backup
+          fetch-depth: 0
 
       - name: Fetch insulin_records from Supabase
         env:
@@ -39,4 +42,4 @@ jobs:
           git config user.email "backup-bot@users.noreply.github.com"
           git add backups/
           git diff --staged --quiet || git commit -m "backup: $(date -u +"%Y-%m-%d") auto backup"
-          git push
+          git push origin backup
