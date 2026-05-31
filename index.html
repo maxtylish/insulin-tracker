@@ -3327,6 +3327,11 @@
 
   <!-- 📅 Google 行事曆（置頂） -->
   <div class="chart-card" style="margin-bottom:14px;">
+    <!-- GCal 連結狀態列 -->
+    <div id="cal-gcal-status-bar" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:7px 10px;border-radius:10px;background:var(--bg);font-size:0.8rem;">
+      <div id="cal-gcal-status-text" style="display:flex;align-items:center;gap:6px;">載入中…</div>
+      <button id="cal-gcal-action-btn" onclick="startGCalAuth()" style="display:none;font-size:0.75rem;padding:4px 11px;border-radius:8px;background:var(--primary);color:#fff;border:none;cursor:pointer;font-weight:600;">連結 Google 日曆</button>
+    </div>
     <div class="stat-date-nav" style="margin-bottom:14px;">
       <button onclick="calNavMonth(-1)">‹</button>
       <span id="calMonthLabel" class="nav-label">--</span>
@@ -3707,6 +3712,18 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.45.3 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.45.3</span>
+          <span class="cl-date">2026-06-01</span>
+          <span class="cl-tag">日曆 GCal 狀態列</span>
+        </div>
+        <ul class="cl-list">
+          <li>日曆頁頂部新增 Google 日曆連結狀態：🟢 已連結 / 🔴 未連結＋快捷連結按鈕</li>
+        </ul>
+      </div>
 
       <!-- v2.45.2 -->
       <div class="cl-item">
@@ -6556,6 +6573,7 @@ function calNavMonth(dir) {
 }
 
 async function renderTodoCalendar() {
+  updateCalGCalStatus();
   if (!calViewYM) calViewYM = todayStr().slice(0, 7);
   var parts = calViewYM.split('-');
   var year  = parseInt(parts[0]);
@@ -10742,7 +10760,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.45.2';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.45.3';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -13746,10 +13764,27 @@ function escapeHtml(s) {
   return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function updateCalGCalStatus() {
+  var textEl = document.getElementById('cal-gcal-status-text');
+  var btnEl  = document.getElementById('cal-gcal-action-btn');
+  if (!textEl) return;
+  var connected = isGCalConnected();
+  if (connected) {
+    textEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#22c55e;display:inline-block;flex-shrink:0;"></span>'
+      + '<span style="color:var(--text-muted);">已連結 Google 日曆</span>';
+    if (btnEl) btnEl.style.display = 'none';
+  } else {
+    textEl.innerHTML = '<span style="width:8px;height:8px;border-radius:50%;background:#ef4444;display:inline-block;flex-shrink:0;"></span>'
+      + '<span style="color:var(--text-muted);">未連結 Google 日曆</span>';
+    if (btnEl) btnEl.style.display = '';
+  }
+}
+
 function renderTodoPage() {
   // Delegate to event-store UI
   renderEventsPage();
   updateGCalUI();
+  updateCalGCalStatus();
   var hint = document.getElementById('todo-gcal-hint');
   if (hint) hint.style.display = isGCalConnected() ? 'none' : 'flex';
   // 行事曆（置頂，第一次初始化）
