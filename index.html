@@ -3713,6 +3713,18 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.45.4 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.45.4</span>
+          <span class="cl-date">2026-06-01</span>
+          <span class="cl-tag">操作日誌顯示操作者</span>
+        </div>
+        <ul class="cl-list">
+          <li>操作日誌每筆記錄新增操作者姓名（囉嗦把拔喵 / 貓谷太太），以主題色標籤顯示</li>
+        </ul>
+      </div>
+
       <!-- v2.45.3 -->
       <div class="cl-item">
         <div class="cl-header">
@@ -5834,7 +5846,10 @@ function _saveOpLog(log) {
 function _logSettingChanges(changes) {
   if (!changes || !changes.length) return;
   var log = _getOpLog();
-  log.push({ ts: Date.now(), changes: changes });
+  var _u = (typeof _eventsUserSub !== 'undefined' && typeof _appUsers !== 'undefined')
+    ? (_appUsers[_eventsUserSub] ? _appUsers[_eventsUserSub].name : _eventsUserSub)
+    : '—';
+  log.push({ ts: Date.now(), user: _u, changes: changes });
   _saveOpLog(log);
   if (document.getElementById('settings-panel-oplog') &&
       document.getElementById('settings-panel-oplog').style.display !== 'none') renderOpLog();
@@ -5851,6 +5866,10 @@ function renderOpLog() {
     var d = new Date(entry.ts);
     var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     var ts = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    var userBadge = entry.user
+      ? '<span style="display:inline-block;background:var(--primary);color:#fff;border-radius:6px;padding:1px 7px;font-size:0.72rem;font-weight:600;margin-left:6px;">'
+        + entry.user + '</span>'
+      : '';
     var chips = entry.changes.map(function(c) {
       return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:3px 9px;font-size:0.78rem;margin:2px 3px 2px 0;">'
         + '<span style="color:var(--text-muted);">' + c.field + '</span>'
@@ -5859,7 +5878,8 @@ function renderOpLog() {
         + '</span>';
     }).join('');
     return '<div style="border-bottom:1px solid var(--border);padding:10px 0 8px;">'
-      + '<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;">' + ds + ' ' + ts + '</div>'
+      + '<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;display:flex;align-items:center;">'
+        + ds + ' ' + ts + userBadge + '</div>'
       + '<div style="flex-wrap:wrap;display:flex;">' + chips + '</div>'
       + '</div>';
   }).join('');
@@ -10760,7 +10780,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.45.3';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.45.4';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
