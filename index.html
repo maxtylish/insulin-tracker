@@ -3715,6 +3715,18 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.46.5 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.46.5</span>
+          <span class="cl-date">2026-06-01</span>
+          <span class="cl-tag">計算機 HTML 完整還原</span>
+        </div>
+        <ul class="cl-list">
+          <li>修復：計算機 HTML 完整還原，包含套餐快選、搜尋、整數建議（calc-round-hint）等現有功能</li>
+        </ul>
+      </div>
+
       <!-- v2.46.4 -->
       <div class="cl-item">
         <div class="cl-header">
@@ -10927,7 +10939,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.46.4';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.46.5';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -14093,6 +14105,8 @@ function checkTodoAlerts() {
       <button class="calc-close-btn" type="button" onclick="closeCalcModal()">✕</button>
     </div>
     <div class="calc-body">
+
+      <!-- 基本資訊 -->
       <div class="calc-section">
         <div class="calc-section-title">基本資訊</div>
         <div class="calc-grid-2">
@@ -14110,8 +14124,22 @@ function checkTodoAlerts() {
           </div>
         </div>
       </div>
+
+      <!-- 飲食紀錄 -->
       <div class="calc-section">
         <div class="calc-section-title">飲食紀錄</div>
+
+        <!-- 套餐快選 -->
+        <div style="margin-bottom:8px;">
+          <input type="text" id="calc-set-search" class="calc-set-search"
+            placeholder="🔍 搜尋套餐名稱..."
+            oninput="calcFilterMealSets(this.value)" />
+          <select id="calc-meal-set" style="width:100%;margin-top:4px;border:1.5px solid var(--border);border-radius:10px;padding:7px 10px;font-size:.88rem;background:var(--card);color:var(--text);"
+            onchange="calcApplyMealSet(this.value)">
+            <option value="">── 選擇套餐（自動填入）──</option>
+          </select>
+        </div>
+
         <div class="calc-food-row">
           <span class="calc-food-badge badge-main">主餐</span>
           <select id="calc-food-1" onchange="calcUpdateFood1()"></select>
@@ -14149,12 +14177,16 @@ function checkTodoAlerts() {
           </select>
           <input type="number" id="calc-qty-4" min="0" step="0.1" value="1" oninput="calcRecalc()" />
         </div>
-        <div class="calc-food-row" style="margin-top:4px;">
-          <span class="calc-food-badge" style="background:#6d28d9;">其他</span>
-          <input type="text" id="calc-other-name" placeholder="食物名稱" style="flex:2;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:.88rem;" />
-          <input type="number" id="calc-other-carbs" min="0" step="1" placeholder="碳水g" style="flex:1;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:.88rem;" oninput="calcRecalc()" />
+        <div class="calc-food-row">
+          <span class="calc-food-badge" style="background:#6d28d9;color:#fff;">其他</span>
+          <input type="text" id="calc-other-name" placeholder="食物名稱（選項）"
+            style="flex:2;border:1.5px solid var(--border);border-radius:10px;padding:7px 10px;font-size:.88rem;background:var(--input-bg);color:var(--text);" />
+          <input type="number" id="calc-other-carbs" min="0" step="1" placeholder="克"
+            style="flex:1;border:1.5px solid var(--border);border-radius:10px;padding:7px 10px;font-size:.88rem;background:var(--input-bg);color:var(--text);" oninput="calcRecalc()" />
         </div>
       </div>
+
+      <!-- 劑量計算 -->
       <div class="calc-section">
         <div class="calc-section-title">劑量計算</div>
         <div class="calc-grid-2">
@@ -14168,23 +14200,44 @@ function checkTodoAlerts() {
           </div>
         </div>
         <div class="calc-preset-row">
-          <div class="calc-preset-item"><span>CIR 醣類係數</span><strong id="calc-cir-display">10</strong><span>g/U</span></div>
-          <div class="calc-preset-item"><span>ISF 敏感係數</span><strong id="calc-isf-display">110</strong><span>mg/dL/U</span></div>
-          <div class="calc-preset-item"><span>目標血糖</span><strong id="calc-target-display">150</strong><span>mg/dL</span></div>
+          <div class="calc-preset-item">
+            <span>CIR 醣類係數</span>
+            <strong id="calc-cir-display">10</strong>
+            <span>g / 單位</span>
+          </div>
+          <div class="calc-preset-item">
+            <span>ISF 敏感係數</span>
+            <strong id="calc-isf-display">110</strong>
+            <span>mg/dL / 單位</span>
+          </div>
+          <div class="calc-preset-item">
+            <span>目標血糖</span>
+            <strong id="calc-target-display">150</strong>
+            <span>mg/dL</span>
+          </div>
         </div>
       </div>
+
+      <!-- 警示 & 整數建議 -->
       <div id="calc-warnings"></div>
+      <div id="calc-round-hint"></div>
+
+      <!-- 計算結果 -->
       <div class="calc-result-box">
         <div class="calc-result-main"><span id="calc-result-dose">0</span><small> 單位</small></div>
         <div class="calc-result-label">建議估算劑量</div>
         <div class="calc-breakdown">
           <div class="calc-breakdown-item"><span>碳水劑量</span><strong id="calc-meal-dose">0</strong></div>
           <div class="calc-breakdown-item"><span>血糖校正</span><strong id="calc-corr-dose">0</strong></div>
-          <div class="calc-breakdown-item"><span>扣除 IOB</span><strong id="calc-iob-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>扣除 IOB</span><strong id="calc-iob-dose">-0</strong></div>
           <div class="calc-breakdown-item"><span>計算值</span><strong id="calc-raw-dose">0</strong></div>
         </div>
       </div>
+
+      <!-- 餐別備註 -->
       <div id="calc-meal-notes" class="calc-notes" style="display:none"></div>
+
+      <!-- 帶入按鈕 -->
       <button class="calc-apply-btn" type="button" onclick="calcApply()">✅ 帶入紀錄表</button>
     </div>
   </div>
