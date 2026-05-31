@@ -3715,6 +3715,18 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.46.4 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.46.4</span>
+          <span class="cl-date">2026-06-01</span>
+          <span class="cl-tag">修復計算劑量</span>
+        </div>
+        <ul class="cl-list">
+          <li>修復：calcOverlay 計算機 HTML 在先前大量 patch 中遺失，導致「計算劑量」無法開啟</li>
+        </ul>
+      </div>
+
       <!-- v2.46.3 -->
       <div class="cl-item">
         <div class="cl-header">
@@ -10915,7 +10927,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.46.3';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.46.4';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -14074,6 +14086,110 @@ function checkTodoAlerts() {
   display:flex;align-items:center;justify-content:center;">🧮</button>
 
 <!-- ══════════════ CALCULATOR MODAL ══════════════ -->
+<div id="calcOverlay" class="calc-overlay" onclick="calcOverlayClick(event)">
+  <div class="calc-modal">
+    <div class="calc-modal-header">
+      <h2 id="calc-modal-title">💊 餐前劑量計算</h2>
+      <button class="calc-close-btn" type="button" onclick="closeCalcModal()">✕</button>
+    </div>
+    <div class="calc-body">
+      <div class="calc-section">
+        <div class="calc-section-title">基本資訊</div>
+        <div class="calc-grid-2">
+          <div class="calc-field">
+            <label>餐別</label>
+            <select id="calc-meal-period" onchange="calcUpdateMeal()">
+              <option value="breakfast">🌅 早餐</option>
+              <option value="lunch">☀️ 午餐</option>
+              <option value="dinner">🌙 晚餐</option>
+            </select>
+          </div>
+          <div class="calc-field">
+            <label>目前血糖 (mg/dL)</label>
+            <input type="number" id="calc-bg" min="0" step="1" value="180" oninput="calcRecalc()" />
+          </div>
+        </div>
+      </div>
+      <div class="calc-section">
+        <div class="calc-section-title">飲食紀錄</div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-main">主餐</span>
+          <select id="calc-food-1" onchange="calcUpdateFood1()"></select>
+          <input type="number" id="calc-qty-1" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-side">餐食2</span>
+          <select id="calc-food-2" onchange="calcRecalc()"></select>
+          <input type="number" id="calc-qty-2" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-fruit">甜點</span>
+          <select id="calc-food-3" onchange="calcRecalc()">
+            <option value="">不選擇</option>
+            <option value="guava">芭樂 100g (碳水10.6g)</option>
+            <option value="apple">蘋果 100g (碳水11.9g)</option>
+            <option value="cherry">櫻桃 100g (碳水19.12g)</option>
+            <option value="banana_peel">香蕉帶皮 100g (碳水10.6g)</option>
+            <option value="banana">香蕉去皮 100g (碳水22.1g)</option>
+            <option value="pineapple">鳳梨 100g (碳水13.6g)</option>
+            <option value="dragon_fruit">火龍果 100g (碳水12.36g)</option>
+            <option value="strawberry">草莓去蒂 100g (碳水9.3g)</option>
+          </select>
+          <input type="number" id="calc-qty-3" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-drink">飲品</span>
+          <select id="calc-food-4" onchange="calcRecalc()">
+            <option value="">不選擇</option>
+            <option value="milk_100">牛奶 100g (碳水4.8g)</option>
+            <option value="milk_150">牛奶 150g (碳水7g)</option>
+            <option value="milk_200">牛奶 200g (碳水10g)</option>
+            <option value="yogurt_100">優酪乳 100g (碳水12g)</option>
+            <option value="yakult">養樂多 90ML (碳水14.7g)</option>
+          </select>
+          <input type="number" id="calc-qty-4" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row" style="margin-top:4px;">
+          <span class="calc-food-badge" style="background:#6d28d9;">其他</span>
+          <input type="text" id="calc-other-name" placeholder="食物名稱" style="flex:2;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:.88rem;" />
+          <input type="number" id="calc-other-carbs" min="0" step="1" placeholder="碳水g" style="flex:1;border:1px solid #e2e8f0;border-radius:8px;padding:6px 10px;font-size:.88rem;" oninput="calcRecalc()" />
+        </div>
+      </div>
+      <div class="calc-section">
+        <div class="calc-section-title">劑量計算</div>
+        <div class="calc-grid-2">
+          <div class="calc-field">
+            <label>預計碳水量 (克)</label>
+            <input type="number" id="calc-carbs" min="0" step="1" value="60" oninput="calcRecalc()" />
+          </div>
+          <div class="calc-field">
+            <label>有效胰島素 IOB (單位)</label>
+            <input type="number" id="calc-iob" min="0" step="0.1" value="0" oninput="calcRecalc()" />
+          </div>
+        </div>
+        <div class="calc-preset-row">
+          <div class="calc-preset-item"><span>CIR 醣類係數</span><strong id="calc-cir-display">10</strong><span>g/U</span></div>
+          <div class="calc-preset-item"><span>ISF 敏感係數</span><strong id="calc-isf-display">110</strong><span>mg/dL/U</span></div>
+          <div class="calc-preset-item"><span>目標血糖</span><strong id="calc-target-display">150</strong><span>mg/dL</span></div>
+        </div>
+      </div>
+      <div id="calc-warnings"></div>
+      <div class="calc-result-box">
+        <div class="calc-result-main"><span id="calc-result-dose">0</span><small> 單位</small></div>
+        <div class="calc-result-label">建議估算劑量</div>
+        <div class="calc-breakdown">
+          <div class="calc-breakdown-item"><span>碳水劑量</span><strong id="calc-meal-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>血糖校正</span><strong id="calc-corr-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>扣除 IOB</span><strong id="calc-iob-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>計算值</span><strong id="calc-raw-dose">0</strong></div>
+        </div>
+      </div>
+      <div id="calc-meal-notes" class="calc-notes" style="display:none"></div>
+      <button class="calc-apply-btn" type="button" onclick="calcApply()">✅ 帶入紀錄表</button>
+    </div>
+  </div>
+</div>
+
 <div id="carbCalcOverlay" class="calc-overlay" onclick="if(event.target.id==='carbCalcOverlay')closeCarbCalc()">
   <div class="calc-modal" style="max-width:340px;">
     <div class="calc-modal-header">
