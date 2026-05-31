@@ -3408,6 +3408,9 @@
       <button class="settings-bm-btn" onclick="switchSettingsPanel('log')">
         <span class="bm-icon">📋</span>日誌
       </button>
+      <button class="settings-bm-btn" onclick="switchSettingsPanel('oplog')">
+        <span class="bm-icon">🗒️</span>操作日誌
+      </button>
     </nav>
 
     <div class="settings-content">
@@ -3684,6 +3687,17 @@ alter table user_todos enable row level security;
       </div>
 
       <!-- ── Panel: 更新日誌 ── -->
+      <div id="settings-panel-oplog" class="settings-panel" style="display:none">
+        <div class="settings-section">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+            <h3 style="margin:0;">🗒️ 設定操作日誌</h3>
+            <button onclick="clearOpLog()" style="font-size:0.75rem;padding:4px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text-muted);cursor:pointer;">清除記錄</button>
+          </div>
+          <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:14px;">記錄每次儲存設定的變更內容，包含 CIR、ISF、目標血糖、血糖警戒值。</p>
+          <div id="oplog-list"></div>
+        </div>
+      </div>
+
       <div id="settings-panel-log" class="settings-panel" style="display:none">
 <div class="settings-section">
     <h3>📋 更新日誌</h3>
@@ -3693,6 +3707,19 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.45.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.45.0</span>
+          <span class="cl-date">2026-05-31</span>
+          <span class="cl-tag">設定操作日誌</span>
+        </div>
+        <ul class="cl-list">
+          <li>【操作日誌】設定頁新增「操作日誌」分頁，記錄每次 CIR / ISF / 目標血糖 / 血糖警戒值的變更時間與新舊值</li>
+          <li>儲存設定時自動比對舊值，只記錄有實際變動的欄位，支援清除記錄</li>
+        </ul>
+      </div>
 
       <!-- v2.44.1 -->
       <div class="cl-item">
@@ -5753,6 +5780,54 @@ function loadSettings() {
 function saveSettingsToStorage() {
   settings._updatedAt = new Date().toISOString();
   localStorage.setItem('insulin_settings', JSON.stringify(settings));
+}
+
+// ── 設定操作日誌 ──────────────────────────────────────────────────────
+function _getOpLog() {
+  try { return JSON.parse(localStorage.getItem('insulin_settings_log') || '[]'); } catch(e) { return []; }
+}
+function _saveOpLog(log) {
+  try { localStorage.setItem('insulin_settings_log', JSON.stringify(log.slice(-300))); } catch(e) {}
+}
+function _logSettingChanges(changes) {
+  if (!changes || !changes.length) return;
+  var log = _getOpLog();
+  log.push({ ts: Date.now(), changes: changes });
+  _saveOpLog(log);
+  if (document.getElementById('settings-panel-oplog') &&
+      document.getElementById('settings-panel-oplog').style.display !== 'none') renderOpLog();
+}
+function renderOpLog() {
+  var el = document.getElementById('oplog-list');
+  if (!el) return;
+  var log = _getOpLog().slice().reverse();
+  if (!log.length) {
+    el.innerHTML = '<p style="color:var(--text-muted);font-size:0.83rem;text-align:center;padding:24px 0;">尚無設定變更記錄</p>';
+    return;
+  }
+  el.innerHTML = log.map(function(entry) {
+    var d = new Date(entry.ts);
+    var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+    var ts = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    var chips = entry.changes.map(function(c) {
+      return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:3px 9px;font-size:0.78rem;margin:2px 3px 2px 0;">'
+        + '<span style="color:var(--text-muted);">' + c.field + '</span>'
+        + '<span style="color:var(--text-muted);text-decoration:line-through;margin:0 2px;">' + c.from + '</span>'
+        + '<span style="color:var(--text-muted);">→</span>'
+        + '<span style="color:var(--primary);font-weight:700;">' + c.to + '</span>'
+        + '</span>';
+    }).join('');
+    return '<div style="border-bottom:1px solid var(--border);padding:10px 0 8px;">'
+      + '<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;">' + ds + ' ' + ts + '</div>'
+      + '<div style="flex-wrap:wrap;display:flex;">' + chips + '</div>'
+      + '</div>';
+  }).join('');
+}
+function clearOpLog() {
+  if (!confirm('確定要清除所有設定操作記錄？')) return;
+  localStorage.removeItem('insulin_settings_log');
+  renderOpLog();
+  showToast('🗑️ 操作日誌已清除');
 }
 
 // ══════════════════════════════════════════
@@ -8591,6 +8666,15 @@ function saveMealParams() {
       target: parseFloat(document.getElementById('mp-target-' + m).value) || null,
     };
   });
+  // 偵測變更（用於操作日誌）
+  var _oldMp = settings.mealParams || {};
+  var _mpChanges = [];
+  meals.forEach(function(m) {
+    var old = _oldMp[m] || {}; var lab = labels[m];
+    if (mp[m].cir    != null && parseFloat(mp[m].cir)    !== parseFloat(old.cir))    _mpChanges.push({ field: lab+' CIR',    from: old.cir    || '-', to: mp[m].cir });
+    if (mp[m].isf    != null && parseFloat(mp[m].isf)    !== parseFloat(old.isf))    _mpChanges.push({ field: lab+' ISF',    from: old.isf    || '-', to: mp[m].isf });
+    if (mp[m].target != null && parseFloat(mp[m].target) !== parseFloat(old.target)) _mpChanges.push({ field: lab+' 目標血糖', from: old.target || '-', to: mp[m].target });
+  });
   // 組成確認訊息
   var summary = meals.map(function(m) {
     var p = mp[m];
@@ -8599,6 +8683,7 @@ function saveMealParams() {
   if (!confirm('確認儲存以下係數？\n\n' + summary)) return;
   settings.mealParams = mp;
   saveSettingsToStorage();
+  _logSettingChanges(_mpChanges);
   // ⚠️ 獨立備份：insulin_meal_params 與 insulin_settings 解耦
   try { localStorage.setItem('insulin_meal_params', JSON.stringify(mp)); } catch(e) {}
   showToast('✅ 餐前係數已儲存！');
@@ -8639,11 +8724,23 @@ function saveNSSettings() {
 
 function saveSettings() {
   if (!requireAppPwd('🔒 儲存設定')) return;
+  var _bgFields = [
+    { id:'set-low',        key:'low',        label:'低血糖警戒值' },
+    { id:'set-normalLow',  key:'normalLow',  label:'正常範圍下限' },
+    { id:'set-normalHigh', key:'normalHigh', label:'正常範圍上限' },
+    { id:'set-high',       key:'high',       label:'高血糖警戒值' },
+  ];
+  var _bgChanges = [];
+  _bgFields.forEach(function(f) {
+    var newVal = parseFloat(document.getElementById(f.id).value) || DEFAULT_SETTINGS[f.key];
+    if (newVal !== settings[f.key]) _bgChanges.push({ field: f.label, from: settings[f.key], to: newVal });
+  });
   settings.low        = parseFloat(document.getElementById('set-low').value)        || DEFAULT_SETTINGS.low;
   settings.normalLow  = parseFloat(document.getElementById('set-normalLow').value)  || DEFAULT_SETTINGS.normalLow;
   settings.normalHigh = parseFloat(document.getElementById('set-normalHigh').value) || DEFAULT_SETTINGS.normalHigh;
   settings.high       = parseFloat(document.getElementById('set-high').value)       || DEFAULT_SETTINGS.high;
   saveSettingsToStorage();
+  _logSettingChanges(_bgChanges);
   showToast('✅ 設定已儲存！');
   syncSettingsToCloud();
 }
@@ -8857,6 +8954,7 @@ var CL_PER_PAGE = 5;
 
 function switchSettingsPanel(panel) {
   _settingsActivePanel = panel;
+  if (panel === 'oplog') setTimeout(renderOpLog, 0);
   var panels = ['cloud', 'account', 'meal', 'cgm', 'notif', 'tools', 'log'];
   var btns = document.querySelectorAll('.settings-bm-btn');
   panels.forEach(function(p, i) {
@@ -10604,7 +10702,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.44.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.45.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
