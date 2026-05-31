@@ -2219,6 +2219,8 @@
     .bg-warning.hypo-urgent { background: linear-gradient(135deg,#991b1b,#dc2626); color:#fff; animation-duration:.9s; }
     .bg-warning.hyper-warn  { background: linear-gradient(135deg,#b45309,#f59e0b); color:#fff; }
     .bg-warning.hyper-urgent{ background: linear-gradient(135deg,#7c2d12,#ea580c); color:#fff; animation-duration:.9s; }
+    .bg-warning.hyper-critical{ background: linear-gradient(135deg,#7f1d1d,#dc2626); color:#fff; animation-duration:.7s; }
+    .bg-warning.hyper-predict { background: linear-gradient(135deg,#78350f,#d97706); color:#fff; animation-duration:2.4s; }
     .bg-warning.hypo-predict{ background: linear-gradient(135deg,#1e3a5f,#2563eb); color:#fff; animation-duration:2.4s; }
     @keyframes warn-pulse {
       0%,100%{ opacity:1; }
@@ -3691,6 +3693,20 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.44.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.44.1</span>
+          <span class="cl-date">2026-05-31</span>
+          <span class="cl-tag">高血糖三段預警</span>
+        </div>
+        <ul class="cl-list">
+          <li>【🚨 緊急高血糖】新增 ≥280 mg/dL 緊急等級，紅色高頻脈動，提示立即確認補打</li>
+          <li>【⚠️ / 🔵 趨勢預測】高血糖預測延伸至 90 分鐘，三段等級：urgent(≤20min) / warn(≤35min) / predict(≤90min)</li>
+          <li>可同時預測「何時達到警戒值(250)」與「何時達到緊急值(280)」，優先顯示緊急預測</li>
+        </ul>
+      </div>
 
       <!-- v2.44.0 -->
       <div class="cl-item">
@@ -5957,25 +5973,30 @@ function updateCGMWidget(entry) {
     } else { hideBanner('hypo'); }
   }
 
-  // ── Hyper banner ─────────────────────────────────────
-  if (sgv >= high) {
+  // ── Hyper banner (三段：critical ≥280 / urgent ≥high / predict up to 90min) ─
+  var CRITICAL_HIGH = 280;
+  if (sgv >= CRITICAL_HIGH) {
+    warnDismissed.hyper = null;
+    showBanner('hyper','hyper-critical','🚨 緊急高血糖！',
+      '當前 '+sgv+' mg/dL · 超過 '+CRITICAL_HIGH+' mg/dL · 請立即確認補打劑量');
+  } else if (sgv >= high) {
     warnDismissed.hyper = null;
     showBanner('hyper','hyper-urgent','🔴 目前已高血糖！',
       '當前 '+sgv+' mg/dL · 警戒 '+high+' mg/dL · 請確認是否需要補打胰島素');
-  } else if (rawDelta !== null && rawDelta > 0) {
-    var minsHigh = (high - sgv) / (rawDelta / 5);
-    if (minsHigh <= WARN) {
-      if (warnDismissed.hyper !== null && sgv > warnDismissed.hyper - 5) {
-        hideBanner('hyper');
-      } else {
-        warnDismissed.hyper = null;
-        var lvlH = minsHigh <= 10 ? 'hyper-urgent' : 'hyper-warn';
-        showBanner('hyper', lvlH,
-          '⚠️ 預計 '+Math.round(minsHigh)+' 分鐘後高血糖',
-          '當前 '+sgv+' mg/dL　'+deltaStr+'/5min　警戒 '+high+' mg/dL');
-      }
+  } else {
+    var _critHat  = _findPredictedHigh(sgv, rawDelta, CRITICAL_HIGH);
+    var _hyperHat = _findPredictedHigh(sgv, rawDelta, high);
+    var _useHat = _critHat || _hyperHat;
+    if (_useHat && !(warnDismissed.hyper !== null && sgv > warnDismissed.hyper - 5)) {
+      warnDismissed.hyper = null;
+      var _ht = _useHat.minsToHigh;
+      var _hlvlH = _ht <= 20 ? 'hyper-urgent' : (_ht <= 35 ? 'hyper-warn' : 'hyper-predict');
+      var _hicnH = _ht <= 35 ? '⚠️' : '🔵';
+      showBanner('hyper', _hlvlH,
+        _hicnH + ' 預計 ' + _ht + ' 分鐘後' + (_critHat ? '緊急高血糖' : '高血糖'),
+        '當前 '+sgv+' mg/dL　'+deltaStr+'　趨勢預測→ '+_useHat.predictedBG+' mg/dL');
     } else { hideBanner('hyper'); }
-  } else { hideBanner('hyper'); }
+  }
   updateBasalTimeBar();
   buildCgmCarousel();
 }
@@ -6331,15 +6352,24 @@ function checkAndNotify(entry) {
     }
   }
 
-  // Hyper
-  if (sgv >= high) {
+  // Hyper (三段: critical / urgent / predict)
+  var _CRIT = 280;
+  if (sgv >= _CRIT) {
+    sendPushNotif('hyper','🚨 緊急高血糖警報',
+      '目前血糖 '+sgv+' mg/dL，超過 '+_CRIT+' mg/dL，請立即確認補打劑量！', true);
+  } else if (sgv >= high) {
     sendPushNotif('hyper','🔴 高血糖警報',
       '目前血糖 '+sgv+' mg/dL，高於警戒值 '+high+' mg/dL，請確認是否補打胰島素。', true);
-  } else if (rawDelta !== null && rawDelta > 0) {
-    var mH = (high - sgv) / (rawDelta / 5);
-    if (mH <= 20) sendPushNotif('hyper',
-      '⚠️ 預計 '+Math.round(mH)+' 分鐘後高血糖',
-      '當前 '+sgv+' mg/dL　趨勢 +'+Math.round(rawDelta*10)/10+' mg/5min', mH <= 10);
+  } else {
+    var _nCritHat = _findPredictedHigh(sgv, rawDelta, _CRIT);
+    var _nHyperHat = _findPredictedHigh(sgv, rawDelta, high);
+    var _nH2 = _nCritHat || _nHyperHat;
+    if (_nH2) {
+      var _nt2 = _nH2.minsToHigh;
+      sendPushNotif('hyper',
+        (_nt2 <= 35 ? '⚠️' : '🔵') + ' 預計 '+_nt2+' 分鐘後' + (_nCritHat ? '緊急高血糖' : '高血糖'),
+        '趨勢預測→ '+_nH2.predictedBG+' mg/dL　當前 '+sgv+' mg/dL', _nt2 <= 15);
+    }
   }
 }
 
@@ -10193,6 +10223,16 @@ function _findPredictedLow(currentSGV, deltaPerFiveMin, lowThreshold) {
   return null;
 }
 
+function _findPredictedHigh(currentSGV, deltaPerFiveMin, threshold) {
+  // 掃描未來5~90分鐘，回傳最早超過高血糖閾值的時間點或 null
+  if (!deltaPerFiveMin || deltaPerFiveMin <= 0) return null;
+  for (var t = 5; t <= 90; t += 5) {
+    var bg = currentSGV + (deltaPerFiveMin / 5) * t;
+    if (bg >= threshold) return { minsToHigh: t, predictedBG: Math.round(bg) };
+  }
+  return null;
+}
+
 // ── Sparkline SVG builder ─────────────────────────────────────────────────────
 function buildPipSparkSVG(history, sparkColor, bandColor, w, h) {
   if (!history || history.length < 2) {
@@ -10564,7 +10604,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.44.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.44.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
