@@ -34,18 +34,18 @@
       --shadow: 0 2px 12px rgba(92,111,104,0.1);
     }
     body[data-skin="cold-dark"] {
-      --bg: #2F2963;       --card: #3a3470;
-      --primary: #EF946C;  --primary-dark: #d4724a;
-      --text: #f5ede6;     --text-muted: #C4A77D;
-      --border: rgba(239,148,108,0.25); --input-bg: #2F2963;
-      --normal: #70877F;   --normal-bg: rgba(112,135,127,0.18);
-      --warn: #EF946C;     --warn-bg: rgba(239,148,108,0.18);
-      --danger: #f87171;   --danger-bg: rgba(239,68,68,0.18);
-      --low: #c4b5fd;      --low-bg: rgba(196,181,253,0.18);
+      --bg: #C7EDE4;       --card: #ffffff;
+      --primary: #820B8A;  --primary-dark: #600868;
+      --text: #1a0a1e;     --text-muted: #AF9AB2;
+      --border: #d4c4d8;   --input-bg: #D5FFF3;
+      --normal: #2d9c6e;   --normal-bg: #e8faf3;
+      --warn: #b07a10;     --warn-bg: #fffbeb;
+      --danger: #d03535;   --danger-bg: #fef2f2;
+      --low: #7055c8;      --low-bg: #f3f0ff;
     }
     body[data-skin="cold-dark"] header {
-      background: linear-gradient(135deg, #2F2963 0%, #454372 100%);
-      box-shadow: 0 2px 8px rgba(239,148,108,0.30);
+      background: linear-gradient(135deg, #820B8A 0%, #AF9AB2 100%);
+      box-shadow: 0 2px 8px rgba(130,11,138,0.30);
     }
     body[data-skin="warm-light"] {
       --bg: #fbf2f4;       --card: #ffffff;
@@ -1939,7 +1939,7 @@
       margin-bottom: 12px; box-shadow: 0 4px 16px rgba(149,217,195,0.18);
       gap: 0; position: relative; overflow: hidden; transition: box-shadow 0.5s ease;
     }
-    body[data-skin="cold-dark"]  .cgm-widget { background: linear-gradient(135deg, #2F2963 0%, #454372 100%); box-shadow: 0 4px 16px rgba(239,148,108,0.25); border: 1px solid rgba(239,148,108,0.22); }
+    body[data-skin="cold-dark"]  .cgm-widget { background: linear-gradient(135deg, #600868 0%, #820B8A 100%); box-shadow: 0 4px 16px rgba(130,11,138,0.28); }
     body[data-skin="warm-light"] .cgm-widget { background: linear-gradient(135deg, #2a0810 0%, #5a1828 100%); box-shadow: 0 4px 16px rgba(200,125,135,0.22); }
     body[data-skin="midnight"]    .cgm-widget { background: linear-gradient(135deg, #090909 0%, #141414 100%); box-shadow: 0 4px 16px rgba(74,222,128,0.15); border: 1px solid rgba(74,222,128,0.22); }
     body[data-skin="warm-dark"]  .cgm-widget { background: linear-gradient(135deg, #1e1205 0%, #413620 100%); box-shadow: 0 4px 16px rgba(156,102,21,0.22); border: 1px solid rgba(255,215,145,0.22); }
@@ -2009,7 +2009,10 @@
       0%   { background-position: 200% center; }
       100% { background-position: -200% center; }
     }
-    @keyframes cgm-bar-pulse {
+    .cgm-sensor-arc { margin-top: 4px; display: flex; flex-direction: column; align-items: center; opacity: 0.9; }
+    @keyframes sensor-urgent-blink { 0%,100%{ opacity:1; } 50%{ opacity:0.35; } }
+    .cgm-sensor-arc.urgent { animation: sensor-urgent-blink 1s ease-in-out infinite; }
+        @keyframes cgm-bar-pulse {
       0%,100% { filter: brightness(1); }
       50%      { filter: brightness(1.55); }
     }
@@ -2042,7 +2045,7 @@
       background-clip: text;
       animation: cgm-shimmer 3s linear infinite;
     }
-    body[data-skin="cold-dark"]  .cgm-value { --cv1: #EF946C; --cv2: #ffd4b8; --cv3: #C4A77D; }
+    body[data-skin="cold-dark"]  .cgm-value { --cv1: #D5FFF3; --cv2: #ffffff; --cv3: #AF9AB2; }
     body[data-skin="warm-light"] .cgm-value { --cv1: #e8a0a8; --cv2: #fff0f2; --cv3: #c87d87; }
     body[data-skin="midnight"]    .cgm-value { --cv1: #4ade80; --cv2: #dcfce7; --cv3: #86efac; }
     body[data-skin="warm-dark"]  .cgm-value { --cv1: #FFD791; --cv2: #fff3c4; --cv3: #9C6615; }
@@ -2480,20 +2483,16 @@
     body[data-skin='midnight']  .vloc-rental { background:#1f0a0a !important; }
     body[data-skin='midnight']  .vloc-carry  { background:#0a1f10 !important; }
     /* ── 深色主題全局 Card/Panel override ──────────────────────────────────── */
-    body[data-skin="cold-dark"]  .history-day,
     body[data-skin="warm-dark"] .history-day,
     body[data-skin="midnight"]  .history-day {
       background: var(--card); border: 1px solid var(--border);
     }
-    body[data-skin="cold-dark"]  .history-day-header,
     body[data-skin="warm-dark"] .history-day-header,
     body[data-skin="midnight"]  .history-day-header { background: var(--bg); }
 
-    body[data-skin="cold-dark"]  .mini-cgm-card,
     body[data-skin="warm-dark"] .mini-cgm-card,
     body[data-skin="midnight"]  .mini-cgm-card { border: 1px solid var(--border); }
 
-    body[data-skin="cold-dark"]  .period-card,
     body[data-skin="warm-dark"] .period-card,
     body[data-skin="midnight"]  .period-card { border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 
@@ -2524,10 +2523,6 @@
     body[data-skin="warm-dark"] input[type="number"],
     body[data-skin="warm-dark"] input[type="date"],
     body[data-skin="warm-dark"] textarea,
-    body[data-skin="cold-dark"]  input[type="text"],
-    body[data-skin="cold-dark"]  input[type="number"],
-    body[data-skin="cold-dark"]  textarea,
-    body[data-skin="cold-dark"]  select,
     body[data-skin="warm-dark"] select,
     body[data-skin="midnight"]  input[type="text"],
     body[data-skin="midnight"]  input[type="number"],
@@ -2921,7 +2916,7 @@
   <div id="skin-switcher">
     <div class="sk-dots">
       <button class="sk-dot" onclick="setSkin('cold-light')" data-sk="cold-light" title="松石·淺色" style="background:#5C6F68;border-color:#95D9C3;"></button>
-      <button class="sk-dot" onclick="setSkin('cold-dark')" data-sk="cold-dark" title="晚霞·深色" style="background:#2F2963;border-color:#EF946C;"></button>
+      <button class="sk-dot" onclick="setSkin('cold-dark')" data-sk="cold-dark" title="薄荷紫·淺色" style="background:#820B8A;border-color:#C7EDE4;"></button>
       <button class="sk-dot" onclick="setSkin('warm-light')" data-sk="warm-light" title="玫瑰·淺色" style="background:#c87d87;"></button>
       <button class="sk-dot" onclick="setSkin('warm-dark')" data-sk="warm-dark" title="黃土·深色" style="background:#413620;border-color:#9C6615;"></button>
       <button class="sk-dot" onclick="setSkin('midnight')" data-sk="midnight" title="深夜·暗色" style="background:#111111;border-color:#4ade80;"></button>
@@ -2985,6 +2980,8 @@
         <span class="cgm-carousel-text" id="cgm-carousel-text-1"></span>
         <span class="cgm-carousel-text" id="cgm-carousel-text-2"></span>
       </div>
+      <!-- Sensor life arc -->
+      <div class="cgm-sensor-arc" id="cgm-sensor-arc" style="display:none;"></div>
     </div>
     <!-- Right: Insulin panel (populated by updateBasalTimeBar) -->
     <div class="cgm-divider" id="cgm-ins-divider" style="display:none;"></div>
@@ -3717,6 +3714,31 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.46.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.46.2</span>
+          <span class="cl-date">2026-06-01</span>
+          <span class="cl-tag">薄荷紫主題</span>
+        </div>
+        <ul class="cl-list">
+          <li>晚霞配色更換為薄荷紫：Frozen Water 薄荷綠底 + Dark Magenta 紫晶主色 + Lilac Ash 紫灰輔助</li>
+        </ul>
+      </div>
+
+      <!-- v2.46.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.46.1</span>
+          <span class="cl-date">2026-06-01</span>
+          <span class="cl-tag">感測器壽命量規</span>
+        </div>
+        <ul class="cl-list">
+          <li>【CGM Widget】左下角新增感測器剩餘壽命半圓量規：從 Nightscout 自動讀取最後換感測器時間，顯示剩餘天/小時</li>
+          <li>顏色預警：🟢 ≥7天 / 🟡 3-7天 / 🟠 1-3天 / 🔴 &lt;24h 閃爍</li>
+        </ul>
+      </div>
 
       <!-- v2.46.0 -->
       <div class="cl-item">
@@ -6538,11 +6560,83 @@ function checkAndNotify(entry) {
   }
 }
 
+// ── CGM 感測器壽命量規 ─────────────────────────────────────────
+var _sensorLastChangeMs = null;   // 快取，避免每次 poll 都打 API
+var _sensorFetchedAt    = 0;
+
+async function fetchSensorLastChange() {
+  if (!settings.nsUrl) return null;
+  // 超過1小時才重新抓
+  if (_sensorLastChangeMs !== null && Date.now() - _sensorFetchedAt < 3600000) return _sensorLastChangeMs;
+  try {
+    var token = settings.nsToken ? '&token=' + encodeURIComponent(settings.nsToken) : '';
+    var url = settings.nsUrl + '/api/v1/treatments.json?find[eventType]=Sensor+Change&count=1' + token;
+    var res = await fetch(url, { headers: nsHeaders() });
+    if (!res.ok) return null;
+    var data = await res.json();
+    if (!data || !data.length) return null;
+    var t = data[0].created_at || data[0].timestamp;
+    _sensorLastChangeMs = t ? new Date(t).getTime() : null;
+    _sensorFetchedAt = Date.now();
+    return _sensorLastChangeMs;
+  } catch(e) { return null; }
+}
+
+function _buildSensorArcSVG(pct, color, remainStr) {
+  var W = 72, H = 42, cx = 36, cy = 40, r = 30;
+  // 從左端逆時針（在SVG座標=往上）畫到終點
+  var a = Math.PI * (1 - Math.max(0, Math.min(100, pct)) / 100);
+  var ex = (cx + r * Math.cos(a)).toFixed(1);
+  var ey = (cy - r * Math.sin(a)).toFixed(1);
+  var track = 'M '+(cx-r)+' '+cy+' A '+r+' '+r+' 0 0 0 '+(cx+r)+' '+cy;
+  var fill  = pct > 0.5 ? ('M '+(cx-r)+' '+cy+' A '+r+' '+r+' 0 0 0 '+ex+' '+ey) : '';
+  var tc = 'rgba(255,255,255,0.18)';
+  return '<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'">'
+    + '<path d="'+track+'" fill="none" stroke="'+tc+'" stroke-width="5.5" stroke-linecap="round"/>'
+    + (fill ? '<path d="'+fill+'" fill="none" stroke="'+color+'" stroke-width="5.5" stroke-linecap="round"/>' : '')
+    + '<text x="'+cx+'" y="'+(cy-7)+'" text-anchor="middle" font-size="9" font-weight="800" fill="'+color+'">'+remainStr+'</text>'
+    + '<text x="'+cx+'" y="'+(cy+0)+'" text-anchor="middle" font-size="7" fill="rgba(255,255,255,0.45)">感測器</text>'
+    + '</svg>';
+}
+
+async function updateCGMSensorLife() {
+  var el = document.getElementById('cgm-sensor-arc');
+  if (!el) return;
+  var lastMs = await fetchSensorLastChange();
+  if (!lastMs) { el.style.display = 'none'; return; }
+
+  var LIFESPAN_MS = 14 * 24 * 3600000;
+  var remainMs = (lastMs + LIFESPAN_MS) - Date.now();
+  var pct = Math.max(0, remainMs / LIFESPAN_MS * 100);
+
+  var color, urgent = false;
+  if (remainMs <= 0)                 { color = '#9ca3af'; }  // 已到期
+  else if (remainMs < 24*3600000)    { color = '#ef4444'; urgent = true; }
+  else if (remainMs < 3*24*3600000)  { color = '#f97316'; }
+  else if (remainMs < 7*24*3600000)  { color = '#fbbf24'; }
+  else                               { color = '#4ade80'; }
+
+  var remStr;
+  if (remainMs <= 0) {
+    remStr = '已到期';
+  } else {
+    var totalH = Math.floor(remainMs / 3600000);
+    var d = Math.floor(totalH / 24);
+    var h = totalH % 24;
+    remStr = d > 0 ? (d + 'D ' + h + 'H') : (h + 'H ' + Math.floor((remainMs % 3600000) / 60000) + 'M');
+  }
+
+  el.innerHTML = _buildSensorArcSVG(pct, color, remStr);
+  el.style.display = 'flex';
+  el.className = 'cgm-sensor-arc' + (urgent ? ' urgent' : '');
+}
+
 async function pollCGM() {
   const entry = await fetchNSCurrent();
   updateCGMWidget(entry);
   checkAndNotify(entry);
   renderMiniCGMChart();
+  updateCGMSensorLife();
   if (entry && entry.sgv) {
     var ts = entry.date || Date.now();
     if (!_pipHistory.length || _pipHistory[_pipHistory.length-1].date !== ts) {
@@ -7142,7 +7236,7 @@ async function renderMiniCGMChart() {
   var _mcSkin = (document.body && document.body.dataset.skin) || 'cold-light';
   var _mcColors = {
     'cold-light': { line:'#3b82f6', fill:'rgba(59,130,246,0.08)',  grid:'rgba(0,0,0,0.07)',          tick:'#8AA39B', lw:1.5 },
-    'cold-dark':  { line:'#EF946C', fill:'rgba(239,148,108,0.12)', grid:'rgba(239,148,108,0.15)',     tick:'#C4A77D', lw:2   },
+    'cold-dark':  { line:'#820B8A', fill:'rgba(130,11,138,0.10)',  grid:'rgba(130,11,138,0.10)',      tick:'#AF9AB2', lw:1.5 },
     'warm-light': { line:'#c87d87', fill:'rgba(200,125,135,0.10)', grid:'rgba(200,125,135,0.12)',     tick:'#e8a0a8', lw:1.5 },
     'warm-dark':  { line:'#FFD791', fill:'rgba(255,215,145,0.12)', grid:'rgba(255,215,145,0.15)',     tick:'#9F7833', lw:2   },
     'midnight':   { line:'#4ade80', fill:'rgba(74,222,128,0.12)',  grid:'rgba(255,255,255,0.12)',     tick:'#777777', lw:2   },
@@ -9700,7 +9794,7 @@ function importUserId() {
 // ════════════════════════════════
 // ── Skin System ──────────────────────────────────────────────────────────
 var SKIN_LABELS = {
-  'cold-light': '松石', 'cold-dark': '晚霞',
+  'cold-light': '松石', 'cold-dark': '薄荷紫',
   'warm-light': '玫瑰·淺', 'warm-dark': '黃土', 'midnight': '深夜'
 };
 function setSkin(name) {
@@ -10264,9 +10358,9 @@ var PIP_SKIN_THEMES = {
   'cold-light': { bg:'#1a2822', text:'#A7FFF6', sub:'#8AA39B', ring:'#95D9C3',
                   low:'#c4b5fd', normal:'#A4F9C8', warn:'#fbbf24', high:'#f87171',
                   spark:'#95D9C3', band:'rgba(164,249,200,0.07)', dot:'#5C6F68', label:'松石' },
-  'cold-dark':  { bg:'#2F2963', text:'#f5ede6', sub:'#C4A77D', ring:'#EF946C',
-                  low:'#c4b5fd', normal:'#70877F', warn:'#EF946C', high:'#f87171',
-                  spark:'#EF946C', band:'rgba(239,148,108,0.10)', dot:'#454372', label:'晚霞' },
+  'cold-dark':  { bg:'#3d0542', text:'#D5FFF3', sub:'#AF9AB2', ring:'#C7EDE4',
+                  low:'#c4b5fd', normal:'#4ade80', warn:'#fbbf24', high:'#f87171',
+                  spark:'#C7EDE4', band:'rgba(199,237,228,0.10)', dot:'#820B8A', label:'薄荷紫' },
   'warm-light': { bg:'#2a1018', text:'#fce7ea', sub:'#e8a0a8', ring:'#c87d87',
                   low:'#c4b5fd', normal:'#a8e6cf', warn:'#fbbf24', high:'#f87171',
                   spark:'#c87d87', band:'rgba(200,125,135,0.07)', dot:'#c87d87', label:'玫瑰' },
@@ -10809,7 +10903,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.46.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.46.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -12775,7 +12869,7 @@ function updateBasalTimeBar() {
       // Build compact rows — colors follow current skin
       var _cgmSkinColors = {
         'cold-light': { rapid: '#95D9C3', basal: '#c4b5fd' },  // 青綠 vs 薰衣草紫
-        'cold-dark':  { rapid: '#EF946C', basal: '#70877F' },  // 晚霞珊瑚 vs 深青
+        'cold-dark':  { rapid: '#D5FFF3', basal: '#AF9AB2' },  // 薄荷白 vs 紫灰
         'warm-light': { rapid: '#e8a0a8', basal: '#93c5fd' },  // 玫瑰 vs 粉藍
         'warm-dark':  { rapid: '#FFD791', basal: '#a78bfa' },  // 金黃 vs 紫羅蘭
         'midnight':   { rapid: '#4ade80', basal: '#c084fc' },  // 霓綠 vs 霓紫
