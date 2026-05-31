@@ -3713,6 +3713,18 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.45.5 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.45.5</span>
+          <span class="cl-date">2026-06-01</span>
+          <span class="cl-tag">HUD 胰島素列配色</span>
+        </div>
+        <ul class="cl-list">
+          <li>HUD 長效胰島素列改為紫色系，與速效（綠/青/金）形成明顯對比，五個主題都已更新</li>
+        </ul>
+      </div>
+
       <!-- v2.45.4 -->
       <div class="cl-item">
         <div class="cl-header">
@@ -10780,7 +10792,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.45.4';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.45.5';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -12745,11 +12757,11 @@ function updateBasalTimeBar() {
       if (divider) divider.style.display = '';
       // Build compact rows — colors follow current skin
       var _cgmSkinColors = {
-        'cold-light': { rapid: '#95D9C3', basal: '#A4F9C8' },
-        'cold-dark':  { rapid: '#FF928B', basal: '#FFAC81' },
-        'warm-light': { rapid: '#e8a0a8', basal: '#f5c5cb' },
-        'warm-dark':  { rapid: '#FFD791', basal: '#9C6615' },
-        'midnight':   { rapid: '#4ade80', basal: '#86efac' },
+        'cold-light': { rapid: '#95D9C3', basal: '#c4b5fd' },  // 青綠 vs 薰衣草紫
+        'cold-dark':  { rapid: '#FF928B', basal: '#7dd3fc' },  // 珊瑚 vs 天藍
+        'warm-light': { rapid: '#e8a0a8', basal: '#93c5fd' },  // 玫瑰 vs 粉藍
+        'warm-dark':  { rapid: '#FFD791', basal: '#a78bfa' },  // 金黃 vs 紫羅蘭
+        'midnight':   { rapid: '#4ade80', basal: '#c084fc' },  // 霓綠 vs 霓紫
       };
       var _cgmColors = _cgmSkinColors[(document.body && document.body.dataset.skin) || 'cold-light'] || _cgmSkinColors['cold-light'];
       function _compactInsRow(last, durationH, color, emoji, shortLabel) {
