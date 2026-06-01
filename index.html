@@ -18,20 +18,20 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <style>
     :root {
-      --bg: #f0faf7;       --card: #ffffff;
-      --primary: #5C6F68;  --primary-dark: #4a5c56;
-      --text: #1e2e28;     --text-muted: #8AA39B;
-      --border: #c0ddd4;   --input-bg: #ffffff;
-      --normal: #3a9070;   --normal-bg: #e8faf3;
-      --warn: #b07a10;     --warn-bg: #fffbeb;
+      --bg: #fdf6f0;       --card: #ffffff;
+      --primary: #E4572E;  --primary-dark: #c23520;
+      --text: #29335C;     --text-muted: #7a6a8a;
+      --border: #f5cfc0;   --input-bg: #ffffff;
+      --normal: #6a9a50;   --normal-bg: rgba(168,198,134,0.18);
+      --warn: #d48a00;     --warn-bg: rgba(243,167,18,0.12);
       --danger: #d03535;   --danger-bg: #fef2f2;
       --low: #7055c8;      --low-bg: #f3f0ff;
-      --c-morning: #c49a3c;  --c-morning-bg: #fffbf2;
-      --c-noon:    #3a9e72;  --c-noon-bg:    #e8faf3;
-      --c-evening: #c0672a;  --c-evening-bg: #fff6f0;
-      --c-bedtime: #7a6bb5;  --c-bedtime-bg: #f4f0ff;
+      --c-morning: #F3A712;  --c-morning-bg: #fff8e6;
+      --c-noon:    #6a9a50;  --c-noon-bg:    #f2f7ec;
+      --c-evening: #E4572E;  --c-evening-bg: #fff2ee;
+      --c-bedtime: #29335C;  --c-bedtime-bg: #f0f1f8;
       --radius: 12px;
-      --shadow: 0 2px 12px rgba(92,111,104,0.1);
+      --shadow: 0 2px 12px rgba(228,87,46,0.12);
     }
     body[data-skin="cold-dark"] {
       --bg: #EFF8FF;       --card: #ffffff;
@@ -1930,10 +1930,10 @@
 
     /* ── CGM Real-time Widget ── */
     .cgm-widget {
-      background: linear-gradient(135deg, #0d1f1a 0%, #1e3d30 100%);
+      background: linear-gradient(135deg, #1a1f3c 0%, #29335C 100%);
       color: white; border-radius: 14px; padding: 14px 18px;
       display: flex; flex-direction: row; align-items: stretch;
-      margin-bottom: 12px; box-shadow: 0 4px 16px rgba(149,217,195,0.18);
+      margin-bottom: 12px; box-shadow: 0 4px 16px rgba(228,87,46,0.22);
       gap: 0; position: relative; overflow: hidden; transition: box-shadow 0.5s ease;
     }
     body[data-skin="cold-dark"]  .cgm-widget { background: linear-gradient(135deg, #1a4a7a 0%, #57B8FF 100%); box-shadow: 0 4px 16px rgba(87,184,255,0.30); }
@@ -2035,7 +2035,7 @@
     .ins-quick-timer-badge { display:inline-flex; align-items:center; gap:4px; font-size:.68rem; font-weight:700; background:rgba(99,102,241,.22); color:#a5b4fc; border-radius:6px; padding:2px 7px; margin-top:3px; border:1px solid rgba(99,102,241,.38); animation:cgm-time-glow 2s ease-in-out infinite; }
     .cgm-value {
       font-size: 2.4rem; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums;
-      --cv1: #A4F9C8; --cv2: #e0fff4; --cv3: #95D9C3;
+      --cv1: #F3A712; --cv2: #ffffff; --cv3: #E4572E;
       background: linear-gradient(90deg, var(--cv1) 0%, var(--cv2) 40%, var(--cv3) 60%, var(--cv1) 100%);
       background-size: 300% auto;
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
@@ -2882,7 +2882,7 @@
   <!-- 左側：Skin 切換器 -->
   <div id="skin-switcher">
     <div class="sk-dots">
-      <button class="sk-dot" onclick="setSkin('cold-light')" data-sk="cold-light" title="松石·淺色" style="background:#5C6F68;border-color:#95D9C3;"></button>
+      <button class="sk-dot" onclick="setSkin('cold-light')" data-sk="cold-light" title="辣椒·淺色" style="background:#E4572E;border-color:#29335C;"></button>
       <button class="sk-dot" onclick="setSkin('cold-dark')" data-sk="cold-dark" title="晴空·淺色" style="background:#57B8FF;border-color:#FBB13C;"></button>
       <button class="sk-dot" onclick="setSkin('warm-light')" data-sk="warm-light" title="玫瑰·淺色" style="background:#c87d87;"></button>
       <button class="sk-dot" onclick="setSkin('warm-dark')" data-sk="warm-dark" title="黃土·深色" style="background:#413620;border-color:#9C6615;"></button>
@@ -3681,6 +3681,18 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.47.3 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.47.3</span>
+          <span class="cl-date">2026-06-01</span>
+          <span class="cl-tag">辣椒主題</span>
+        </div>
+        <ul class="cl-list">
+          <li>松石主題改版為「辣椒」：辣椒紅（#E4572E）× 暮藍（#29335C）× 琥珀橙（#F3A712）× 橄欖綠（#A8C686）</li>
+        </ul>
+      </div>
 
       <!-- v2.47.2 -->
       <div class="cl-item">
@@ -7299,7 +7311,7 @@ async function renderMiniCGMChart() {
   // ── skin-aware chart colors ──────────────────────────────────────────
   var _mcSkin = (document.body && document.body.dataset.skin) || 'cold-light';
   var _mcColors = {
-    'cold-light': { line:'#3b82f6', fill:'rgba(59,130,246,0.08)',  grid:'rgba(0,0,0,0.07)',          tick:'#8AA39B', lw:1.5 },
+    'cold-light': { line:'#E4572E', fill:'rgba(228,87,46,0.10)',   grid:'rgba(228,87,46,0.08)',       tick:'#F3A712', lw:1.5 },
     'cold-dark':  { line:'#57B8FF', fill:'rgba(87,184,255,0.10)',  grid:'rgba(87,184,255,0.12)',       tick:'#B66D0D', lw:1.5 },
     'warm-light': { line:'#c87d87', fill:'rgba(200,125,135,0.10)', grid:'rgba(200,125,135,0.12)',     tick:'#e8a0a8', lw:1.5 },
     'warm-dark':  { line:'#FFD791', fill:'rgba(255,215,145,0.12)', grid:'rgba(255,215,145,0.15)',     tick:'#9F7833', lw:2   },
@@ -9858,7 +9870,7 @@ function importUserId() {
 // ════════════════════════════════
 // ── Skin System ──────────────────────────────────────────────────────────
 var SKIN_LABELS = {
-  'cold-light': '松石', 'cold-dark': '晴空',
+  'cold-light': '辣椒', 'cold-dark': '晴空',
   'warm-light': '玫瑰·淺', 'warm-dark': '黃土', 'midnight': '晨曦'
 };
 function setSkin(name) {
@@ -10419,9 +10431,9 @@ var _pipLastBasal = null;     // last basal injection {dt, site} for PiP display
 
 // ── PIP 主題隨 App Skin 自動切換 ──────────────────────────────────────────
 var PIP_SKIN_THEMES = {
-  'cold-light': { bg:'#1a2822', text:'#A7FFF6', sub:'#8AA39B', ring:'#95D9C3',
-                  low:'#c4b5fd', normal:'#A4F9C8', warn:'#fbbf24', high:'#f87171',
-                  spark:'#95D9C3', band:'rgba(164,249,200,0.07)', dot:'#5C6F68', label:'松石' },
+  'cold-light': { bg:'#1a1f3c', text:'#F3A712', sub:'#A8C686', ring:'#E4572E',
+                  low:'#c4b5fd', normal:'#A8C686', warn:'#F3A712', high:'#f87171',
+                  spark:'#E4572E', band:'rgba(228,87,46,0.10)', dot:'#E4572E', label:'辣椒' },
   'cold-dark':  { bg:'#1a3050', text:'#EFF8FF', sub:'#FBB13C', ring:'#57B8FF',
                   low:'#c4b5fd', normal:'#4ade80', warn:'#FBB13C', high:'#FE6847',
                   spark:'#57B8FF', band:'rgba(87,184,255,0.10)', dot:'#2499e8', label:'晴空' },
@@ -10967,7 +10979,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.47.2';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.47.3';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -12932,7 +12944,7 @@ function updateBasalTimeBar() {
       if (divider) divider.style.display = '';
       // Build compact rows — colors follow current skin
       var _cgmSkinColors = {
-        'cold-light': { rapid: '#95D9C3', basal: '#c4b5fd' },  // 青綠 vs 薰衣草紫
+        'cold-light': { rapid: '#E4572E', basal: '#A8C686' },  // 辣椒紅 vs 橄欖綠
         'cold-dark':  { rapid: '#FBB13C', basal: '#57B8FF' },  // 琥珀金 vs 晴空藍
         'warm-light': { rapid: '#e8a0a8', basal: '#93c5fd' },  // 玫瑰 vs 粉藍
         'warm-dark':  { rapid: '#FFD791', basal: '#a78bfa' },  // 金黃 vs 紫羅蘭
