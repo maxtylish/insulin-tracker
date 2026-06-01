@@ -166,6 +166,49 @@
       transform:scale(1.2);
     }
     .sk-dot:hover:not(.active) { transform:scale(1.12); }
+    .sk-dot-custom {
+      background: conic-gradient(#E4572E 0%,#F3A712 20%,#A8C686 40%,#5C95FF 60%,#c87d87 80%,#E4572E 100%) !important;
+      border-color: rgba(0,0,0,0.25) !important;
+    }
+    /* ── Theme Editor Overlay ── */
+    #theme-editor-overlay {
+      display:none; position:fixed; inset:0; z-index:9999;
+      background:rgba(0,0,0,0.55); align-items:flex-end; justify-content:center;
+    }
+    #theme-editor-sheet {
+      background:var(--card); border-radius:20px 20px 0 0;
+      padding:20px 18px 32px; width:100%; max-width:520px;
+      max-height:88vh; overflow-y:auto;
+      box-shadow:0 -4px 32px rgba(0,0,0,0.22);
+    }
+    .te-title { font-size:1.05rem; font-weight:700; color:var(--text); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+    .te-presets { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+    .te-preset-btn {
+      display:flex; align-items:center; gap:5px;
+      padding:5px 11px; border-radius:20px; border:1.5px solid var(--border);
+      background:var(--bg); color:var(--text); font-size:0.78rem;
+      cursor:pointer; transition:all .15s;
+    }
+    .te-preset-btn:hover { border-color:var(--primary); color:var(--primary); }
+    .te-preset-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+    .te-fields { display:grid; grid-template-columns:1fr 1fr; gap:10px 16px; margin-bottom:20px; }
+    .te-field { display:flex; flex-direction:column; gap:4px; }
+    .te-field label { font-size:0.72rem; color:var(--text-muted); font-weight:600; }
+    .te-field-row { display:flex; align-items:center; gap:8px; }
+    .te-color-input {
+      width:36px; height:36px; border-radius:8px; border:1.5px solid var(--border);
+      padding:2px; cursor:pointer; background:none; flex-shrink:0;
+    }
+    .te-hex-input {
+      flex:1; font-size:0.78rem; padding:5px 8px; border-radius:8px;
+      border:1.5px solid var(--border); background:var(--input-bg);
+      color:var(--text); font-family:monospace; max-width:90px;
+    }
+    .te-actions { display:flex; gap:10px; justify-content:flex-end; }
+    .te-btn { padding:9px 22px; border-radius:12px; font-size:0.88rem; font-weight:600; cursor:pointer; border:none; }
+    .te-btn-save { background:var(--primary); color:#fff; }
+    .te-btn-close { background:var(--bg); color:var(--text-muted); border:1.5px solid var(--border); }
+    .te-section-title { font-size:0.72rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; margin:10px 0 6px; grid-column:1/-1; }
     #sk-label {
       font-size:0.58rem; opacity:0.55; letter-spacing:0.3px;
       color:var(--text-muted); white-space:nowrap;
@@ -2887,6 +2930,7 @@
       <button class="sk-dot" onclick="setSkin('warm-light')" data-sk="warm-light" title="玫瑰·淺色" style="background:#c87d87;"></button>
       <button class="sk-dot" onclick="setSkin('warm-dark')" data-sk="warm-dark" title="黃土·深色" style="background:#413620;border-color:#9C6615;"></button>
       <button class="sk-dot" onclick="setSkin('midnight')" data-sk="midnight" title="晨曦·淺色" style="background:#F87575;border-color:#5C95FF;"></button>
+      <button class="sk-dot sk-dot-custom" onclick="showThemeEditor()" data-sk="custom" title="自訂主題" style="width:16px;height:16px;"></button>
     </div>
     <div id="sk-label"></div>
   </div>
@@ -2903,6 +2947,11 @@
     <div style="display:flex;align-items:center;gap:2px;"><span id="userDot" class="user-dot user-dot-dad"></span><div id="syncBadge" class="sync-badge sync-busy" style="display:inline-block;">⏳ 初始化</div></div>
   </div>
 </header>
+
+<!-- ── Theme Editor Overlay ── -->
+<div id="theme-editor-overlay" onclick="if(event.target===this)closeThemeEditor()">
+  <div id="theme-editor-sheet"></div>
+</div>
 
 <nav>
   <button class="active" onclick="switchTab('today')"><span class="nav-ico">📋</span><span class="nav-lbl">今日記錄</span></button>
@@ -3681,6 +3730,20 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.48.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.48.0</span>
+          <span class="cl-date">2026-06-01</span>
+          <span class="cl-tag">視覺化主題編輯器</span>
+        </div>
+        <ul class="cl-list">
+          <li>新增「自訂主題」色盤按鈕（Header 右側色點最後一個）</li>
+          <li>開啟編輯器可即時調整主色、背景、文字、邊框、Header 漸層、CGM 漸層等 10 項顏色</li>
+          <li>快速套用既有 5 個主題作為起點，即時預覽，套用後儲存至本機</li>
+        </ul>
+      </div>
 
       <!-- v2.47.3 -->
       <div class="cl-item">
@@ -9880,7 +9943,11 @@ function setSkin(name) {
     btn.classList.toggle('active', btn.dataset.sk === name);
   });
   var lbl = document.getElementById('sk-label');
-  if (lbl) lbl.textContent = SKIN_LABELS[name] || '';
+  if (lbl) lbl.textContent = name === 'custom' ? '自訂' : (SKIN_LABELS[name] || '');
+  if (name === 'custom') {
+    if (!_customSkinVars) _customSkinVars = _loadCustomSkinVars();
+    _applyCustomSkinStyle(_customSkinVars);
+  }
   // 若 PIP 視窗開啟，即時更新背景色
   if (typeof _pipWin !== 'undefined' && _pipWin && !_pipWin.closed) {
     _renderPipContent(_pipThemeKey);
@@ -9891,6 +9958,190 @@ function initSkin() {
   var saved = 'cold-light';
   try { saved = localStorage.getItem('app_skin') || 'cold-light'; } catch(e) {}
   setSkin(saved);
+}
+
+// ── Custom Theme Engine ────────────────────────────────────────────────────
+var _customSkinVars = null;
+
+var _CUSTOM_SKIN_DEFAULT = {
+  '--primary':'#E4572E','--primary-dark':'#c23520',
+  '--bg':'#fdf6f0','--card':'#ffffff',
+  '--text':'#29335C','--text-muted':'#7a6a8a',
+  '--border':'#f5cfc0','--input-bg':'#ffffff',
+  '--normal':'#6a9a50','--normal-bg':'rgba(168,198,134,0.18)',
+  '--warn':'#d48a00','--warn-bg':'rgba(243,167,18,0.12)',
+  '--danger':'#d03535','--danger-bg':'#fef2f2',
+  '--low':'#7055c8','--low-bg':'#f3f0ff',
+  '--shadow':'0 2px 12px rgba(228,87,46,0.12)',
+  '_hstart':'#E4572E','_hend':'#29335C',
+  '_cgm0':'#1a1f3c','_cgm1':'#29335C'
+};
+
+var _SKIN_PRESETS_TE = {
+  'cold-light':{'--primary':'#E4572E','--bg':'#fdf6f0','--card':'#ffffff','--text':'#29335C','--text-muted':'#7a6a8a','--border':'#f5cfc0','--normal':'#6a9a50','--warn':'#d48a00','_hstart':'#E4572E','_hend':'#29335C','_cgm0':'#1a1f3c','_cgm1':'#29335C','_dot':'#E4572E'},
+  'cold-dark': {'--primary':'#57B8FF','--bg':'#EFF8FF','--card':'#ffffff','--text':'#1a2a3a','--text-muted':'#B66D0D','--border':'#b8dfff','--normal':'#2d9c6e','--warn':'#FBB13C','_hstart':'#57B8FF','_hend':'#FBB13C','_cgm0':'#1a4a7a','_cgm1':'#57B8FF','_dot':'#57B8FF'},
+  'warm-light':{'--primary':'#c87d87','--bg':'#fbf2f4','--card':'#ffffff','--text':'#3d1e22','--text-muted':'#9a6870','--border':'#f0d0d5','--normal':'#3a9070','--warn':'#b07a10','_hstart':'#c87d87','_hend':'#d4919a','_cgm0':'#2a0810','_cgm1':'#5a1828','_dot':'#c87d87'},
+  'warm-dark': {'--primary':'#9C6615','--bg':'#2a1f0e','--card':'#362812','--text':'#FFD791','--text-muted':'#9F7833','--border':'rgba(255,215,145,0.22)','--normal':'#86efac','--warn':'#FFD791','_hstart':'#413620','_hend':'#9C6615','_cgm0':'#1e1205','_cgm1':'#413620','_dot':'#413620'},
+  'midnight':  {'--primary':'#F87575','--bg':'#fef0f0','--card':'#ffffff','--text':'#2d1a2a','--text-muted':'#9a6870','--border':'#ffd4d4','--normal':'#5C95FF','--warn':'#f59e0b','_hstart':'#F87575','_hend':'#5C95FF','_cgm0':'#F87575','_cgm1':'#5C95FF','_dot':'#F87575'},
+};
+
+function _loadCustomSkinVars() {
+  try {
+    var s = localStorage.getItem('app_skin_custom');
+    if (s) return Object.assign({}, _CUSTOM_SKIN_DEFAULT, JSON.parse(s));
+  } catch(e) {}
+  return Object.assign({}, _CUSTOM_SKIN_DEFAULT);
+}
+
+function _saveCustomSkinVars(v) {
+  try { localStorage.setItem('app_skin_custom', JSON.stringify(v)); } catch(e) {}
+}
+
+function _applyCustomSkinStyle(vars) {
+  var el = document.getElementById('custom-skin-style');
+  if (!el) { el = document.createElement('style'); el.id = 'custom-skin-style'; document.head.appendChild(el); }
+  var hs = vars['_hstart'] || vars['--primary'] || '#E4572E';
+  var he = vars['_hend']   || vars['--text']    || '#29335C';
+  var c0 = vars['_cgm0']   || '#1a1f3c';
+  var c1 = vars['_cgm1']   || he;
+  var cvLines = Object.keys(vars).filter(function(k){return k.startsWith('--');})
+    .map(function(k){return k+':'+vars[k]+';'}).join(' ');
+  el.textContent = 'body[data-skin="custom"]{' + cvLines + '}'
+    + 'body[data-skin="custom"] header{background:linear-gradient(135deg,' + hs + ' 0%,' + he + ' 100%);box-shadow:0 2px 8px ' + hs + '66;}'
+    + 'body[data-skin="custom"] .cgm-widget{background:linear-gradient(135deg,' + c0 + ' 0%,' + c1 + ' 100%);box-shadow:0 4px 16px ' + hs + '44;}';
+}
+
+function _hexToValid(v) {
+  if (!v) return null;
+  v = v.trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) return v;
+  if (/^#[0-9a-fA-F]{3}$/.test(v)) return v;
+  if (/^[0-9a-fA-F]{6}$/.test(v)) return '#'+v;
+  return null;
+}
+
+function showThemeEditor() {
+  if (!_customSkinVars) {
+    var cur = document.body.dataset.skin || 'cold-light';
+    var preset = _SKIN_PRESETS_TE[cur];
+    _customSkinVars = Object.assign({}, _CUSTOM_SKIN_DEFAULT, preset || {});
+  }
+  _buildThemeEditorUI();
+  document.getElementById('theme-editor-overlay').style.display = 'flex';
+}
+
+function closeThemeEditor() {
+  document.getElementById('theme-editor-overlay').style.display = 'none';
+}
+
+function _teFieldId(key) { return 'tc-' + key.replace(/[^a-z0-9]/gi,'_'); }
+
+function _buildThemeEditorUI() {
+  var sheet = document.getElementById('theme-editor-sheet');
+  if (!sheet) return;
+
+  var presets = [
+    {key:'cold-light', label:'辣椒', dot:'#E4572E'},
+    {key:'cold-dark',  label:'晴空', dot:'#57B8FF'},
+    {key:'warm-light', label:'玫瑰', dot:'#c87d87'},
+    {key:'warm-dark',  label:'黃土', dot:'#413620'},
+    {key:'midnight',   label:'晨曦', dot:'#F87575'},
+  ];
+
+  var fields = [
+    {sec:'主色'},
+    {key:'--primary',    label:'主色（按鈕/強調）'},
+    {sec:'背景與卡片'},
+    {key:'--bg',         label:'頁面背景'},
+    {key:'--card',       label:'卡片背景'},
+    {sec:'文字'},
+    {key:'--text',       label:'主要文字'},
+    {key:'--text-muted', label:'次要文字'},
+    {sec:'邊框與提示'},
+    {key:'--border',     label:'邊框'},
+    {key:'--normal',     label:'正常血糖'},
+    {key:'--warn',       label:'警示色'},
+    {sec:'Header 漸層'},
+    {key:'_hstart',      label:'起色'},
+    {key:'_hend',        label:'終色'},
+    {sec:'CGM 漸層'},
+    {key:'_cgm0',        label:'起色'},
+    {key:'_cgm1',        label:'終色'},
+  ];
+
+  var presetBtns = presets.map(function(p) {
+    return '<button class="te-preset-btn" data-sk="' + p.key + '" onclick="teLoadPreset(this.dataset.sk)">'
+      + '<span class="te-preset-dot" style="background:' + p.dot + ';"></span>' + p.label + '</button>';
+  }).join('');
+
+  var fieldRows = '';
+  fields.forEach(function(f) {
+    if (f.sec) {
+      fieldRows += '<div class="te-section-title">' + f.sec + '</div>';
+      return;
+    }
+    var v = _customSkinVars[f.key] || '#888888';
+    var colorVal = /^#[0-9a-fA-F]{3,6}$/.test(v) ? v : '#888888';
+    var id = _teFieldId(f.key);
+    fieldRows += '<div class="te-field">'
+      + '<label>' + f.label + '</label>'
+      + '<div class="te-field-row">'
+      + '<input type="color" class="te-color-input" id="' + id + '-c" value="' + colorVal
+        + '" data-key="' + f.key + '" data-pair="' + id + '-h" oninput="teOnColorInput(this)">'
+      + '<input type="text" class="te-hex-input" id="' + id + '-h" value="' + colorVal
+        + '" data-key="' + f.key + '" data-pair="' + id + '-c"'
+        + ' maxlength="7" placeholder="#ffffff" oninput="teOnHexInput(this)">'
+      + '</div></div>';
+  });
+
+  sheet.innerHTML = '<div class="te-title">🎨 自訂主題</div>'
+    + '<div class="te-presets">' + presetBtns + '</div>'
+    + '<div class="te-fields">' + fieldRows + '</div>'
+    + '<div class="te-actions">'
+    + '<button class="te-btn te-btn-close" onclick="closeThemeEditor()">關閉</button>'
+    + '<button class="te-btn te-btn-save" onclick="saveCustomTheme()">套用並儲存</button>'
+    + '</div>';
+}
+
+function teOnColorInput(el) {
+  var pairId = el.dataset.pair;
+  document.getElementById(pairId).value = el.value;
+  teUpdateColor(el.dataset.key, el.value);
+}
+
+function teOnHexInput(el) {
+  var hv = _hexToValid(el.value);
+  if (!hv) return;
+  document.getElementById(el.dataset.pair).value = hv;
+  teUpdateColor(el.dataset.key, hv);
+}
+
+
+function teUpdateColor(key, value) {
+  if (!_customSkinVars) _customSkinVars = _loadCustomSkinVars();
+  _customSkinVars[key] = value;
+  // 衍生顏色
+  if (key === '--primary') { _customSkinVars['--primary-dark'] = value; }
+  if (key === '--bg')      { _customSkinVars['--input-bg'] = value; }
+  if (key === '--normal')  { _customSkinVars['--normal-bg'] = value+'25'; }
+  if (key === '--warn')    { _customSkinVars['--warn-bg'] = value+'20'; }
+  setSkin('custom');
+}
+
+function teLoadPreset(skinKey) {
+  var preset = _SKIN_PRESETS_TE[skinKey];
+  if (!preset) return;
+  _customSkinVars = Object.assign({}, _CUSTOM_SKIN_DEFAULT, preset);
+  _buildThemeEditorUI(); // re-render with new values
+  setSkin('custom');
+}
+
+function saveCustomTheme() {
+  if (!_customSkinVars) return;
+  _saveCustomSkinVars(_customSkinVars);
+  setSkin('custom');
+  closeThemeEditor();
+  showToast('🎨 自訂主題已儲存');
 }
 
 function init() {
@@ -10979,7 +11230,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.47.3';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.48.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
