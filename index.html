@@ -3715,6 +3715,18 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.46.6 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.46.6</span>
+          <span class="cl-date">2026-06-01</span>
+          <span class="cl-tag">飲品新增無糖豆奶</span>
+        </div>
+        <ul class="cl-list">
+          <li>計算機飲品選項新增「無糖豆奶 100g (碳水3g)」</li>
+        </ul>
+      </div>
+
       <!-- v2.46.5 -->
       <div class="cl-item">
         <div class="cl-header">
@@ -10939,7 +10951,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.46.5';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.46.6';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -14174,6 +14186,7 @@ function checkTodoAlerts() {
             <option value="milk_200">牛奶 200g (碳水10g)</option>
             <option value="yogurt_100">優酪乳 100g (碳水12g)</option>
             <option value="yakult">養樂多 90ML (碳水14.7g)</option>
+            <option value="soymilk_unsweetened">無糖豆奶 100g (碳水3g)</option>
           </select>
           <input type="number" id="calc-qty-4" min="0" step="0.1" value="1" oninput="calcRecalc()" />
         </div>
