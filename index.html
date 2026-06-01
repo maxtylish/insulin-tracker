@@ -66,7 +66,7 @@
     }
     body[data-skin="midnight"] {
       --bg: #A30000;       --card: #7a0000;
-      --primary: #FF7700;  --primary-dark: #cc5e00;
+      --primary: #EFD28D;  --primary-dark: #d4b55a;
       --text: #EFD28D;     --text-muted: #c4956a;
       --border: rgba(255,119,0,0.30); --input-bg: #7a0000;
       --normal: #00AFB5;   --normal-bg: rgba(0,175,181,0.18);
@@ -75,8 +75,8 @@
       --low: #c4b5fd;      --low-bg: rgba(196,181,253,0.18);
     }
     body[data-skin="midnight"]    header {
-      background: linear-gradient(135deg, #A30000 0%, #FF7700 100%);
-      box-shadow: 0 2px 8px rgba(255,119,0,0.35);
+      background: linear-gradient(135deg, #A30000 0%, #EFD28D 100%);
+      box-shadow: 0 2px 8px rgba(239,210,141,0.35);
     }
     body[data-skin="warm-dark"] {
       --bg: #2a1f0e;       --card: #362812;
@@ -1938,7 +1938,7 @@
     }
     body[data-skin="cold-dark"]  .cgm-widget { background: linear-gradient(135deg, #1a4a7a 0%, #57B8FF 100%); box-shadow: 0 4px 16px rgba(87,184,255,0.30); }
     body[data-skin="warm-light"] .cgm-widget { background: linear-gradient(135deg, #2a0810 0%, #5a1828 100%); box-shadow: 0 4px 16px rgba(200,125,135,0.22); }
-    body[data-skin="midnight"]    .cgm-widget { background: linear-gradient(135deg, #7a0000 0%, #A30000 100%); box-shadow: 0 4px 16px rgba(255,119,0,0.28); border: 1px solid rgba(255,119,0,0.25); }
+    body[data-skin="midnight"]    .cgm-widget { background: linear-gradient(135deg, #7a0000 0%, #A30000 100%); box-shadow: 0 4px 16px rgba(239,210,141,0.25); border: 1px solid rgba(239,210,141,0.20); }
     body[data-skin="warm-dark"]  .cgm-widget { background: linear-gradient(135deg, #1e1205 0%, #413620 100%); box-shadow: 0 4px 16px rgba(156,102,21,0.22); border: 1px solid rgba(255,215,145,0.22); }
     .cgm-widget[data-bg-status="low"]    { box-shadow: 0 4px 20px rgba(139,92,246,0.38); }
     .cgm-widget[data-bg-status="normal"] { box-shadow: 0 4px 20px rgba(34,197,94,0.32); }
@@ -2044,7 +2044,7 @@
     }
     body[data-skin="cold-dark"]  .cgm-value { --cv1: #FBB13C; --cv2: #ffffff; --cv3: #57B8FF; }
     body[data-skin="warm-light"] .cgm-value { --cv1: #e8a0a8; --cv2: #fff0f2; --cv3: #c87d87; }
-    body[data-skin="midnight"]    .cgm-value { --cv1: #FF7700; --cv2: #EFD28D; --cv3: #00AFB5; }
+    body[data-skin="midnight"]    .cgm-value { --cv1: #EFD28D; --cv2: #fffbe6; --cv3: #00AFB5; }
     body[data-skin="warm-dark"]  .cgm-value { --cv1: #FFD791; --cv2: #fff3c4; --cv3: #9C6615; }
     .cgm-widget[data-bg-status="normal"] .cgm-value {
       --cv1: #4ade80; --cv2: #dcfce7; --cv3: #86efac;
@@ -3711,6 +3711,20 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.47.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.47.1</span>
+          <span class="cl-date">2026-06-01</span>
+          <span class="cl-tag">熔岩主色+日誌刪除</span>
+        </div>
+        <ul class="cl-list">
+          <li>熔岩主題主色改為 Soft Peach #EFD28D，按鈕、邊框、漸層更新</li>
+          <li>修復：文件截斷問題（carbCalcOverlay 被切斷）已恢復</li>
+          <li>操作日誌每筆右側新增紅色 × 支援單筆刪除</li>
+        </ul>
+      </div>
 
       <!-- v2.47.0 -->
       <div class="cl-item">
@@ -5986,12 +6000,22 @@ function renderOpLog() {
         + '</span>';
     }).join('');
     return '<div style="border-bottom:1px solid var(--border);padding:10px 0 8px;">'
-      + '<div style="font-size:0.75rem;color:var(--text-muted);margin-bottom:6px;display:flex;align-items:center;">'
-        + ds + ' ' + ts + userBadge + '</div>'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">'
+        + '<div style="font-size:0.75rem;color:var(--text-muted);display:flex;align-items:center;">' + ds + ' ' + ts + userBadge + '</div>'
+        + '<button onclick="deleteOpLogEntry(' + (_getOpLog().length - 1 - idx) + ')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:1rem;padding:0 4px;line-height:1;" title="刪除此記錄">×</button>'
+        + '</div>'
       + '<div style="flex-wrap:wrap;display:flex;">' + chips + '</div>'
       + '</div>';
   }).join('');
 }
+function deleteOpLogEntry(idx) {
+  var log = _getOpLog();
+  if (idx < 0 || idx >= log.length) return;
+  log.splice(idx, 1);
+  _saveOpLog(log);
+  renderOpLog();
+}
+
 function clearOpLog() {
   if (!confirm('確定要清除所有設定操作記錄？')) return;
   localStorage.removeItem('insulin_settings_log');
@@ -7296,7 +7320,7 @@ async function renderMiniCGMChart() {
     'cold-dark':  { line:'#57B8FF', fill:'rgba(87,184,255,0.10)',  grid:'rgba(87,184,255,0.12)',       tick:'#B66D0D', lw:1.5 },
     'warm-light': { line:'#c87d87', fill:'rgba(200,125,135,0.10)', grid:'rgba(200,125,135,0.12)',     tick:'#e8a0a8', lw:1.5 },
     'warm-dark':  { line:'#FFD791', fill:'rgba(255,215,145,0.12)', grid:'rgba(255,215,145,0.15)',     tick:'#9F7833', lw:2   },
-    'midnight':   { line:'#FF7700', fill:'rgba(255,119,0,0.12)',   grid:'rgba(255,119,0,0.15)',       tick:'#c4956a', lw:2   },
+    'midnight':   { line:'#EFD28D', fill:'rgba(239,210,141,0.12)', grid:'rgba(239,210,141,0.15)',     tick:'#c4956a', lw:2   },
   };
   var _mc = _mcColors[_mcSkin] || _mcColors['cold-light'];
 
@@ -10424,9 +10448,9 @@ var PIP_SKIN_THEMES = {
   'warm-dark':  { bg:'#2a1f0e', text:'#FFD791', sub:'#9F7833', ring:'#9C6615',
                   low:'#c4b5fd', normal:'#86efac', warn:'#FFD791', high:'#f87171',
                   spark:'#9C6615', band:'rgba(156,102,21,0.12)', dot:'#9C6615', label:'黃土' },
-  'midnight':   { bg:'#7a0000', text:'#EFD28D', sub:'#c4956a', ring:'#FF7700',
+  'midnight':   { bg:'#7a0000', text:'#EFD28D', sub:'#c4956a', ring:'#EFD28D',
                   low:'#c4b5fd', normal:'#00AFB5', warn:'#FF7700', high:'#EFD28D',
-                  spark:'#FF7700', band:'rgba(255,119,0,0.10)', dot:'#A30000', label:'熔岩' },
+                  spark:'#EFD28D', band:'rgba(239,210,141,0.10)', dot:'#A30000', label:'熔岩' },
 };
 
 // 取得當前 skin 對應的 PIP 主題
@@ -10960,7 +10984,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.47.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.47.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -12929,7 +12953,7 @@ function updateBasalTimeBar() {
         'cold-dark':  { rapid: '#FBB13C', basal: '#57B8FF' },  // 琥珀金 vs 晴空藍
         'warm-light': { rapid: '#e8a0a8', basal: '#93c5fd' },  // 玫瑰 vs 粉藍
         'warm-dark':  { rapid: '#FFD791', basal: '#a78bfa' },  // 金黃 vs 紫羅蘭
-        'midnight':   { rapid: '#FF7700', basal: '#00AFB5' },  // 熔岩橙 vs 熱帶青
+        'midnight':   { rapid: '#EFD28D', basal: '#00AFB5' },  // 沙金 vs 熱帶青
       };
       var _cgmColors = _cgmSkinColors[(document.body && document.body.dataset.skin) || 'cold-light'] || _cgmSkinColors['cold-light'];
       function _compactInsRow(last, durationH, color, emoji, shortLabel) {
@@ -14285,4 +14309,280 @@ function checkTodoAlerts() {
         </div>
         <div class="calc-row">
           <label class="calc-label">目標血糖</label>
-          <input type="number" id="cc-tar
+          <input type="number" id="cc-target" class="calc-input" min="80" max="250" step="1" value="140" oninput="carbCalcRecalc()">
+          <span class="calc-unit">mg/dL</span>
+        </div>
+        <div class="calc-row">
+          <label class="calc-label">CIR（目前餐段）</label>
+          <input type="number" id="cc-cir" class="calc-input" min="1" max="30" step="0.5" value="10" oninput="carbCalcRecalc()">
+          <span class="calc-unit">g/U</span>
+        </div>
+      </div>
+      <div class="calc-result-box">
+        <div class="calc-result-label">建議補糖量</div>
+        <div class="calc-result-value"><span id="cc-result">—</span> <span class="calc-result-unit">克</span></div>
+        <div style="font-size:0.75rem;color:var(--text-muted);margin-top:6px;">公式：(目標血糖 − 目前血糖) ÷ (ISF ÷ CIR)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="calcOverlay" class="calc-overlay" onclick="calcOverlayClick(event)">
+  <div class="calc-modal">
+    <div class="calc-modal-header">
+      <h2 id="calc-modal-title">💊 餐前劑量計算</h2>
+      <button class="calc-close-btn" type="button" onclick="closeCalcModal()">✕</button>
+    </div>
+    <div class="calc-body">
+
+      <!-- 基本資訊 -->
+      <div class="calc-section">
+        <div class="calc-section-title">基本資訊</div>
+        <div class="calc-grid-2">
+          <div class="calc-field">
+            <label>餐別</label>
+            <select id="calc-meal-period" onchange="calcUpdateMeal()">
+              <option value="breakfast">🌅 早餐</option>
+              <option value="lunch">☀️ 午餐</option>
+              <option value="dinner">🌙 晚餐</option>
+            </select>
+          </div>
+          <div class="calc-field">
+            <label>目前血糖 (mg/dL)</label>
+            <input type="number" id="calc-bg" min="0" step="1" value="180" oninput="calcRecalc()" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 飲食紀錄 -->
+      <div class="calc-section">
+        <div class="calc-section-title">飲食紀錄</div>
+        <div class="calc-food-row" style="align-items:flex-start;">
+          <span class="calc-food-badge badge-set" style="margin-top:4px;">套餐</span>
+          <div style="flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;">
+            <input type="search" id="calc-set-search" class="calc-set-search"
+              placeholder="🔍 搜尋套餐名稱…" oninput="calcFilterMealSets(this.value)">
+            <select id="calc-meal-set" onchange="calcApplyMealSet(this.value)" style="width:100%;">
+              <option value="">── 選擇套餐（自動填入）──</option>
+            </select>
+          </div>
+        </div>
+        <hr class="calc-set-divider">
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-main">主餐</span>
+          <select id="calc-food-1" onchange="calcUpdateFood1()"></select>
+          <input type="number" id="calc-qty-1" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-side">餐食2</span>
+          <select id="calc-food-2" onchange="calcRecalc()"></select>
+          <input type="number" id="calc-qty-2" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-fruit">甜點</span>
+          <select id="calc-food-3" onchange="calcRecalc()">
+            <option value="">不選擇</option>
+            <option value="guava">芭樂 100公克 (碳水10.6克)</option>
+            <option value="apple">蘋果 100公克 (碳水11.9克)</option>
+            <option value="cherry">櫻桃 100公克 (碳水19.12克)</option>
+            <option value="banana_peel">香蕉帶皮 100公克 (碳水10.6克)</option>
+            <option value="banana">香蕉去皮 100公克 (碳水22.1克)</option>
+            <option value="pineapple">鳳梨 100公克 (碳水13.6克)</option>
+            <option value="dragon_fruit">火龍果 100公克 (碳水12.36克)</option>
+            <option value="strawberry">草莓去蒂 100公克 (碳水9.3克)</option>
+            <option value="kiwi">奇異果 100公克 (碳水14.6克)</option>
+          </select>
+          <input type="number" id="calc-qty-3" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-drink">飲品</span>
+          <select id="calc-food-4" onchange="calcRecalc()">
+            <option value="">不選擇</option>
+            <option value="milk_100">牛奶 100公克 (碳水4.8克)</option>
+            <option value="milk_150">牛奶 150公克 (碳水7克)</option>
+            <option value="milk_200">牛奶 200公克 (碳水10克)</option>
+            <option value="yogurt_100">優酪乳 100公克 (碳水12克)</option>
+            <option value="yakult">養樂多 90ML (碳水14.7克)</option>
+          </select>
+          <input type="number" id="calc-qty-4" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-other">其他</span>
+          <input type="text" id="calc-other-name" placeholder="食物名稱（選填）"
+                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 8px;font-size:0.8rem;outline:none;width:100%;color:var(--text);" />
+          <input type="number" id="calc-other-carbs" min="0" step="1" placeholder="克"
+                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 4px;font-size:0.82rem;outline:none;text-align:center;width:100%;"
+                 oninput="calcRecalc()" />
+        </div>
+      </div>
+
+      <!-- 劑量計算 -->
+      <div class="calc-section">
+        <div class="calc-section-title">劑量計算</div>
+        <div class="calc-grid-2">
+          <div class="calc-field">
+            <label>預計碳水量 (克)</label>
+            <input type="number" id="calc-carbs" min="0" step="1" value="60" oninput="calcRecalc()" />
+          </div>
+          <div class="calc-field">
+            <label>有效胰島素 IOB (單位)</label>
+            <input type="number" id="calc-iob" min="0" step="0.1" value="0" oninput="calcRecalc()" />
+          </div>
+        </div>
+        <div class="calc-preset-row">
+          <div class="calc-preset-item">
+            <span>CIR 醣類係數</span>
+            <strong id="calc-cir-display">10</strong>
+            <span>g / 單位</span>
+          </div>
+          <div class="calc-preset-item">
+            <span>ISF 敏感係數</span>
+            <strong id="calc-isf-display">50</strong>
+            <span>mg/dL / 單位</span>
+          </div>
+          <div class="calc-preset-item">
+            <span>目標血糖</span>
+            <strong id="calc-target-display">110</strong>
+            <span>mg/dL</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 警示 -->
+      <div id="calc-warnings"></div>
+
+      <!-- 計算結果 -->
+      <div class="calc-result-box">
+        <div class="calc-result-main"><span id="calc-result-dose">0</span><small> 單位</small></div>
+        <div class="calc-result-label">建議估算劑量</div>
+        <div class="calc-breakdown">
+          <div class="calc-breakdown-item"><span>碳水劑量</span><strong id="calc-meal-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>血糖校正</span><strong id="calc-corr-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>扣除 IOB</span><strong id="calc-iob-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>計算值</span><strong id="calc-raw-dose">0</strong></div>
+        </div>
+      </div>
+
+      <!-- 餐別備註 -->
+      <div id="calc-meal-notes" class="calc-notes" style="display:none"></div>
+
+      <!-- 進位提示 -->
+      <div id="calc-round-hint"></div>
+
+      <!-- 帶入按鈕 -->
+      <button class="calc-apply-btn" type="button" onclick="calcApply()">✅ 帶入紀錄表</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ══ Quick Calculator Modal ══ -->
+<div id="quickCalcOverlay" class="calc-overlay" style="display:none"
+  onclick="if(event.target.id==='quickCalcOverlay')closeQuickCalc()">
+  <div class="calc-modal" style="max-width:290px;">
+    <div class="calc-modal-header">
+      <h2>🧮 快速計算機</h2>
+      <button class="calc-close-btn" type="button" onclick="closeQuickCalc()">✕</button>
+    </div>
+    <div style="padding:14px 12px 16px;">
+      <div id="qc-display"
+        style="text-align:right;font-size:2rem;font-weight:700;
+        min-height:54px;padding:8px 12px;background:var(--bg);
+        border-radius:10px;margin-bottom:12px;color:var(--text);
+        word-break:break-all;letter-spacing:0.01em;">0</div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+        <button class="qc-btn qc-fn" onclick="qcClear()">AC</button>
+        <button class="qc-btn qc-fn" onclick="qcToggleSign()">±</button>
+        <button class="qc-btn qc-fn" onclick="qcPercent()">%</button>
+        <button class="qc-btn qc-op" onclick="qcOp('/')">÷</button>
+        <button class="qc-btn" onclick="qcDigit(7)">7</button>
+        <button class="qc-btn" onclick="qcDigit(8)">8</button>
+        <button class="qc-btn" onclick="qcDigit(9)">9</button>
+        <button class="qc-btn qc-op" onclick="qcOp('*')">×</button>
+        <button class="qc-btn" onclick="qcDigit(4)">4</button>
+        <button class="qc-btn" onclick="qcDigit(5)">5</button>
+        <button class="qc-btn" onclick="qcDigit(6)">6</button>
+        <button class="qc-btn qc-op" onclick="qcOp('-')">−</button>
+        <button class="qc-btn" onclick="qcDigit(1)">1</button>
+        <button class="qc-btn" onclick="qcDigit(2)">2</button>
+        <button class="qc-btn" onclick="qcDigit(3)">3</button>
+        <button class="qc-btn qc-op" onclick="qcOp('+')">+</button>
+        <button class="qc-btn" style="grid-column:span 2" onclick="qcDigit(0)">0</button>
+        <button class="qc-btn" onclick="qcDot()">.</button>
+        <button class="qc-btn qc-eq" onclick="qcEquals()">=</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ Prescription Modal ══ -->
+<div id="rxModalOverlay" class="rx-modal-overlay" onclick="if(event.target===this)closeRxModal()">
+  <div class="rx-modal">
+    <h3>📋 處方資料</h3>
+    <div class="rx-field">
+      <label>處方名稱</label>
+      <input id="rx-modal-title-input" placeholder="例：台大內分泌科 慢性處方簽">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="rx-field">
+        <label>💊 下次領藥日期</label>
+        <input id="rx-modal-refill" type="date">
+      </div>
+      <div class="rx-field">
+        <label>📅 下次回診日期</label>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input id="rx-modal-appt" type="date" style="flex:1;min-width:0;">
+          <select id="rx-modal-appt-session" style="width:94px;padding:6px 4px;border:1px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-size:.85rem;flex:none;">
+            <option value="">時段</option>
+            <option value="morning">🌅 上午診</option>
+            <option value="afternoon">🌆 下午診</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:6px;">
+          <input id="rx-modal-appt-clinic" placeholder="科別（如：小兒科）"
+            style="flex:1;min-width:0;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:.84rem;background:var(--card);color:var(--text);">
+          <input id="rx-modal-appt-room" placeholder="診間（如：209診）"
+            style="width:100px;flex:none;padding:6px 8px;border:1px solid var(--border);border-radius:8px;font-size:.84rem;background:var(--card);color:var(--text);">
+        </div>
+      </div>
+    </div>
+    <div class="rx-field">
+      <label>📋 可調劑次數 &amp; 領藥紀錄</label>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <select id="rx-modal-refill-total" onchange="onRefillTotalChange()" style="width:72px;padding:5px 8px;border:1.5px solid var(--border);border-radius:8px;background:var(--card);color:var(--text);font-size:.84rem;">
+          <option value="1">1 次</option>
+          <option value="2">2 次</option>
+          <option value="3">3 次</option>
+          <option value="4">4 次</option>
+        </select>
+        <span style="font-size:.75rem;color:var(--text-muted);">次（點 ⬜ 可標記已領並自動填入今日日期）</span>
+      </div>
+      <div id="rx-refill-records-editor"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="rx-field">
+        <label>科別</label>
+        <input id="rx-modal-clinic" placeholder="內分泌科">
+      </div>
+      <div class="rx-field">
+        <label>醫院</label>
+        <input id="rx-modal-hospital" placeholder="台大醫院">
+      </div>
+    </div>
+    <div class="rx-field">
+      <label>藥品列表</label>
+      <div id="rx-drug-editor-area"></div>
+    </div>
+    <div class="rx-field">
+      <label>備註</label>
+      <textarea id="rx-modal-note" placeholder="預約號碼、注意事項…"></textarea>
+    </div>
+    <div class="rx-modal-btns">
+      <button class="rx-cancel-btn" onclick="closeRxModal()">取消</button>
+      <button class="rx-save-btn" onclick="saveRxModal()">儲存</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
