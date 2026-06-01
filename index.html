@@ -204,6 +204,36 @@
       border:1.5px solid var(--border); background:var(--input-bg);
       color:var(--text); font-family:monospace; max-width:90px;
     }
+    .te-preview {
+      border-radius:12px; overflow:hidden; border:1.5px solid var(--border);
+      margin-bottom:16px; flex-shrink:0;
+    }
+    .te-prev-header {
+      padding:9px 14px; font-size:0.8rem; font-weight:700; color:#fff;
+      letter-spacing:.3px;
+    }
+    .te-prev-body {
+      background:var(--bg); padding:10px 12px; display:flex; flex-direction:column; gap:8px;
+    }
+    .te-prev-card {
+      background:var(--card); border-radius:8px; border:1px solid var(--border);
+      padding:9px 11px; display:flex; flex-direction:column; gap:5px;
+    }
+    .te-prev-text-main  { font-size:0.82rem; font-weight:600; color:var(--text); }
+    .te-prev-text-muted { font-size:0.72rem; color:var(--text-muted); }
+    .te-prev-row { display:flex; align-items:center; gap:7px; margin-top:2px; }
+    .te-prev-btn {
+      background:var(--primary); color:#fff; font-size:0.72rem; font-weight:700;
+      padding:4px 11px; border-radius:6px;
+    }
+    .te-prev-pill {
+      font-size:0.68rem; font-weight:700; padding:3px 8px; border-radius:10px;
+    }
+    .te-prev-pill.normal { background:var(--normal-bg); color:var(--normal); }
+    .te-prev-pill.warn   { background:var(--warn-bg);   color:var(--warn);   }
+    .te-prev-cgm {
+      height:20px; border-radius:6px;
+    }
     .te-actions { display:flex; gap:10px; justify-content:flex-end; }
     .te-btn { padding:9px 22px; border-radius:12px; font-size:0.88rem; font-weight:600; cursor:pointer; border:none; }
     .te-btn-save { background:var(--primary); color:#fff; }
@@ -3730,6 +3760,18 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.48.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.48.1</span>
+          <span class="cl-date">2026-06-01</span>
+          <span class="cl-tag">主題編輯器即時預覽</span>
+        </div>
+        <ul class="cl-list">
+          <li>主題編輯器頂部新增即時預覽條：Header 漸層、卡片、文字、按鈕、血糖色、CGM 漸層即時反映</li>
+        </ul>
+      </div>
 
       <!-- v2.48.0 -->
       <div class="cl-item">
@@ -10008,7 +10050,9 @@ function _applyCustomSkinStyle(vars) {
     .map(function(k){return k+':'+vars[k]+';'}).join(' ');
   el.textContent = 'body[data-skin="custom"]{' + cvLines + '}'
     + 'body[data-skin="custom"] header{background:linear-gradient(135deg,' + hs + ' 0%,' + he + ' 100%);box-shadow:0 2px 8px ' + hs + '66;}'
-    + 'body[data-skin="custom"] .cgm-widget{background:linear-gradient(135deg,' + c0 + ' 0%,' + c1 + ' 100%);box-shadow:0 4px 16px ' + hs + '44;}';
+    + 'body[data-skin="custom"] .cgm-widget{background:linear-gradient(135deg,' + c0 + ' 0%,' + c1 + ' 100%);box-shadow:0 4px 16px ' + hs + '44;}'
+    + 'body[data-skin="custom"] .te-prev-header{background:linear-gradient(135deg,' + hs + ' 0%,' + he + ' 100%);}'
+    + 'body[data-skin="custom"] .te-prev-cgm{background:linear-gradient(135deg,' + c0 + ' 0%,' + c1 + ' 100%);}' ;
 }
 
 function _hexToValid(v) {
@@ -10094,7 +10138,21 @@ function _buildThemeEditorUI() {
       + '</div></div>';
   });
 
-  sheet.innerHTML = '<div class="te-title">🎨 自訂主題</div>'
+  var previewHtml = '<div class="te-preview">'
+    + '<div class="te-prev-header">Ms.Aududu · 預覽</div>'
+    + '<div class="te-prev-body">'
+    + '<div class="te-prev-card">'
+    + '<div class="te-prev-text-main">今日記錄 · 2026-06-01</div>'
+    + '<div class="te-prev-text-muted">早餐胰島素 6U · 血糖 148 mg/dL</div>'
+    + '<div class="te-prev-row">'
+    + '<div class="te-prev-btn">儲存</div>'
+    + '<div class="te-prev-pill normal">正常</div>'
+    + '<div class="te-prev-pill warn">偏高</div>'
+    + '</div></div>'
+    + '<div class="te-prev-cgm"></div>'
+    + '</div></div>';
+
+  sheet.innerHTML = '<div class="te-title">🎨 自訂主題</div>' + previewHtml
     + '<div class="te-presets">' + presetBtns + '</div>'
     + '<div class="te-fields">' + fieldRows + '</div>'
     + '<div class="te-actions">'
@@ -11230,7 +11288,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.48.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.48.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
