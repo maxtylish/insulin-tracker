@@ -65,18 +65,19 @@
       box-shadow: 0 2px 8px rgba(156,102,21,0.35);
     }
     body[data-skin="midnight"] {
-      --bg: #A30000;       --card: #7a0000;
-      --primary: #EFD28D;  --primary-dark: #d4b55a;
-      --text: #EFD28D;     --text-muted: #c4956a;
-      --border: rgba(255,119,0,0.30); --input-bg: #7a0000;
-      --normal: #00AFB5;   --normal-bg: rgba(0,175,181,0.18);
-      --warn: #FF7700;     --warn-bg: rgba(255,119,0,0.18);
-      --danger: #ff4444;   --danger-bg: rgba(255,68,68,0.18);
-      --low: #c4b5fd;      --low-bg: rgba(196,181,253,0.18);
+      --bg: #fef0f0;       --card: #ffffff;
+      --primary: #F87575;  --primary-dark: #e05555;
+      --text: #2d1a2a;     --text-muted: #9a6870;
+      --border: #ffd4d4;   --input-bg: #ffffff;
+      --normal: #5C95FF;   --normal-bg: rgba(92,149,255,0.12);
+      --warn: #f59e0b;     --warn-bg: rgba(245,158,11,0.12);
+      --danger: #ef4444;   --danger-bg: rgba(239,68,68,0.12);
+      --low: #8b5cf6;      --low-bg: rgba(139,92,246,0.12);
+      --shadow: 0 2px 12px rgba(248,117,117,0.15);
     }
     body[data-skin="midnight"]    header {
-      background: linear-gradient(135deg, #A30000 0%, #EFD28D 100%);
-      box-shadow: 0 2px 8px rgba(239,210,141,0.35);
+      background: linear-gradient(135deg, #F87575 0%, #5C95FF 100%);
+      box-shadow: 0 2px 8px rgba(248,117,117,0.35);
     }
     body[data-skin="warm-dark"] {
       --bg: #2a1f0e;       --card: #362812;
@@ -1460,8 +1461,7 @@
     .qc-btn.qc-eq { background:var(--primary); color:#fff; }
     body[data-skin='warm-dark'] .qc-btn { background:#2a1f0e; color:#FFD791; }
     body[data-skin='warm-dark'] .qc-btn.qc-fn { background:#362812; color:#FFD791; }
-    body[data-skin='midnight']  .qc-btn { background:#1e1e1e; color:#e2e8f0; }
-    body[data-skin='midnight']  .qc-btn.qc-fn { background:#2a2a2a; color:#e2e8f0; }
+
 
     .danger-btn {
       width: 100%;
@@ -1938,7 +1938,7 @@
     }
     body[data-skin="cold-dark"]  .cgm-widget { background: linear-gradient(135deg, #1a4a7a 0%, #57B8FF 100%); box-shadow: 0 4px 16px rgba(87,184,255,0.30); }
     body[data-skin="warm-light"] .cgm-widget { background: linear-gradient(135deg, #2a0810 0%, #5a1828 100%); box-shadow: 0 4px 16px rgba(200,125,135,0.22); }
-    body[data-skin="midnight"]    .cgm-widget { background: linear-gradient(135deg, #7a0000 0%, #A30000 100%); box-shadow: 0 4px 16px rgba(239,210,141,0.25); border: 1px solid rgba(239,210,141,0.20); }
+    body[data-skin="midnight"]    .cgm-widget { background: linear-gradient(135deg, #F87575 0%, #5C95FF 100%); box-shadow: 0 4px 16px rgba(248,117,117,0.25); }
     body[data-skin="warm-dark"]  .cgm-widget { background: linear-gradient(135deg, #1e1205 0%, #413620 100%); box-shadow: 0 4px 16px rgba(156,102,21,0.22); border: 1px solid rgba(255,215,145,0.22); }
     .cgm-widget[data-bg-status="low"]    { box-shadow: 0 4px 20px rgba(139,92,246,0.38); }
     .cgm-widget[data-bg-status="normal"] { box-shadow: 0 4px 20px rgba(34,197,94,0.32); }
@@ -2044,7 +2044,7 @@
     }
     body[data-skin="cold-dark"]  .cgm-value { --cv1: #FBB13C; --cv2: #ffffff; --cv3: #57B8FF; }
     body[data-skin="warm-light"] .cgm-value { --cv1: #e8a0a8; --cv2: #fff0f2; --cv3: #c87d87; }
-    body[data-skin="midnight"]    .cgm-value { --cv1: #EFD28D; --cv2: #fffbe6; --cv3: #00AFB5; }
+    body[data-skin="midnight"]    .cgm-value { --cv1: #FFA9A3; --cv2: #ffffff; --cv3: #5C95FF; }
     body[data-skin="warm-dark"]  .cgm-value { --cv1: #FFD791; --cv2: #fff3c4; --cv3: #9C6615; }
     .cgm-widget[data-bg-status="normal"] .cgm-value {
       --cv1: #4ade80; --cv2: #dcfce7; --cv3: #86efac;
@@ -2383,9 +2383,7 @@
     body[data-skin='warm-dark'] .vial-disabled-badge {
       background:#362812; color:#9F7833; border-color:#4a3218;
     }
-    body[data-skin='midnight'] .vial-disabled-badge {
-      background:#1e1e1e; color:#6b7280; border-color:#374151;
-    }
+    
     /* 重新啟用 / 停用 按鈕 */
     .vial-deactivate-btn {
       font-size:.72rem; padding:3px 10px; border-radius:6px;
@@ -2426,18 +2424,14 @@
     body[data-skin='warm-dark'] .vial-status-sel.sealed   { background:#0c4a6e; color:#7dd3fc; border-color:#0c4a6e; }
     body[data-skin='warm-dark'] .vial-status-sel.opened   { background:#14532d; color:#86efac; border-color:#14532d; }
     body[data-skin='warm-dark'] .vial-status-sel.inactive { background:#334155; color:#64748b; border-color:#334155; }
-    body[data-skin='midnight']  .vial-status-sel.sealed   { background:#0c4a6e; color:#7dd3fc; border-color:#0c4a6e; }
-    body[data-skin='midnight']  .vial-status-sel.opened   { background:#14532d; color:#86efac; border-color:#14532d; }
-    body[data-skin='midnight']  .vial-status-sel.inactive { background:#1e1e1e; color:#6b7280; border-color:#374151; }
+
     .vial-status-toggle.sealed  { background:#e0f2fe; color:#0369a1; }
     .vial-status-toggle.opened  { background:#dcfce7; color:#15803d; }
     .vial-status-toggle.inactive { background:#f1f5f9; color:#94a3b8; }
     body[data-skin='warm-dark'] .vial-status-toggle.sealed  { background:#0c4a6e; color:#7dd3fc; }
     body[data-skin='warm-dark'] .vial-status-toggle.opened  { background:#14532d; color:#86efac; }
     body[data-skin='warm-dark'] .vial-status-toggle.inactive { background:#334155; color:#64748b; }
-    body[data-skin='midnight']  .vial-status-toggle.sealed  { background:#0c4a6e; color:#7dd3fc; }
-    body[data-skin='midnight']  .vial-status-toggle.opened  { background:#14532d; color:#86efac; }
-    body[data-skin='midnight']  .vial-status-toggle.inactive { background:#1e1e1e; color:#6b7280; }
+
     .vial-icon-btn { font-size:.78rem; padding:4px 8px; border-radius:6px; border:1px solid var(--border); background:var(--card); color:var(--text); cursor:pointer; }
     .vial-icon-btn:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
     .vial-icon-btn.danger { border-color:#ef4444; color:#ef4444; }
@@ -2461,7 +2455,7 @@
     .vlf-btn-disabled.active { background:#64748b; color:#fff; }
     body[data-skin='cold-dark'] .vlf-btn,
     body[data-skin='warm-dark'] .vlf-btn,
-    body[data-skin='midnight']  .vlf-btn { background:var(--card); }
+
     .vlf-hide-row { display:flex; align-items:center; gap:5px; margin-left:auto; font-size:.72rem; color:var(--text-muted); cursor:pointer; user-select:none; white-space:nowrap; }
     .vlf-hide-row input[type='checkbox'] { width:15px; height:15px; cursor:pointer; accent-color:var(--primary); }
     .vlf-hide-row.dimmed { opacity:.4; pointer-events:none; }
@@ -2476,62 +2470,38 @@
     body[data-skin='warm-dark'] .vloc-home   { background:#0e1a2e !important; }
     body[data-skin='warm-dark'] .vloc-rental { background:#2a0e10 !important; }
     body[data-skin='warm-dark'] .vloc-carry  { background:#0e2a14 !important; }
-    body[data-skin='midnight']  .vloc-home   { background:#0a1a2e !important; }
-    body[data-skin='midnight']  .vloc-rental { background:#1f0a0a !important; }
-    body[data-skin='midnight']  .vloc-carry  { background:#0a1f10 !important; }
+
     /* ── 深色主題全局 Card/Panel override ──────────────────────────────────── */
     body[data-skin="warm-dark"] .history-day,
-    body[data-skin="midnight"]  .history-day {
-      background: var(--card); border: 1px solid var(--border);
-    }
-    body[data-skin="warm-dark"] .history-day-header,
-    body[data-skin="midnight"]  .history-day-header { background: var(--bg); }
+    body[data-skin="warm-dark"] .history-day-header { background: var(--bg); }
 
-    body[data-skin="warm-dark"] .mini-cgm-card,
-    body[data-skin="midnight"]  .mini-cgm-card { border: 1px solid var(--border); }
+    body[data-skin="warm-dark"] .mini-cgm-card { border: 1px solid var(--border); }
 
-    body[data-skin="warm-dark"] .period-card,
-    body[data-skin="midnight"]  .period-card { border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    body[data-skin="warm-dark"] .period-card { border-top: 1px solid var(--border); border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 
-    body[data-skin="warm-dark"] .period-tabs,
-    body[data-skin="midnight"]  .period-tabs { background: var(--card); border: 1px solid var(--border); }
+    body[data-skin="warm-dark"] .period-tabs { background: var(--card); border: 1px solid var(--border); }
 
-    body[data-skin="warm-dark"] .stat-date-nav,
-    body[data-skin="midnight"]  .stat-date-nav { background: var(--card); border: 1px solid var(--border); }
+    body[data-skin="warm-dark"] .stat-date-nav { background: var(--card); border: 1px solid var(--border); }
 
     body[data-skin="warm-dark"] .overview-card,
-    body[data-skin="midnight"]  .overview-card,
     body[data-skin="warm-dark"] .hba1c-card,
-    body[data-skin="midnight"]  .hba1c-card,
     body[data-skin="warm-dark"] .tir-card,
-    body[data-skin="midnight"]  .tir-card,
     body[data-skin="warm-dark"] .chart-card,
-    body[data-skin="midnight"]  .chart-card,
-    body[data-skin="warm-dark"] .stat-card,
-    body[data-skin="midnight"]  .stat-card { background: var(--card); border: 1px solid var(--border); }
+    body[data-skin="warm-dark"] .stat-card { background: var(--card); border: 1px solid var(--border); }
 
-    body[data-skin="warm-dark"] .settings-section,
-    body[data-skin="midnight"]  .settings-section { background: var(--card); border: 1px solid var(--border); }
+    body[data-skin="warm-dark"] .settings-section { background: var(--card); border: 1px solid var(--border); }
 
-    body[data-skin="warm-dark"] .suppl-row,
-    body[data-skin="midnight"]  .suppl-row { background: var(--card); border: 1px solid var(--border); }
+    body[data-skin="warm-dark"] .suppl-row { background: var(--card); border: 1px solid var(--border); }
 
     body[data-skin="warm-dark"] input[type="text"],
     body[data-skin="warm-dark"] input[type="number"],
     body[data-skin="warm-dark"] input[type="date"],
     body[data-skin="warm-dark"] textarea,
-    body[data-skin="warm-dark"] select,
-    body[data-skin="midnight"]  input[type="text"],
-    body[data-skin="midnight"]  input[type="number"],
-    body[data-skin="midnight"]  input[type="date"],
-    body[data-skin="midnight"]  textarea,
-    body[data-skin="midnight"]  select {
+    body[data-skin="warm-dark"] select {
       background: var(--input-bg); color: var(--text); border-color: var(--border);
     }
-    body[data-skin="warm-dark"] .todo-item.todo-starred,
-    body[data-skin="midnight"]  .todo-item.todo-starred { background: var(--warn-bg); }
-    body[data-skin="warm-dark"] .todo-item.todo-starred .todo-title,
-    body[data-skin="midnight"]  .todo-item.todo-starred .todo-title { color: var(--warn); }
+    body[data-skin="warm-dark"] .todo-item.todo-starred { background: var(--warn-bg); }
+    body[data-skin="warm-dark"] .todo-item.todo-starred .todo-title { color: var(--warn); }
     /* ── END 深色主題全局 override ─────────────────────────────────────────── */
 
     .vial-summary { background:var(--bg); border-radius:8px; padding:8px 10px; margin-bottom:10px; border:1px solid var(--border); }
@@ -2916,7 +2886,7 @@
       <button class="sk-dot" onclick="setSkin('cold-dark')" data-sk="cold-dark" title="晴空·淺色" style="background:#57B8FF;border-color:#FBB13C;"></button>
       <button class="sk-dot" onclick="setSkin('warm-light')" data-sk="warm-light" title="玫瑰·淺色" style="background:#c87d87;"></button>
       <button class="sk-dot" onclick="setSkin('warm-dark')" data-sk="warm-dark" title="黃土·深色" style="background:#413620;border-color:#9C6615;"></button>
-      <button class="sk-dot" onclick="setSkin('midnight')" data-sk="midnight" title="熔岩·暗色" style="background:#A30000;border-color:#FF7700;"></button>
+      <button class="sk-dot" onclick="setSkin('midnight')" data-sk="midnight" title="晨曦·淺色" style="background:#F87575;border-color:#5C95FF;"></button>
     </div>
     <div id="sk-label"></div>
   </div>
@@ -3711,6 +3681,19 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.47.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.47.2</span>
+          <span class="cl-date">2026-06-01</span>
+          <span class="cl-tag">晨曦主題+日誌修復</span>
+        </div>
+        <ul class="cl-list">
+          <li>熔岩主題改版為「晨曦」：葡萄柚粉（#F87575）× 矢車菊藍（#5C95FF），淺色調</li>
+          <li>修復：操作日誌有資料時顯示空白（renderOpLog map callback 缺少 idx 參數）</li>
+        </ul>
+      </div>
 
       <!-- v2.47.1 -->
       <div class="cl-item">
@@ -5984,7 +5967,7 @@ function renderOpLog() {
     el.innerHTML = '<p style="color:var(--text-muted);font-size:0.83rem;text-align:center;padding:24px 0;">尚無設定變更記錄</p>';
     return;
   }
-  el.innerHTML = log.map(function(entry) {
+  el.innerHTML = log.map(function(entry, idx) {
     var d = new Date(entry.ts);
     var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
     var ts = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
@@ -7320,7 +7303,7 @@ async function renderMiniCGMChart() {
     'cold-dark':  { line:'#57B8FF', fill:'rgba(87,184,255,0.10)',  grid:'rgba(87,184,255,0.12)',       tick:'#B66D0D', lw:1.5 },
     'warm-light': { line:'#c87d87', fill:'rgba(200,125,135,0.10)', grid:'rgba(200,125,135,0.12)',     tick:'#e8a0a8', lw:1.5 },
     'warm-dark':  { line:'#FFD791', fill:'rgba(255,215,145,0.12)', grid:'rgba(255,215,145,0.15)',     tick:'#9F7833', lw:2   },
-    'midnight':   { line:'#EFD28D', fill:'rgba(239,210,141,0.12)', grid:'rgba(239,210,141,0.15)',     tick:'#c4956a', lw:2   },
+    'midnight':   { line:'#F87575', fill:'rgba(248,117,117,0.10)', grid:'rgba(248,117,117,0.10)',     tick:'#FFA9A3', lw:1.5 },
   };
   var _mc = _mcColors[_mcSkin] || _mcColors['cold-light'];
 
@@ -9876,7 +9859,7 @@ function importUserId() {
 // ── Skin System ──────────────────────────────────────────────────────────
 var SKIN_LABELS = {
   'cold-light': '松石', 'cold-dark': '晴空',
-  'warm-light': '玫瑰·淺', 'warm-dark': '黃土', 'midnight': '熔岩'
+  'warm-light': '玫瑰·淺', 'warm-dark': '黃土', 'midnight': '晨曦'
 };
 function setSkin(name) {
   document.body.dataset.skin = name;
@@ -10448,9 +10431,9 @@ var PIP_SKIN_THEMES = {
   'warm-dark':  { bg:'#2a1f0e', text:'#FFD791', sub:'#9F7833', ring:'#9C6615',
                   low:'#c4b5fd', normal:'#86efac', warn:'#FFD791', high:'#f87171',
                   spark:'#9C6615', band:'rgba(156,102,21,0.12)', dot:'#9C6615', label:'黃土' },
-  'midnight':   { bg:'#7a0000', text:'#EFD28D', sub:'#c4956a', ring:'#EFD28D',
-                  low:'#c4b5fd', normal:'#00AFB5', warn:'#FF7700', high:'#EFD28D',
-                  spark:'#EFD28D', band:'rgba(239,210,141,0.10)', dot:'#A30000', label:'熔岩' },
+  'midnight':   { bg:'#0a1628', text:'#FFA9A3', sub:'#B9E6FF', ring:'#F87575',
+                  low:'#c4b5fd', normal:'#B9E6FF', warn:'#fbbf24', high:'#f87171',
+                  spark:'#F87575', band:'rgba(248,117,117,0.10)', dot:'#F87575', label:'晨曦' },
 };
 
 // 取得當前 skin 對應的 PIP 主題
@@ -10984,7 +10967,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.47.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.47.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -12953,7 +12936,7 @@ function updateBasalTimeBar() {
         'cold-dark':  { rapid: '#FBB13C', basal: '#57B8FF' },  // 琥珀金 vs 晴空藍
         'warm-light': { rapid: '#e8a0a8', basal: '#93c5fd' },  // 玫瑰 vs 粉藍
         'warm-dark':  { rapid: '#FFD791', basal: '#a78bfa' },  // 金黃 vs 紫羅蘭
-        'midnight':   { rapid: '#EFD28D', basal: '#00AFB5' },  // 沙金 vs 熱帶青
+        'midnight':   { rapid: '#F87575', basal: '#5C95FF' },  // 葡萄柚 vs 矢車菊藍
       };
       var _cgmColors = _cgmSkinColors[(document.body && document.body.dataset.skin) || 'cold-light'] || _cgmSkinColors['cold-light'];
       function _compactInsRow(last, durationH, color, emoji, shortLabel) {
