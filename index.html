@@ -3754,11 +3754,24 @@ alter table user_todos enable row level security;
 <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.36.0</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.48.3</strong>
     </p>
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.48.3 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.48.3</span>
+          <span class="cl-date">2026-06-01</span>
+          <span class="cl-tag">食物修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>主食新增：五穀米 100公克（碳水68.9克）</li>
+          <li>修復：無糖豆奶調整倍數後碳水不變（CALC_CARB_FOODS 補齊 soymilk_unsweetened）</li>
+        </ul>
+      </div>
 
       <!-- v2.48.2 -->
       <div class="cl-item">
@@ -10232,6 +10245,8 @@ function init() {
     var isMobile  = window.innerWidth <= 420;
     document.getElementById('headerDate').textContent = isMobile ? shortDate : fullDate;
     document.getElementById('header-version').textContent = APP_VERSION;
+    var avd = document.getElementById('app-version-display');
+    if (avd) avd.textContent = APP_VERSION;
   })();
   // Snapshot whether today already has local data before cloud sync
   var hadLocalDataToday = !!getAllData()[today];
@@ -10300,11 +10315,14 @@ const CALC_CARB_FOODS = {
   milk_100: 4.8, milk_150: 7, milk_200: 10, yogurt_100: 12, yakult: 14.7,
   chunshuitang_kung_noodle: 64,    // 春水堂功夫麵 一份(220克)
   chunshuitang_butter_toast: 50,   // 春水堂奶酥厚片 一份
+  soymilk_unsweetened: 3,          // 無糖豆奶 100g
+  multigrain_rice: 68.9,           // 五穀米 100克
 };
 
 const CALC_MAIN_OPTIONS = {
   breakfast: [
     { value: 'white_rice',         label: '白飯 100公克 (碳水30克)' },
+    { value: 'multigrain_rice',     label: '五穀米 100公克 (碳水68.9克)' },
     { value: 'udon',               label: '烏龍麵 100公克 (碳水24.6克)' },
     { value: 'yangchun_noodle',    label: '陽春麵 100公克 (碳水27.8克)' },
     { value: 'oil_noodle',         label: '油麵 100公克 (碳水25.5克)' },
@@ -10322,6 +10340,7 @@ const CALC_MAIN_OPTIONS = {
   ],
   lunch: [
     { value: 'white_rice',      label: '白飯 100公克 (碳水30克)' },
+    { value: 'multigrain_rice',  label: '五穀米 100公克 (碳水68.9克)' },
     { value: 'udon',            label: '烏龍麵 100公克 (碳水24.6克)' },
     { value: 'yangchun_noodle', label: '陽春麵 100公克 (碳水27.8克)' },
     { value: 'oil_noodle',      label: '油麵 100公克 (碳水25.5克)' },
@@ -10335,6 +10354,7 @@ const CALC_MAIN_OPTIONS = {
   ],
   dinner: [
     { value: 'white_rice',      label: '白飯 100公克 (碳水30克)' },
+    { value: 'multigrain_rice',  label: '五穀米 100公克 (碳水68.9克)' },
     { value: 'udon',            label: '烏龍麵 100公克 (碳水24.6克)' },
     { value: 'yangchun_noodle', label: '陽春麵 100公克 (碳水27.8克)' },
     { value: 'oil_noodle',      label: '油麵 100公克 (碳水25.5克)' },
@@ -11299,7 +11319,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.48.2';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.48.3';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
