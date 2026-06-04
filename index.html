@@ -3766,6 +3766,18 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.48.7 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.48.7</span>
+          <span class="cl-date">2026-06-04</span>
+          <span class="cl-tag">藥瓶加入時間</span>
+        </div>
+        <ul class="cl-list">
+          <li>NEW badge 移至資訊列顯示；新增藥瓶自動記錄加入時間並顯示於列表</li>
+        </ul>
+      </div>
+
       <!-- v2.48.6 -->
       <div class="cl-item">
         <div class="cl-header">
@@ -11361,7 +11373,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.48.6';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.48.7';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -12026,7 +12038,7 @@ async function manualSyncVials(btn) {
 function addInsulinVial() {
   var arr = getInsulinVials();
   var id  = 'v' + Date.now().toString(36);
-  arr.push({ id: id, type: 'novorapid', location: 'home', mfgYM: '', serialNo: '', openDate: '', expDate: '', note: '', pickupDate: '', isNew: true });
+  arr.push({ id: id, type: 'novorapid', location: 'home', mfgYM: '', serialNo: '', openDate: '', expDate: '', note: '', pickupDate: '', isNew: true, addedAt: Date.now() });
   _saveVialsToStorage(arr);
   _vialEditIds[id] = true;
   renderInsulinVials();
@@ -12209,9 +12221,14 @@ function _vialItemHTML(v, idx, isEdit) {
     var serialVal = v.serialNo || '—';
     var pickupFmt = v.pickupDate ? (function(){ var p=v.pickupDate.split('-'); return p[1]+'/'+p[2]; })() : '';
     var mfgFmt    = v.mfgYM ? v.mfgYM.replace('-','/') : '';
+    var addedFmt  = v.addedAt ? (function(){
+      var d = new Date(v.addedAt);
+      return (d.getMonth()+1) + '/' + d.getDate() + ' ' + d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+    })() : '';
     var unopenedExp = calcUnopenedExpYM(v.mfgYM, def.shelfMonths);
     var openExpFmt  = v.openDate ? calcVialExpDate(v.openDate, def.openExpDays) : '';
     var infoRow   = '<div class="vial-info-row">'
+      + (v.isNew ? '<span class="vial-new-badge">NEW</span>' : '')
       + '<span class="vial-serial-tag"><span class="sv-label">序號</span>' + serialVal + '</span>'
       + (mfgFmt ? '<span class="vial-serial-tag"><span class="sv-label">製造</span>' + mfgFmt + '</span>' : '')
       + (!v.openDate && v.active !== false && unopenedExp
@@ -12224,6 +12241,7 @@ function _vialItemHTML(v, idx, isEdit) {
             + (function(){ var p=openExpFmt.split('-'); return p[1]+'/'+p[2]; })() + '</span>' : '')
       + (pickupFmt ? '<span class="vial-serial-tag"><span class="sv-label">領取</span>' + pickupFmt + '</span>' : '')
       + (v.note ? '<span class="vial-note-tag">📝 ' + v.note + '</span>' : '')
+      + (addedFmt ? '<span class="vial-serial-tag" style="margin-left:auto;opacity:.6;"><span class="sv-label">加入</span>' + addedFmt + '</span>' : '')
       + '</div>';
     return '<div class="vial-row vloc-' + loc + inactiveCls + '" id="vial-item-' + v.id + '">'
       + '<div class="vial-row-top">'
