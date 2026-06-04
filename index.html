@@ -2521,6 +2521,15 @@
     .vial-row-edit { padding:12px 6px 8px; border-bottom:1px solid var(--border); background:var(--bg); border-radius:10px; margin:4px 0; }
     /* ── 地點 filter ── */
     .vial-loc-filters { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+    .vial-quick-note-row { display:flex; align-items:center; gap:5px; margin-top:5px; flex-wrap:wrap; }
+    .vial-qn-label { font-size:.65rem; color:var(--text-muted); margin-right:2px; }
+    .vial-qn-chip {
+      min-width:26px; height:22px; border-radius:6px; border:1.5px solid var(--border);
+      background:var(--bg); color:var(--text-muted); font-size:.72rem; font-weight:700;
+      cursor:pointer; padding:0 6px; transition:all .12s; line-height:20px; text-align:center;
+    }
+    .vial-qn-chip.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+    .vial-qn-chip:hover:not(.active) { border-color:var(--primary); color:var(--primary); }
     .vial-opened-toggle {
       display:flex; align-items:center; gap:8px;
       padding:8px 12px; margin:8px 0 4px;
@@ -3800,6 +3809,18 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.49.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.49.2</span>
+          <span class="cl-date">2026-06-04</span>
+          <span class="cl-tag">快速備註 A-E</span>
+        </div>
+        <ul class="cl-list">
+          <li>藥瓶列表新增快速標記 A/B/C/D/E，點擊即存，再點取消；同批號多支可快速區分</li>
+        </ul>
+      </div>
 
       <!-- v2.49.1 -->
       <div class="cl-item">
@@ -11433,7 +11454,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.49.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.49.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -12306,6 +12327,14 @@ function _vialItemHTML(v, idx, isEdit) {
       + (v.note ? '<span class="vial-note-tag">📝 ' + v.note + '</span>' : '')
       + (addedFmt ? '<span class="vial-serial-tag" style="margin-left:auto;opacity:.6;"><span class="sv-label">加入</span>' + addedFmt + '</span>' : '')
       + '</div>';
+    var qnChips = ['A','B','C','D','E'].map(function(l){
+      var act = (v.note === l) ? ' active' : '';
+      return '<button class="vial-qn-chip' + act + '" data-vid="' + v.id + '" data-l="' + l + '"'
+        + ' onclick="quickNoteVial(this.dataset.vid,this.dataset.l)">' + l + '</button>';
+    }).join('');
+    var quickNoteRow = '<div class="vial-quick-note-row">'
+      + '<span class="vial-qn-label">標記</span>' + qnChips + '</div>';
+
     return '<div class="vial-row vloc-' + loc + inactiveCls + '" id="vial-item-' + v.id + '">'
       + '<div class="vial-row-top">'
       +   '<div class="vial-row-left">'
@@ -12326,6 +12355,7 @@ function _vialItemHTML(v, idx, isEdit) {
       +   '</div>'
       + '</div>'
       + infoRow
+      + quickNoteRow
       + (badge ? '<div class="vial-row-badge">' + badge + '</div>' : '')
       + '</div>';
   }
@@ -12613,6 +12643,15 @@ function _vialSummaryHTML(arr) {
 
 function setVialLocFilter(loc) {
   _vialLocFilter = (loc === 'all') ? null : loc;
+  renderInsulinVials();
+}
+
+function quickNoteVial(id, letter) {
+  var arr = getInsulinVials();
+  var v = arr.find(function(x){ return x.id === id; });
+  if (!v) return;
+  v.note = (v.note === letter) ? '' : letter;  // toggle
+  _saveVialsToStorage(arr);
   renderInsulinVials();
 }
 
