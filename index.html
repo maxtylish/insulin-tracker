@@ -12026,7 +12026,7 @@ async function manualSyncVials(btn) {
 function addInsulinVial() {
   var arr = getInsulinVials();
   var id  = 'v' + Date.now().toString(36);
-  arr.push({ id: id, type: 'novorapid', location: 'home', mfgYM: '', serialNo: '', openDate: '', expDate: '', note: '', pickupDate: '' });
+  arr.push({ id: id, type: 'novorapid', location: 'home', mfgYM: '', serialNo: '', openDate: '', expDate: '', note: '', pickupDate: '', isNew: true });
   _saveVialsToStorage(arr);
   _vialEditIds[id] = true;
   renderInsulinVials();
