@@ -2482,6 +2482,12 @@
     .vial-row-top { display:flex; align-items:center; justify-content:space-between; gap:6px; }
     .vial-row-left { display:flex; align-items:center; gap:6px; flex:1; min-width:0; overflow:hidden; }
     .vial-type-name { font-size:.84rem; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .vial-new-badge {
+      font-size:.6rem; font-weight:800; letter-spacing:.04em;
+      background:#ef4444; color:#fff; border-radius:5px;
+      padding:1px 5px; margin-left:5px; vertical-align:middle;
+      flex-shrink:0;
+    }
     .vial-loc-tag { font-size:.67rem; font-weight:700; padding:2px 7px; border-radius:6px; background:var(--bg); color:var(--text-muted); border:1px solid var(--border); white-space:nowrap; flex-shrink:0; }
     .vial-serial-inline { font-size:.64rem; color:var(--text-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:80px; }
     .vial-info-row { display:flex; align-items:flex-start; gap:10px; flex-wrap:wrap; margin:4px 0 2px; padding:0 2px; }
@@ -3759,6 +3765,30 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.48.6 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.48.6</span>
+          <span class="cl-date">2026-06-04</span>
+          <span class="cl-tag">NEW 標記</span>
+        </div>
+        <ul class="cl-list">
+          <li>藥瓶支援 NEW 紅色 badge；開封後自動清除</li>
+        </ul>
+      </div>
+
+      <!-- v2.48.5 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.48.5</span>
+          <span class="cl-date">2026-06-04</span>
+          <span class="cl-tag">藥瓶顯示強化</span>
+        </div>
+        <ul class="cl-list">
+          <li>未拆封藥瓶列表新增「製造」「到期」日期顯示；已拆封顯示「開封」「失效」日期</li>
+        </ul>
+      </div>
 
       <!-- v2.48.4 -->
       <div class="cl-item">
@@ -11331,7 +11361,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.48.4';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.48.6';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -12084,6 +12114,12 @@ function _vialExpiryBadge(expStr) {
 }
 
 function onVialStatusChange(id, val) {
+  // 開封時自動移除 NEW 標記
+  if (val === 'opened') {
+    var _arr = getInsulinVials();
+    var _v = _arr.find(function(x){ return x.id === id; });
+    if (_v) { _v.isNew = false; _saveVialsToStorage(_arr); }
+  }
   var arr = getInsulinVials();
   var v   = arr.find(function(x){ return x.id === id; });
   if (!v) return;
@@ -12172,8 +12208,20 @@ function _vialItemHTML(v, idx, isEdit) {
     var statusCls = v.active === false ? 'inactive' : (v.openDate ? 'opened' : 'sealed');
     var serialVal = v.serialNo || '—';
     var pickupFmt = v.pickupDate ? (function(){ var p=v.pickupDate.split('-'); return p[1]+'/'+p[2]; })() : '';
+    var mfgFmt    = v.mfgYM ? v.mfgYM.replace('-','/') : '';
+    var unopenedExp = calcUnopenedExpYM(v.mfgYM, def.shelfMonths);
+    var openExpFmt  = v.openDate ? calcVialExpDate(v.openDate, def.openExpDays) : '';
     var infoRow   = '<div class="vial-info-row">'
       + '<span class="vial-serial-tag"><span class="sv-label">序號</span>' + serialVal + '</span>'
+      + (mfgFmt ? '<span class="vial-serial-tag"><span class="sv-label">製造</span>' + mfgFmt + '</span>' : '')
+      + (!v.openDate && v.active !== false && unopenedExp
+          ? '<span class="vial-serial-tag"><span class="sv-label">到期</span>' + unopenedExp + '</span>' : '')
+      + (v.openDate && v.active !== false
+          ? '<span class="vial-serial-tag"><span class="sv-label">開封</span>'
+            + (function(){ var p=v.openDate.split('-'); return p[1]+'/'+p[2]; })() + '</span>' : '')
+      + (openExpFmt && v.openDate && v.active !== false
+          ? '<span class="vial-serial-tag" style="color:var(--danger);"><span class="sv-label">失效</span>'
+            + (function(){ var p=openExpFmt.split('-'); return p[1]+'/'+p[2]; })() + '</span>' : '')
       + (pickupFmt ? '<span class="vial-serial-tag"><span class="sv-label">領取</span>' + pickupFmt + '</span>' : '')
       + (v.note ? '<span class="vial-note-tag">📝 ' + v.note + '</span>' : '')
       + '</div>';
@@ -12182,6 +12230,7 @@ function _vialItemHTML(v, idx, isEdit) {
       +   '<div class="vial-row-left">'
       +     dot
       +     '<span class="vial-type-name">' + def.label + '</span>'
+      +     (v.isNew ? '<span class="vial-new-badge">NEW</span>' : '')
       +     '<span class="vial-loc-tag">' + locLabel + '</span>'
       +   '</div>'
       +   '<div class="vial-row-right">'
