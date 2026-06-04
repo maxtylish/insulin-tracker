@@ -2521,6 +2521,20 @@
     .vial-row-edit { padding:12px 6px 8px; border-bottom:1px solid var(--border); background:var(--bg); border-radius:10px; margin:4px 0; }
     /* ── 地點 filter ── */
     .vial-loc-filters { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+    .vial-opened-toggle {
+      display:flex; align-items:center; gap:8px;
+      padding:8px 12px; margin:8px 0 4px;
+      background:var(--bg); border:1.5px solid var(--border);
+      border-radius:10px; cursor:pointer; user-select:none;
+    }
+    .vial-opened-toggle-label {
+      font-size:.8rem; font-weight:700; color:var(--text-muted); flex:1;
+    }
+    .vial-opened-toggle-arrow {
+      font-size:.72rem; color:var(--text-muted); transition:transform .2s;
+    }
+    .vial-opened-toggle.expanded .vial-opened-toggle-arrow { transform:rotate(180deg); }
+    .vial-opened-section { overflow:hidden; }
     .vial-search-box {
       width:100%; margin-bottom:8px; position:relative;
     }
@@ -3786,6 +3800,18 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.49.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.49.1</span>
+          <span class="cl-date">2026-06-04</span>
+          <span class="cl-tag">已拆封折疊</span>
+        </div>
+        <ul class="cl-list">
+          <li>藥瓶列表「已拆封」預設折疊，點標題展開；未拆封庫存一眼即見</li>
+        </ul>
+      </div>
 
       <!-- v2.49.0 -->
       <div class="cl-item">
@@ -11407,7 +11433,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.49.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.49.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -11973,6 +11999,7 @@ var _vialEditIds = {};
 var _vialLocFilter    = null;  // null=全部(有效庫存), 'home'|'rental'|'carry'|'disabled'
 var _vialStatusFilter = null;  // null=全部, 'new'|'sealed'|'opened'
 var _vialSearch       = '';    // 搜尋文字
+var _vialOpenedCollapsed = true; // 已拆封預設折疊
 
 function calcVialExpDate(openDateStr, days) {
   if (!openDateStr || !days) return '';
@@ -12589,6 +12616,15 @@ function setVialLocFilter(loc) {
   renderInsulinVials();
 }
 
+function toggleVialOpenedSection() {
+  _vialOpenedCollapsed = !_vialOpenedCollapsed;
+  var sec  = document.getElementById('vial-opened-section');
+  var btn  = document.getElementById('vial-opened-toggle');
+  if (!sec || !btn) return;
+  sec.style.display = _vialOpenedCollapsed ? 'none' : 'block';
+  btn.classList.toggle('expanded', !_vialOpenedCollapsed);
+}
+
 function setVialStatusFilter(s) {
   _vialStatusFilter = (_vialStatusFilter === s) ? null : s;
   renderInsulinVials();
@@ -12660,15 +12696,38 @@ function renderInsulinVials() {
           || (v.note || '').toLowerCase().includes(q);
     });
   }
-  var typeCounts = {};
-  var rows = filtered.map(function(v) {
-    typeCounts[v.type] = (typeCounts[v.type] || 0) + 1;
-    return _vialItemHTML(v, typeCounts[v.type], !!_vialEditIds[v.id]);
-  }).join('');
+
+  // 拆封 / 未拆封 分組（狀態 filter 為 opened 時不分組）
+  var sealedList = filtered.filter(function(v){ return !v.openDate; });
+  var openedList = filtered.filter(function(v){ return  v.openDate; });
+  var showSplit  = !_vialStatusFilter || _vialStatusFilter === 'new';
+
+  function buildRows(list) {
+    var tc = {};
+    return list.map(function(v){
+      tc[v.type] = (tc[v.type]||0)+1;
+      return _vialItemHTML(v, tc[v.type], !!_vialEditIds[v.id]);
+    }).join('');
+  }
+
+  var mainRows, openedBlock = '';
+  if (showSplit && openedList.length > 0) {
+    mainRows = buildRows(sealedList);
+    var isExp = !_vialOpenedCollapsed;
+    openedBlock = '<div id="vial-opened-toggle" class="vial-opened-toggle' + (isExp?' expanded':'') + '"'
+      + ' onclick="toggleVialOpenedSection()">'
+      + '<span class="vial-opened-toggle-label">💉 已拆封中 (' + openedList.length + '支)</span>'
+      + '<span class="vial-opened-toggle-arrow">▼</span></div>'
+      + '<div id="vial-opened-section" class="vial-opened-section" style="display:' + (isExp?'block':'none') + ';">'
+      + buildRows(openedList) + '</div>';
+  } else {
+    mainRows = buildRows(filtered);
+  }
+
   var isEmpty = filtered.length === 0;
   var emptyTxt = _vialLocFilter === 'disabled' ? '無已停用的胰島素' : '此地點無胰島素紀錄';
   var emptyNote = isEmpty ? '<div class="suppl-empty">' + emptyTxt + '</div>' : '';
-  el.innerHTML = _vialSummaryHTML(arr) + _vialFilterBtnsHTML() + emptyNote + rows;
+  el.innerHTML = _vialSummaryHTML(arr) + _vialFilterBtnsHTML() + emptyNote + mainRows + openedBlock;
 }
 
 function renderManagePage() {
