@@ -2521,6 +2521,27 @@
     .vial-row-edit { padding:12px 6px 8px; border-bottom:1px solid var(--border); background:var(--bg); border-radius:10px; margin:4px 0; }
     /* ── 地點 filter ── */
     .vial-loc-filters { display:flex; gap:6px; margin-bottom:10px; flex-wrap:wrap; }
+    .vial-search-box {
+      width:100%; margin-bottom:8px; position:relative;
+    }
+    .vial-search-input {
+      width:100%; padding:8px 34px 8px 12px; border-radius:10px;
+      border:1.5px solid var(--border); background:var(--input-bg);
+      color:var(--text); font-size:.84rem; box-sizing:border-box;
+    }
+    .vial-search-clear {
+      position:absolute; right:10px; top:50%; transform:translateY(-50%);
+      background:none; border:none; color:var(--text-muted); cursor:pointer;
+      font-size:1rem; padding:0; line-height:1; display:none;
+    }
+    .vial-status-filters { display:flex; gap:6px; margin-bottom:8px; flex-wrap:wrap; }
+    .vsf-btn { font-size:.72rem; font-weight:700; padding:5px 13px; border-radius:20px; border:2px solid; cursor:pointer; background:var(--card); transition:background .15s,color .15s; }
+    .vsf-new    { border-color:#ef4444; color:#ef4444; }
+    .vsf-sealed { border-color:#3b82f6; color:#3b82f6; }
+    .vsf-opened { border-color:#16a34a; color:#16a34a; }
+    .vsf-new.active    { background:#ef4444; color:#fff; }
+    .vsf-sealed.active { background:#3b82f6; color:#fff; }
+    .vsf-opened.active { background:#16a34a; color:#fff; }
     .vlf-btn { font-size:.72rem; font-weight:700; padding:5px 13px; border-radius:20px; border:2px solid; cursor:pointer; background:var(--card); transition:background .15s,color .15s; }
     .vlf-btn-all    { border-color:var(--primary); color:var(--primary); }
     .vlf-btn-home   { border-color:#2563eb; color:#2563eb; }
@@ -3765,6 +3786,19 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.49.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.49.0</span>
+          <span class="cl-date">2026-06-04</span>
+          <span class="cl-tag">藥瓶搜尋與篩選</span>
+        </div>
+        <ul class="cl-list">
+          <li>藥瓶頁新增搜尋列：可搜尋序號、類型、備註</li>
+          <li>新增狀態篩選：【最新】【未拆封】【已拆封】，可與地點篩選並用</li>
+        </ul>
+      </div>
 
       <!-- v2.48.7 -->
       <div class="cl-item">
@@ -11373,7 +11407,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.48.7';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.49.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -11936,7 +11970,9 @@ var INSULIN_VIAL_DEFS = {
 };
 
 var _vialEditIds = {};
-var _vialLocFilter = null;  // null=全部(有效庫存), 'home'|'rental'|'carry'|'disabled'
+var _vialLocFilter    = null;  // null=全部(有效庫存), 'home'|'rental'|'carry'|'disabled'
+var _vialStatusFilter = null;  // null=全部, 'new'|'sealed'|'opened'
+var _vialSearch       = '';    // 搜尋文字
 
 function calcVialExpDate(openDateStr, days) {
   if (!openDateStr || !days) return '';
@@ -12553,6 +12589,27 @@ function setVialLocFilter(loc) {
   renderInsulinVials();
 }
 
+function setVialStatusFilter(s) {
+  _vialStatusFilter = (_vialStatusFilter === s) ? null : s;
+  renderInsulinVials();
+}
+
+function onVialSearch(val) {
+  _vialSearch = val.trim().toLowerCase();
+  var clrBtn = document.getElementById('vial-search-clear');
+  if (clrBtn) clrBtn.style.display = _vialSearch ? 'block' : 'none';
+  renderInsulinVials();
+}
+
+function clearVialSearch() {
+  _vialSearch = '';
+  var inp = document.getElementById('vial-search-input');
+  if (inp) inp.value = '';
+  var clrBtn = document.getElementById('vial-search-clear');
+  if (clrBtn) clrBtn.style.display = 'none';
+  renderInsulinVials();
+}
+
 
 function _vialFilterBtnsHTML() {
   var btns = [
@@ -12588,6 +12645,20 @@ function renderInsulinVials() {
   } else {
     // 全部：只顯示有效庫存（停用項目在停用 tab 才出現）
     filtered = arr.filter(function(v){ return v.active !== false; });
+  }
+  // 狀態 filter
+  if (_vialStatusFilter === 'new')    filtered = filtered.filter(function(v){ return !!v.isNew; });
+  if (_vialStatusFilter === 'sealed') filtered = filtered.filter(function(v){ return !v.openDate; });
+  if (_vialStatusFilter === 'opened') filtered = filtered.filter(function(v){ return !!v.openDate; });
+  // 搜尋
+  if (_vialSearch) {
+    var q = _vialSearch;
+    filtered = filtered.filter(function(v){
+      var def2 = INSULIN_VIAL_DEFS[v.type] || {};
+      return (v.serialNo || '').toLowerCase().includes(q)
+          || (def2.label || v.type || '').toLowerCase().includes(q)
+          || (v.note || '').toLowerCase().includes(q);
+    });
   }
   var typeCounts = {};
   var rows = filtered.map(function(v) {
