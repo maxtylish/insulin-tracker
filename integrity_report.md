@@ -1,82 +1,125 @@
-# 胰島素記錄表 PWA — 自動完整性檢測報告
+# 胰島素記錄表 功能完整性測試報告
 
-**檢測時間：** 2026-06-04  
-**應用版本：** v2.48.4  
-**檔案：** index.html (673.3 KB, 14,934 行)  
-**JS 腳本：** 364,297 字元 / 8,733 行
+**執行日期：** 2026-06-05  
+**測試版本：** v2.49.3  
+**自動排程任務 `daily-check`**
 
 ---
 
-## ✅ 語法驗證
+## 總覽
 
 | 項目 | 結果 |
 |------|------|
-| JS 語法 (`node --check`) | ✅ 無錯誤 |
-| 大括號平衡 (open/close) | ✅ 2116 / 2116，完全平衡 |
-| HTML 正確關閉 (`</html>`) | ✅ 確認存在 |
-| Script 區塊數量 | ✅ 2 個（主腳本 364,297 字元） |
+| HTML 結構完整性 | ✅ 正常 |
+| JavaScript 主腳本語法 | ✅ 通過 |
+| 資料存儲安全規則 | ✅ 符合 |
+| 版本號一致性 | ⚠️ changelog 缺少 v2.49.3 條目（見下） |
 
 ---
 
-## ✅ 關鍵函式存在性
+## 1. HTML 檔案完整性
 
-| 函式 | 結果 |
+- **檔案大小：** 700,157 bytes（~683 KB）
+- **總行數：** 15,171 行
+- **開頭：** `<!DOCTYPE html>` ✅
+- **結尾：** `</body></html>` ✅
+- **`<script>` 標籤配對：** 3 開 / 3 閉 ✅
+- **HTML 結構：** `<head>` 第 2999 行閉合，`<body>` 第 3000 行，第 15170 行閉合 ✅
+
+---
+
+## 2. JavaScript 語法驗證
+
+- **主腳本大小：** 369,504 chars（8,845 行）
+- **`node --check` 結果：** ✅ 語法無誤
+- **第二個 `<script>` 區塊：** Supabase CDN 外部載入，非本機 JS，可忽略
+
+---
+
+## 3. 資料存儲安全規則
+
+### 規則 1：`allDataCache` 唯一真實來源
+- `getAllData()` 直接回傳 `allDataCache` ✅
+- `setAllData(data)` 同步更新 `allDataCache` + `localStorage('insulin_records')` ✅
+- 唯一直接讀取 `localStorage.getItem('insulin_records')` 的地方：`initSupabase()` 初始化 cache，符合規則 ✅
+
+### 規則 2：`saveDayData()` 安全性
+- `setAllData()` 在 `syncDayToCloud()` 之前呼叫（offset 1612 vs 1631）✅
+- `savePeriod()` 使用 `time: (bg || insulin) ? time : ''` 保護（有資料才記錄時間）✅
+- `clearAllData()` 同時清除 `localStorage.removeItem('insulin_records')` + `allDataCache = {}` ✅
+
+### 規則 3：`loadFromCloud()` 合併邏輯
+- 物件型欄位（PERIODS）：有 `time` 的勝出 ✅
+- 陣列型欄位（corrections/carbs/snacks）：`cv.length >= lv.length ? cv : lv`（保留較多的版本）✅
+- Primitives：cloud wins ✅
+
+### 規則 4：`init()` 載入順序
+```
+initSupabase()         ← 載入 allDataCache
+buildPeriodCards()
+loadDayData()          ← 用 cache 渲染 UI（第 1 次）
+loadFromCloud().then(() => {
+  loadDayData()        ← 合併 cloud 後重新渲染（第 2 次）✅
+  renderTodoPage()
+  renderInsulinVials()
+  loadSettingsFromCloud()
+})
+```
+順序正確 ✅
+
+---
+
+## 4. 關鍵函式存在確認
+
+| 函式 | 存在 |
 |------|------|
-| `getAllData()` | ✅ 存在 (1次) |
-| `setAllData()` | ✅ 存在 (1次) |
-| `savePeriod()` | ✅ 存在 (1次) |
-| `saveDayData()` | ✅ 存在 (1次) |
-| `loadDayData()` | ✅ 存在 (1次) |
-| `loadFromCloud()` | ✅ 存在 (1次) |
-| `initSupabase()` | ✅ 存在 (1次) |
-| `syncDayToCloud()` | ✅ 存在 (1次) |
-| `getTodos()` / `setTodos()` | ✅ 存在 |
-| `getSupplies()` / `setSupplies()` | ✅ 存在 |
-| `loadSettings()` / `saveSettingsToStorage()` | ✅ 存在 |
-| `clearAllData()` | ✅ 存在 |
-| `init()` | ✅ 存在，正確在最後被呼叫 |
-
-總計：405 個具名函式，51 個 async 函式
+| `getAllData()` | ✅ |
+| `setAllData()` | ✅ |
+| `loadFromCloud()` | ✅ |
+| `saveDayData()` | ✅ |
+| `savePeriod()` | ✅ |
+| `syncDayToCloud()` | ✅ |
+| `init()` | ✅ |
+| `loadDayData()` | ✅ |
+| `getTodos()` / `setTodos()` | ✅ |
+| `loadSettings()` | ✅ |
+| `getSupplies()` / `setSupplies()` | ✅ |
+| `clearAllData()` | ✅ |
 
 ---
 
-## ✅ 資料安全規則符合性（CLAUDE.md）
+## 5. ⚠️ 版本號一致性問題
 
-| 規則 | 結果 |
-|------|------|
-| Rule 1: `allDataCache` 為唯一真實來源 | ✅ 直接讀 `insulin_records` 僅在 `initSupabase()` 內 (初始載入) |
-| Rule 1: `setAllData()` 同步更新 cache + localStorage | ✅ |
-| Rule 2: `clearAllData()` 同時清 `allDataCache` | ✅ |
-| Rule 2: `clearAllData()` 清除 `insulin_records` | ✅ |
-| Rule 3: `loadFromCloud()` 陣列合併保留較多項目 | ✅ (`cv.length >= lv.length` 邏輯存在) |
-| Rule 4: `init()` 載入順序正確 | ✅ initSupabase → loadDayData → loadFromCloud → loadDayData |
-| Rule 5: `setAllData()` 在 `syncDayToCloud()` 之前 | ✅ savePeriod 和 saveDayData 均符合 |
+| 項目 | 值 |
+|------|-----|
+| JS `APP_VERSION` | `v2.49.3` |
+| git 最新 commit | `548b7df 快速備註加入【筆針】標記 (v2.49.3)` |
+| HTML changelog 最新條目 | `v2.49.2`（2026-06-04） |
 
----
+**問題：HTML 的版本更新記錄（changelog section）缺少 v2.49.3 的條目。**  
+功能不受影響，但使用者在「版本記錄」頁面看不到 v2.49.3 的更新說明。
 
-## ✅ UI 渲染架構
-
-Period cards（morning/noon/evening/bedtime）的 input IDs（如 `morning-bg`、`noon-time`）均為動態生成（`buildPeriodCards()` 在 `init()` 內呼叫），非靜態 HTML，屬於正常設計。
-
----
-
-## ✅ localStorage Keys
-
-| Key | 參照次數 |
-|-----|---------|
-| `insulin_records` | 10 |
-| `insulin_vials` | 8 |
-| `insulin_todos` | 3 |
-| `insulin_settings` | 2 |
-| `insulin_supplies` | 2 |
+**建議修正：** 在 `<!-- v2.49.2 -->` 之前插入：
+```html
+<!-- v2.49.3 -->
+<div class="cl-item">
+  <div class="cl-header">
+    <span class="cl-badge cl-badge-patch">v2.49.3</span>
+    <span class="cl-date">2026-06-05</span>
+    <span class="cl-tag">快速備註筆針</span>
+  </div>
+  <ul class="cl-list">
+    <li>快速備註加入【筆針】標記</li>
+  </ul>
+</div>
+```
 
 ---
 
 ## 結論
 
-**整體評估：✅ 通過，無問題**
-
-程式碼完整性良好，無截斷跡象，語法正確，資料安全規則均符合。應用功能應可正常運作。
+程式碼**無截斷**，JavaScript 語法正確，資料存儲安全規則全部符合，所有關鍵函式均存在。  
+唯一待處理：**v2.49.3 changelog 條目尚未加入 HTML**，不影響功能，建議下次改版時一併補上。
 
 ---
-*此報告由自動排程任務 `daily-check` 產生*
+*此報告由自動排程任務 `daily-check` 產生於 2026-06-05*

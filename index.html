@@ -1925,6 +1925,64 @@
     }
     .calc-field select:focus,
     .calc-field input[type="number"]:focus { border-color: #7c3aed; }
+    .fdb-section { margin-top:4px; }
+    .fdb-toggle-btn {
+      width:100%; text-align:left; padding:8px 12px;
+      background:var(--bg); border:1.5px solid var(--border);
+      border-radius:10px; cursor:pointer; font-size:.82rem;
+      font-weight:700; color:var(--text-muted); display:flex;
+      align-items:center; justify-content:space-between;
+    }
+    .fdb-toggle-btn.has-items { border-color:var(--primary); color:var(--primary); }
+    .fdb-body { display:none; padding:10px 0 0; }
+    .fdb-body.open { display:block; }
+    .fdb-search-wrap { position:relative; margin-bottom:8px; }
+    .fdb-search-input {
+      width:100%; padding:8px 12px; border-radius:10px;
+      border:1.5px solid var(--border); background:var(--input-bg);
+      color:var(--text); font-size:.85rem; box-sizing:border-box;
+    }
+    .fdb-dropdown {
+      position:absolute; top:100%; left:0; right:0; z-index:99;
+      background:var(--card); border:1.5px solid var(--border);
+      border-radius:10px; max-height:180px; overflow-y:auto;
+      box-shadow:0 4px 16px rgba(0,0,0,.12); display:none;
+    }
+    .fdb-dropdown.open { display:block; }
+    .fdb-opt {
+      padding:8px 12px; cursor:pointer; font-size:.82rem;
+      color:var(--text); display:flex; justify-content:space-between;
+      border-bottom:1px solid var(--border);
+    }
+    .fdb-opt:last-child { border-bottom:none; }
+    .fdb-opt:hover { background:var(--bg); }
+    .fdb-opt-carb { color:var(--primary); font-weight:700; }
+    .fdb-add-row { display:flex; gap:6px; align-items:center; margin-bottom:8px; }
+    .fdb-gram-input {
+      width:72px; padding:7px 8px; border-radius:8px;
+      border:1.5px solid var(--border); background:var(--input-bg);
+      color:var(--text); font-size:.85rem; text-align:center;
+    }
+    .fdb-add-btn {
+      padding:7px 14px; border-radius:8px; border:none;
+      background:var(--primary); color:#fff; font-size:.82rem;
+      font-weight:700; cursor:pointer; white-space:nowrap;
+    }
+    .fdb-selected-name {
+      flex:1; font-size:.8rem; color:var(--text); padding:7px 8px;
+      background:var(--bg); border-radius:8px; border:1.5px solid var(--border);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .fdb-list { display:flex; flex-direction:column; gap:4px; margin-bottom:6px; }
+    .fdb-item {
+      display:flex; align-items:center; gap:6px;
+      background:var(--bg); border-radius:8px; padding:5px 9px;
+      font-size:.78rem;
+    }
+    .fdb-item-name { flex:1; color:var(--text); }
+    .fdb-item-carb { color:var(--primary); font-weight:700; min-width:48px; text-align:right; }
+    .fdb-item-del { background:none; border:none; color:#ef4444; cursor:pointer; font-size:.9rem; padding:0 2px; }
+    .fdb-subtotal { text-align:right; font-size:.8rem; font-weight:700; color:var(--primary); padding:2px 2px 4px; }
     .calc-food-row {
       display: grid; grid-template-columns: 48px 1fr 60px;
       align-items: center; gap: 6px; margin-bottom: 7px;
@@ -3809,6 +3867,19 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.50.0 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-minor">v2.50.0</span>
+          <span class="cl-date">2026-06-05</span>
+          <span class="cl-tag">食材碳水查詢庫</span>
+        </div>
+        <ul class="cl-list">
+          <li>碳水計算機新增「食材查詢」：搜尋 80+ 種台灣常見食材，輸入克數自動加總碳水</li>
+          <li>支援多項疊加，結果即時反映至劑量計算</li>
+        </ul>
+      </div>
 
       <!-- v2.49.2 -->
       <div class="cl-item">
@@ -10605,6 +10676,7 @@ function openSnackCalcModal(sectionId) {
     document.getElementById('calc-qty-' + i).value  = 1;
   });
   document.getElementById('calc-other-carbs').value = '';
+  _fdbItems = []; if (typeof fdbRender === 'function') fdbRender();
   document.getElementById('calc-iob').value = '';
   calcUpdateMeal();
   calcRecalc();
@@ -10798,6 +10870,137 @@ function calcFmt(v) {
   return Number.isInteger(r) ? String(r) : r.toFixed(1);
 }
 
+
+// ── 台灣食材碳水資料庫 (per 100g) ─────────────────────────────────────────
+var TAIWAN_FOOD_DB = [
+  // 主食
+  {n:'白米飯',c:30,cat:'主食'},{n:'糙米飯',c:31,cat:'主食'},{n:'五穀米飯',c:32,cat:'主食'},
+  {n:'白麵條(熟)',c:26,cat:'主食'},{n:'烏龍麵(熟)',c:25,cat:'主食'},{n:'義大利麵(熟)',c:27,cat:'主食'},
+  {n:'油麵(熟)',c:26,cat:'主食'},{n:'米粉(熟)',c:22,cat:'主食'},{n:'冬粉(熟)',c:22,cat:'主食'},
+  {n:'糯米飯',c:36,cat:'主食'},{n:'燕麥粥',c:12,cat:'主食'},
+  {n:'白吐司',c:49,cat:'主食'},{n:'全麥吐司',c:44,cat:'主食'},{n:'饅頭',c:50,cat:'主食'},
+  {n:'包子(素)',c:35,cat:'主食'},{n:'地瓜(蒸)',c:27,cat:'主食'},{n:'馬鈴薯(熟)',c:17,cat:'主食'},
+  {n:'芋頭(熟)',c:24,cat:'主食'},{n:'南瓜(熟)',c:9,cat:'主食'},{n:'玉米',c:20,cat:'主食'},
+  // 蔬菜
+  {n:'空心菜',c:3,cat:'蔬菜'},{n:'花椰菜',c:5,cat:'蔬菜'},{n:'青花椰菜',c:7,cat:'蔬菜'},
+  {n:'高麗菜',c:5,cat:'蔬菜'},{n:'菠菜',c:3,cat:'蔬菜'},{n:'番茄',c:4,cat:'蔬菜'},
+  {n:'小黃瓜',c:3,cat:'蔬菜'},{n:'紅蘿蔔',c:10,cat:'蔬菜'},{n:'洋蔥',c:10,cat:'蔬菜'},
+  {n:'青椒',c:5,cat:'蔬菜'},{n:'豆芽菜',c:4,cat:'蔬菜'},{n:'茄子',c:5,cat:'蔬菜'},
+  {n:'苦瓜',c:4,cat:'蔬菜'},{n:'冬瓜',c:3,cat:'蔬菜'},{n:'絲瓜',c:4,cat:'蔬菜'},
+  {n:'四季豆',c:7,cat:'蔬菜'},{n:'玉米筍',c:7,cat:'蔬菜'},{n:'毛豆',c:10,cat:'蔬菜'},
+  {n:'秋葵',c:7,cat:'蔬菜'},{n:'香菇',c:7,cat:'蔬菜'},{n:'金針菇',c:7,cat:'蔬菜'},
+  // 水果
+  {n:'香蕉',c:23,cat:'水果'},{n:'蘋果',c:14,cat:'水果'},{n:'橘子',c:13,cat:'水果'},
+  {n:'葡萄',c:17,cat:'水果'},{n:'芒果',c:15,cat:'水果'},{n:'西瓜',c:8,cat:'水果'},
+  {n:'奇異果',c:15,cat:'水果'},{n:'草莓',c:8,cat:'水果'},{n:'木瓜',c:10,cat:'水果'},
+  {n:'龍眼',c:22,cat:'水果'},{n:'荔枝',c:17,cat:'水果'},{n:'鳳梨',c:14,cat:'水果'},
+  {n:'火龍果',c:12,cat:'水果'},{n:'芭樂',c:10,cat:'水果'},{n:'柳橙',c:12,cat:'水果'},
+  {n:'桃子',c:11,cat:'水果'},{n:'梨',c:14,cat:'水果'},{n:'柿子',c:20,cat:'水果'},
+  {n:'蓮霧',c:8,cat:'水果'},{n:'釋迦',c:25,cat:'水果'},{n:'棗子',c:16,cat:'水果'},
+  {n:'百香果',c:11,cat:'水果'},{n:'哈密瓜',c:10,cat:'水果'},
+  // 豆/蛋白
+  {n:'板豆腐',c:3,cat:'豆蛋'},{n:'嫩豆腐',c:2,cat:'豆蛋'},{n:'雞蛋',c:1,cat:'豆蛋'},
+  {n:'納豆',c:11,cat:'豆蛋'},{n:'豆乾',c:11,cat:'豆蛋'},
+  // 肉/海鮮
+  {n:'雞胸肉',c:0,cat:'肉類'},{n:'豬里肌',c:0,cat:'肉類'},{n:'牛肉',c:0,cat:'肉類'},
+  {n:'鮭魚',c:0,cat:'肉類'},{n:'蝦仁',c:1,cat:'肉類'},{n:'花枝',c:3,cat:'肉類'},
+  // 乳製品
+  {n:'全脂牛奶',c:5,cat:'乳品'},{n:'低脂牛奶',c:5,cat:'乳品'},
+  {n:'優酪乳(原味)',c:12,cat:'乳品'},{n:'起司片',c:2,cat:'乳品'},
+  {n:'無糖豆漿',c:3,cat:'乳品'},{n:'煉乳(15g)',c:12,cat:'乳品'},
+  // 點心
+  {n:'海綿蛋糕',c:50,cat:'點心'},{n:'麻糬',c:50,cat:'點心'},{n:'湯圓',c:38,cat:'點心'},
+  {n:'蘇打餅乾',c:70,cat:'點心'},{n:'巧克力',c:60,cat:'點心'},{n:'果凍',c:17,cat:'點心'},
+  {n:'布丁',c:16,cat:'點心'},{n:'洋芋片',c:55,cat:'點心'},{n:'爆米花',c:60,cat:'點心'},
+  // 飲料
+  {n:'果汁(100%)',c:12,cat:'飲料'},{n:'汽水',c:11,cat:'飲料'},{n:'運動飲料',c:7,cat:'飲料'},
+  {n:'珍珠(50g)',c:40,cat:'飲料'},{n:'蜂蜜(15g)',c:12,cat:'飲料'},
+];
+
+var _fdbItems   = [];   // {n, c, g}  每次開 calc 時清空
+var _fdbSelFood = null; // {n, c}
+
+function fdbOpen() {
+  var body = document.getElementById('fdb-body');
+  if (body) body.classList.toggle('open');
+  var inp = document.getElementById('fdb-search');
+  if (inp) inp.focus();
+}
+
+function fdbSearch(val) {
+  var dd = document.getElementById('fdb-dropdown');
+  if (!dd) return;
+  var q = val.trim().toLowerCase();
+  if (!q) { dd.classList.remove('open'); return; }
+  var hits = TAIWAN_FOOD_DB.filter(function(f){ return f.n.toLowerCase().includes(q); }).slice(0, 12);
+  if (!hits.length) { dd.classList.remove('open'); return; }
+  dd.innerHTML = hits.map(function(f){
+    return '<div class="fdb-opt" data-n="' + f.n + '" data-c="' + f.c + '" onclick="fdbSelect(this.dataset.n, this.dataset.c)">'
+      + '<span>' + f.cat + ' · ' + f.n + '</span>'
+      + '<span class="fdb-opt-carb">' + f.c + 'g/100g</span></div>';
+  }).join('');
+  dd.classList.add('open');
+}
+
+function fdbSelect(name, carbs) {
+  _fdbSelFood = {n: name, c: parseFloat(carbs)};
+  var inp = document.getElementById('fdb-search');
+  if (inp) inp.value = name;
+  var dd = document.getElementById('fdb-dropdown');
+  if (dd) dd.classList.remove('open');
+  var lbl = document.getElementById('fdb-selected-label');
+  if (lbl) lbl.textContent = name + ' (' + carbs + 'g/100g)';
+  var gram = document.getElementById('fdb-gram');
+  if (gram) gram.focus();
+}
+
+function fdbAdd() {
+  if (!_fdbSelFood) return;
+  var gram = parseFloat((document.getElementById('fdb-gram') || {}).value) || 0;
+  if (!gram) return;
+  _fdbItems.push({n: _fdbSelFood.n, c: _fdbSelFood.c, g: gram});
+  _fdbSelFood = null;
+  var inp = document.getElementById('fdb-search');
+  if (inp) inp.value = '';
+  var gramEl = document.getElementById('fdb-gram');
+  if (gramEl) gramEl.value = '100';
+  fdbRender();
+  calcRecalc();
+}
+
+function fdbRemove(idx) {
+  _fdbItems.splice(idx, 1);
+  fdbRender();
+  calcRecalc();
+}
+
+function fdbTotal() {
+  return _fdbItems.reduce(function(s, it){ return s + it.c * it.g / 100; }, 0);
+}
+
+function fdbRender() {
+  var list = document.getElementById('fdb-list');
+  var sub  = document.getElementById('fdb-subtotal');
+  var btn  = document.getElementById('fdb-toggle-btn');
+  if (!list) return;
+  list.innerHTML = _fdbItems.map(function(it, i){
+    var carb = (it.c * it.g / 100).toFixed(1);
+    return '<div class="fdb-item">'
+      + '<span class="fdb-item-name">' + it.n + ' ' + it.g + 'g</span>'
+      + '<span class="fdb-item-carb">碳水 ' + carb + 'g</span>'
+      + '<button class="fdb-item-del" data-i="' + i + '" onclick="fdbRemove(parseInt(this.dataset.i))">×</button>'
+      + '</div>';
+  }).join('');
+  var total = fdbTotal();
+  if (sub) sub.textContent = _fdbItems.length ? '食材庫小計：' + total.toFixed(1) + ' g' : '';
+  if (btn) {
+    btn.classList.toggle('has-items', _fdbItems.length > 0);
+    var arrow = btn.querySelector('.fdb-arrow');
+    var label = btn.querySelector('.fdb-label');
+    if (label) label.textContent = _fdbItems.length ? '🔍 食材查詢（已加 ' + _fdbItems.length + ' 項）' : '🔍 食材查詢';
+  }
+}
+
 function calcRecalc() {
   const meal   = document.getElementById('calc-meal-period').value;
   const preset = getMealPreset(meal);
@@ -10830,6 +11033,9 @@ function calcRecalc() {
   const otherEl = document.getElementById('calc-other-carbs');
   const otherCarbs = otherEl ? (parseFloat(otherEl.value) || 0) : 0;
   if (otherCarbs > 0) { totalCarbs += otherCarbs; hasFood = true; }
+  // 加上食材庫小計
+  var fdbC = (typeof fdbTotal === 'function') ? fdbTotal() : 0;
+  if (fdbC > 0) { totalCarbs += fdbC; hasFood = true; }
 
   if (hasFood) {
     document.getElementById('calc-carbs').value = Math.round(totalCarbs * 10) / 10;
@@ -11454,7 +11660,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.49.3';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.50.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -14812,6 +15018,30 @@ function checkTodoAlerts() {
             style="flex:2;border:1.5px solid var(--border);border-radius:10px;padding:7px 10px;font-size:.88rem;background:var(--input-bg);color:var(--text);" />
           <input type="number" id="calc-other-carbs" min="0" step="1" placeholder="克"
             style="flex:1;border:1.5px solid var(--border);border-radius:10px;padding:7px 10px;font-size:.88rem;background:var(--input-bg);color:var(--text);" oninput="calcRecalc()" />
+        </div>
+      </div>
+
+      <!-- 食材庫 -->
+      <div class="calc-section fdb-section">
+        <button id="fdb-toggle-btn" class="fdb-toggle-btn" onclick="fdbOpen()">
+          <span class="fdb-label">🔍 食材查詢</span>
+          <span class="fdb-arrow">▾</span>
+        </button>
+        <div id="fdb-body" class="fdb-body">
+          <div class="fdb-search-wrap">
+            <input type="text" id="fdb-search" class="fdb-search-input"
+              placeholder="輸入食材名稱（如：香蕉、白米飯…）"
+              oninput="fdbSearch(this.value)" autocomplete="off" />
+            <div id="fdb-dropdown" class="fdb-dropdown"></div>
+          </div>
+          <div class="fdb-add-row">
+            <span id="fdb-selected-label" class="fdb-selected-name">← 請先搜尋選擇食材</span>
+            <input type="number" id="fdb-gram" class="fdb-gram-input" value="100" min="1" step="5" placeholder="克" />
+            <span style="font-size:.75rem;color:var(--text-muted);">g</span>
+            <button class="fdb-add-btn" onclick="fdbAdd()">加入</button>
+          </div>
+          <div id="fdb-list" class="fdb-list"></div>
+          <div id="fdb-subtotal" class="fdb-subtotal"></div>
         </div>
       </div>
 
