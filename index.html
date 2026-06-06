@@ -3868,6 +3868,19 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.50.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.50.1</span>
+          <span class="cl-date">2026-06-06</span>
+          <span class="cl-tag">統計頁修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>統計分析預設改為「雙週」（單日無當天資料時圖表空白）</li>
+          <li>血糖趨勢無資料時顯示提示文字，不再顯示空圖</li>
+        </ul>
+      </div>
+
       <!-- v2.50.0 -->
       <div class="cl-item">
         <div class="cl-header">
@@ -8414,7 +8427,7 @@ function deleteHistoryDay(date) {
 // ══════════════════════════════════════════
 
 // State for statistics page
-let statPeriod = 'day';        // day | week | biweek | month | quarter
+let statPeriod = 'biweek';     // day | week | biweek | month | quarter
 let statAnchor = todayStr();   // anchor date (ISO string)
 let tirChart   = null;
 
@@ -8632,6 +8645,21 @@ function renderCharts() {
       y: { grid: { color: '#f1f5f9' } }
     }
   };
+
+  // 無資料提示
+  var bgNoData = document.getElementById('bg-no-data-msg');
+  if (!bgNoData) {
+    bgNoData = document.createElement('div');
+    bgNoData.id = 'bg-no-data-msg';
+    bgNoData.style.cssText = 'text-align:center;padding:32px 0;font-size:.88rem;color:var(--text-muted);display:none;';
+    bgNoData.textContent = '此區間沒有血糖紀錄。請切換日期或改用「雙週」模式查看。';
+    var bgCanvas = document.getElementById('bgChart');
+    if (bgCanvas && bgCanvas.parentNode) bgCanvas.parentNode.insertBefore(bgNoData, bgCanvas);
+  }
+  var hasBGData = bgDatasets.some(function(ds){ return ds.data.some(function(v){ return v !== null; }); });
+  if (bgNoData) bgNoData.style.display = hasBGData ? 'none' : 'block';
+  var bgChartEl = document.getElementById('bgChart');
+  if (bgChartEl) bgChartEl.style.display = hasBGData ? '' : 'none';
 
   if (bgChart) bgChart.destroy();
   bgChart = new Chart(document.getElementById('bgChart'), {
@@ -11660,7 +11688,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.50.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.50.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
