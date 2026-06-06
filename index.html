@@ -3868,6 +3868,18 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.50.2 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.50.2</span>
+          <span class="cl-date">2026-06-06</span>
+          <span class="cl-tag">單日血糖圖</span>
+        </div>
+        <ul class="cl-list">
+          <li>單日模式：血糖趨勢改為四時段折線，X 軸顯示早/中/晚/睡前與施打時間，點上標示數值</li>
+        </ul>
+      </div>
+
       <!-- v2.50.1 -->
       <div class="cl-item">
         <div class="cl-header">
@@ -8646,59 +8658,149 @@ function renderCharts() {
     }
   };
 
-  // 無資料提示
+  // ── 無資料提示 ──────────────────────────────────────────────────────────
   var bgNoData = document.getElementById('bg-no-data-msg');
   if (!bgNoData) {
     bgNoData = document.createElement('div');
     bgNoData.id = 'bg-no-data-msg';
     bgNoData.style.cssText = 'text-align:center;padding:32px 0;font-size:.88rem;color:var(--text-muted);display:none;';
-    bgNoData.textContent = '此區間沒有血糖紀錄。請切換日期或改用「雙週」模式查看。';
     var bgCanvas = document.getElementById('bgChart');
     if (bgCanvas && bgCanvas.parentNode) bgCanvas.parentNode.insertBefore(bgNoData, bgCanvas);
   }
-  var hasBGData = bgDatasets.some(function(ds){ return ds.data.some(function(v){ return v !== null; }); });
-  if (bgNoData) bgNoData.style.display = hasBGData ? 'none' : 'block';
-  var bgChartEl = document.getElementById('bgChart');
-  if (bgChartEl) bgChartEl.style.display = hasBGData ? '' : 'none';
 
-  if (bgChart) bgChart.destroy();
-  bgChart = new Chart(document.getElementById('bgChart'), {
-    type: 'line',
-    data: { labels: labels, datasets: bgDatasets },
-    options: Object.assign({}, baseOpts, {
-      scales: Object.assign({}, baseOpts.scales, {
-        y: Object.assign({}, baseOpts.scales.y, {
-          title: { display: true, text: 'mg/dL', font: { size: 10 } },
-          min: 0
+  // ── 單日模式：X軸 = 四個時段，單條折線 ──────────────────────────────────
+  if (statPeriod === 'day') {
+    var dayData = all[start] || {};
+    var periodLabels = PERIODS.map(function(p){
+      var t = dayData[p.id] && dayData[p.id].time ? dayData[p.id].time : p.defaultTime;
+      return p.label + ' ' + t;
+    });
+    var periodColors = ['#f59e0b','#10b981','#f97316','#6366f1'];
+    var dayBGValues = PERIODS.map(function(p){
+      return parseFloat(dayData[p.id] && dayData[p.id].bg ? dayData[p.id].bg : '') || null;
+    });
+    var hasDayData = dayBGValues.some(function(v){ return v !== null; });
+
+    if (bgNoData) { bgNoData.textContent = '此日尚無血糖記錄。'; bgNoData.style.display = hasDayData ? 'none' : 'block'; }
+    var bgChartEl = document.getElementById('bgChart');
+    if (bgChartEl) bgChartEl.style.display = hasDayData ? '' : 'none';
+
+    if (bgChart) bgChart.destroy();
+    if (!hasDayData) { bgChart = null; }
+    else {
+      bgChart = new Chart(document.getElementById('bgChart'), {
+        type: 'line',
+        data: {
+          labels: periodLabels,
+          datasets: [{
+            label: '血糖 mg/dL',
+            data: dayBGValues,
+            borderColor: '#6366f1',
+            backgroundColor: 'rgba(99,102,241,0.08)',
+            tension: 0.3, fill: true,
+            pointRadius: 8, pointHoverRadius: 10,
+            pointBackgroundColor: periodColors,
+            pointBorderColor: '#fff', pointBorderWidth: 2,
+            spanGaps: true
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: {
+              label: function(ctx){ return ' ' + (ctx.raw !== null ? ctx.raw + ' mg/dL' : '未記錄'); }
+            }},
+            datalabels: false
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { font: { size: 11 }, color: '#888' } },
+            y: {
+              min: 0,
+              grid: { color: '#f1f5f9' },
+              title: { display: true, text: 'mg/dL', font: { size: 10 } },
+              ticks: { font: { size: 10 } }
+            }
+          }
+        },
+        plugins: [{
+          id: 'bgZones',
+          afterDraw: function(chart) {
+            var ctx = chart.ctx, chartArea = chart.chartArea, y = chart.scales.y;
+            if (!y || !chartArea) return;
+            function drawZoneLine(val, color) {
+              if (!val) return;
+              var yPos = y.getPixelForValue(val);
+              if (yPos < chartArea.top || yPos > chartArea.bottom) return;
+              ctx.save(); ctx.beginPath(); ctx.setLineDash([4,3]);
+              ctx.strokeStyle = color; ctx.lineWidth = 1;
+              ctx.moveTo(chartArea.left, yPos); ctx.lineTo(chartArea.right, yPos);
+              ctx.stroke(); ctx.restore();
+            }
+            drawZoneLine(settings.normalHigh, '#22c55e88');
+            drawZoneLine(settings.low,        '#8b5cf688');
+            drawZoneLine(settings.high,       '#ef444488');
+          }
+        }, {
+          id: 'bgValueLabels',
+          afterDatasetsDraw: function(chart) {
+            var ctx = chart.ctx;
+            chart.data.datasets[0].data.forEach(function(val, i) {
+              if (val === null) return;
+              var meta = chart.getDatasetMeta(0);
+              var pt = meta.data[i];
+              if (!pt) return;
+              var color = periodColors[i];
+              ctx.save();
+              ctx.font = 'bold 13px sans-serif';
+              ctx.fillStyle = color;
+              ctx.textAlign = 'center';
+              ctx.fillText(val, pt.x, pt.y - 14);
+              ctx.restore();
+            });
+          }
+        }]
+      });
+    }
+  } else {
+    // ── 多日模式：四條折線（原有邏輯）──────────────────────────────────────
+    var hasBGData = bgDatasets.some(function(ds){ return ds.data.some(function(v){ return v !== null; }); });
+    if (bgNoData) { bgNoData.textContent = '此區間沒有血糖紀錄，請切換日期範圍。'; bgNoData.style.display = hasBGData ? 'none' : 'block'; }
+    var bgChartEl2 = document.getElementById('bgChart');
+    if (bgChartEl2) bgChartEl2.style.display = hasBGData ? '' : 'none';
+
+    if (bgChart) bgChart.destroy();
+    bgChart = new Chart(document.getElementById('bgChart'), {
+      type: 'line',
+      data: { labels: labels, datasets: bgDatasets },
+      options: Object.assign({}, baseOpts, {
+        scales: Object.assign({}, baseOpts.scales, {
+          y: Object.assign({}, baseOpts.scales.y, {
+            title: { display: true, text: 'mg/dL', font: { size: 10 } },
+            min: 0
+          })
         })
-      })
-    }),
-    plugins: [{
-      id: 'bgZones',
-      afterDraw: function(chart) {
-        var ctx = chart.ctx;
-        var chartArea = chart.chartArea;
-        var y = chart.scales.y;
-        if (!y || !chartArea) return;
-        function drawLine(val, color) {
-          var yPos = y.getPixelForValue(val);
-          if (yPos < chartArea.top || yPos > chartArea.bottom) return;
-          ctx.save();
-          ctx.beginPath();
-          ctx.setLineDash([4, 3]);
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 1;
-          ctx.moveTo(chartArea.left, yPos);
-          ctx.lineTo(chartArea.right, yPos);
-          ctx.stroke();
-          ctx.restore();
+      }),
+      plugins: [{
+        id: 'bgZones',
+        afterDraw: function(chart) {
+          var ctx = chart.ctx, chartArea = chart.chartArea, y = chart.scales.y;
+          if (!y || !chartArea) return;
+          function drawLine(val, color) {
+            var yPos = y.getPixelForValue(val);
+            if (yPos < chartArea.top || yPos > chartArea.bottom) return;
+            ctx.save(); ctx.beginPath(); ctx.setLineDash([4,3]);
+            ctx.strokeStyle = color; ctx.lineWidth = 1;
+            ctx.moveTo(chartArea.left, yPos); ctx.lineTo(chartArea.right, yPos);
+            ctx.stroke(); ctx.restore();
+          }
+          drawLine(settings.normalHigh, '#22c55e88');
+          drawLine(settings.low,        '#8b5cf688');
+          drawLine(settings.high,       '#ef444488');
         }
-        drawLine(settings.normalHigh, '#22c55e88');
-        drawLine(settings.low,        '#8b5cf688');
-        drawLine(settings.high,       '#ef444488');
-      }
-    }]
-  });
+      }]
+    });
+  }
 
   if (insulinChart) insulinChart.destroy();
   insulinChart = new Chart(document.getElementById('insulinChart'), {
@@ -11688,7 +11790,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.50.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.50.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
