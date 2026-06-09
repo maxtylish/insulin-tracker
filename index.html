@@ -3338,6 +3338,9 @@
       <button class="stats-bm-btn" onclick="switchStatPanel('iob')">
         <span class="bm-icon">⏱</span>IOB
       </button>
+      <button class="stats-bm-btn" onclick="switchStatPanel('meal')">
+        <span class="bm-icon">🍽</span>飲食
+      </button>
     </nav>
     <div class="stats-content">
 
@@ -3425,6 +3428,28 @@
           <h3>📡 CGM 連續血糖曲線</h3>
           <div class="chart-sub">來自 Nightscout · 每 5 分鐘一點</div>
           <canvas id="cgmChart" height="220"></canvas>
+        </div>
+      </div>
+
+      <!-- Panel 7: 飲食分析 -->
+      <div id="stat-panel-meal" class="stat-panel" style="display:none">
+        <div class="overview-card" id="mealStatCards">
+          <h3>飲食概覽</h3>
+          <div class="overview-grid"></div>
+        </div>
+        <div class="chart-card" style="margin-top:12px">
+          <h3>各時段平均血糖</h3>
+          <div class="chart-sub">記錄期間各餐次平均測量值</div>
+          <canvas id="mealBGChart" height="180"></canvas>
+        </div>
+        <div class="chart-card" style="margin-top:12px">
+          <h3>補打時間分布</h3>
+          <div class="chart-sub">速效補打最常出現的時段（小時）</div>
+          <canvas id="corrTimeChart" height="150"></canvas>
+        </div>
+        <div class="chart-card" style="margin-top:12px">
+          <h3>每日點心 / 補打 / 補糖筆數</h3>
+          <canvas id="mealEventChart" height="160"></canvas>
         </div>
       </div>
 
@@ -3905,6 +3930,18 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.51.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.51.1</span>
+          <span class="cl-date">2026-06-09</span>
+          <span class="cl-tag">統計新功能</span>
+        </div>
+        <ul class="cl-list">
+          <li>統計新增「🍽 飲食」分析頁：概覽卡（日均補打/補糖/點心）、各時段平均血糖、補打時間分布、每日飲食事件趨勢</li>
+        </ul>
+      </div>
 
       <!-- v2.51.0 -->
       <div class="cl-item">
@@ -8932,6 +8969,7 @@ function renderCharts() {
   });
 
   renderIOBChart();
+  renderMealPanel();
 
   // CGM day chart — only in single-day view
   if (statPeriod === 'day') {
@@ -8940,6 +8978,142 @@ function renderCharts() {
     // hide CGM section in multi-day views
     const cgmSec = document.getElementById('cgm-day-section');
     if (cgmSec) cgmSec.style.display = 'none';
+  }
+}
+
+// ════════════════════════════════
+//  MEAL ANALYSIS PANEL
+// ════════════════════════════════
+var mealBGChart = null;
+var corrTimeChart = null;
+var mealEventChart = null;
+
+function renderMealPanel() {
+  var panelEl = document.getElementById('stat-panel-meal');
+  if (!panelEl || panelEl.style.display === 'none') return;
+  var all = getAllData();
+  var range = getStatDateRange();
+  var dates = getDatesBetween(range.start, range.end).filter(function(d){ return all[d]; });
+  var totalDays = dates.length;
+  var totalCorr = 0, totalCarbEvt = 0, totalSnacks = 0;
+  var periodBGSum = { morning:0, noon:0, evening:0, bedtime:0 };
+  var periodBGCnt = { morning:0, noon:0, evening:0, bedtime:0 };
+  var corrByHour = new Array(24).fill(0);
+  var daySnacks = [], dayCorrCnt = [], dayCarbCnt = [];
+
+  dates.forEach(function(d) {
+    var day = all[d];
+    var corr = day.corrections || [];
+    var carbEvts = day.carbs || [];
+    var snacks = SNACK_SECTIONS.reduce(function(s, sec){ return s + (day[sec.id] || []).length; }, 0);
+    totalCorr += corr.length;
+    totalCarbEvt += carbEvts.length;
+    totalSnacks += snacks;
+    daySnacks.push(snacks);
+    dayCorrCnt.push(corr.length);
+    dayCarbCnt.push(carbEvts.length);
+    PERIODS.forEach(function(p) {
+      var v = parseFloat(day[p.id] && day[p.id].bg ? day[p.id].bg : '');
+      if (!isNaN(v) && v > 0) { periodBGSum[p.id] += v; periodBGCnt[p.id]++; }
+    });
+    corr.forEach(function(r) {
+      if (r.time) { var h = parseInt(r.time.split(':')[0], 10); if (h >= 0 && h < 24) corrByHour[h]++; }
+    });
+  });
+
+  var nd = totalDays || 1;
+  var cardEl = document.getElementById('mealStatCards');
+  if (cardEl) {
+    cardEl.innerHTML = '<h3>飲食概覽</h3><div class="overview-grid">'
+      + '<div class="overview-item"><div class="ov-label">有記錄天數</div><div class="ov-value" style="color:var(--primary)">' + totalDays + '<span class="ov-unit">天</span></div></div>'
+      + '<div class="overview-item"><div class="ov-label">日均補打</div><div class="ov-value" style="color:#2563eb">' + (totalCorr/nd).toFixed(1) + '<span class="ov-unit">次</span></div></div>'
+      + '<div class="overview-item"><div class="ov-label">日均補糖</div><div class="ov-value" style="color:#d97706">' + (totalCarbEvt/nd).toFixed(1) + '<span class="ov-unit">次</span></div></div>'
+      + '<div class="overview-item"><div class="ov-label">日均點心</div><div class="ov-value" style="color:#059669">' + (totalSnacks/nd).toFixed(1) + '<span class="ov-unit">筆</span></div></div>'
+      + '</div>';
+  }
+
+  // Chart 1: per-period avg BG
+  var bgValues = PERIODS.map(function(p) {
+    return periodBGCnt[p.id] > 0 ? Math.round(periodBGSum[p.id] / periodBGCnt[p.id]) : null;
+  });
+  var bgColors = ['#f59e0b','#10b981','#f97316','#6366f1'];
+  var bgCtx = document.getElementById('mealBGChart');
+  if (bgCtx) {
+    if (mealBGChart) { mealBGChart.destroy(); mealBGChart = null; }
+    mealBGChart = new Chart(bgCtx, {
+      type: 'bar',
+      data: {
+        labels: ['早餐前','午餐前','晚餐前','睡前'],
+        datasets: [{
+          data: bgValues,
+          backgroundColor: bgColors.map(function(c){ return c + '99'; }),
+          borderColor: bgColors, borderWidth: 2, borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: function(ctx){ return ctx.raw ? ctx.raw + ' mg/dL' : '無記錄'; } } }
+        },
+        scales: {
+          y: { min: 60, grid: { color: 'rgba(0,0,0,0.06)' }, ticks: { font: { size:11 } } },
+          x: { grid: { display: false }, ticks: { font: { size:12 } } }
+        }
+      }
+    });
+  }
+
+  // Chart 2: correction time distribution (6 × 4-hour buckets)
+  var bucketLabels = ['00-04','04-08','08-12','12-16','16-20','20-24'];
+  var bucketVals = [0,0,0,0,0,0];
+  for (var h = 0; h < 24; h++) bucketVals[Math.floor(h/4)] += corrByHour[h];
+  var ctCtx = document.getElementById('corrTimeChart');
+  if (ctCtx) {
+    if (corrTimeChart) { corrTimeChart.destroy(); corrTimeChart = null; }
+    corrTimeChart = new Chart(ctCtx, {
+      type: 'bar',
+      data: {
+        labels: bucketLabels,
+        datasets: [{ label: '補打次數', data: bucketVals, backgroundColor: 'rgba(99,102,241,0.65)', borderColor: '#6366f1', borderWidth: 2, borderRadius: 5 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1, font: { size:11 } }, grid: { color: 'rgba(0,0,0,0.06)' } },
+          x: { grid: { display: false }, ticks: { font: { size:11 } } }
+        }
+      }
+    });
+  }
+
+  // Chart 3: per-day stacked events
+  var dateLabels = dates.map(function(d) {
+    var o = new Date(d + 'T00:00:00'); return (o.getMonth()+1) + '/' + o.getDate();
+  });
+  var meCtx = document.getElementById('mealEventChart');
+  if (meCtx) {
+    if (mealEventChart) { mealEventChart.destroy(); mealEventChart = null; }
+    mealEventChart = new Chart(meCtx, {
+      type: 'bar',
+      data: {
+        labels: dateLabels,
+        datasets: [
+          { label: '點心', data: daySnacks, backgroundColor: 'rgba(16,185,129,0.75)', borderRadius: 3 },
+          { label: '補打', data: dayCorrCnt, backgroundColor: 'rgba(37,99,235,0.75)', borderRadius: 3 },
+          { label: '補糖', data: dayCarbCnt, backgroundColor: 'rgba(217,119,6,0.75)', borderRadius: 3 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: true,
+        plugins: { legend: { position: 'bottom', labels: { font: { size:11 }, boxWidth: 12, padding: 10 } } },
+        scales: {
+          x: { stacked: true, grid: { display: false }, ticks: { font: { size:10 }, maxRotation: 45, autoSkip: dateLabels.length > 14 } },
+          y: { stacked: true, beginAtZero: true, ticks: { stepSize: 1, font: { size:11 } }, grid: { color: 'rgba(0,0,0,0.06)' } }
+        }
+      }
+    });
   }
 }
 
@@ -9796,7 +9970,7 @@ var _statsActivePanel = 'overview';
 
 function switchStatPanel(panel) {
   _statsActivePanel = panel;
-  var panels = ['overview','tir','bg','insulin','cgm','iob'];
+  var panels = ['overview','tir','bg','insulin','cgm','iob','meal'];
   var btns = document.querySelectorAll('.stats-bm-btn');
   panels.forEach(function(p, i) {
     var el = document.getElementById('stat-panel-' + p);
@@ -11921,7 +12095,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.51.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.51.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
