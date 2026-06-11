@@ -93,18 +93,6 @@
       --shadow: 0 2px 12px rgba(65,54,32,0.6);
     }
 
-    /* v2.52.0: define previously-missing tokens (--surface/--hover/--primary-rgb/--text-primary) */
-    :root {
-      --surface: #ffffff;
-      --hover: rgba(0,0,0,0.05);
-      --primary-rgb: 228,87,46;
-      --text-primary: var(--text);
-    }
-    body[data-skin="cold-dark"]  { --primary-rgb: 87,184,255;  --surface: #f4faff; }
-    body[data-skin="warm-light"] { --primary-rgb: 200,125,135; --surface: #fdf8f9; }
-    body[data-skin="midnight"]   { --primary-rgb: 248,117,117; --surface: #fff7f7; }
-    body[data-skin="warm-dark"]  { --primary-rgb: 156,102,21;  --surface: #3d2d15; --hover: rgba(255,215,145,0.08); }
-
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
@@ -3102,111 +3090,6 @@
     }
     .cal-loading { text-align: center; padding: 16px; color: var(--text-muted); font-size: .82rem; }
 
-
-    /* ╔══════════════════════════════════════════════════════════════╗
-       ║  v2.52.0 UI POLISH LAYER — 整體質感微調                        ║
-       ║  整塊可移除即還原。不改版面結構，只調質感。                       ║
-       ╚══════════════════════════════════════════════════════════════╝ */
-
-    /* ── 1. 質感 tokens ── */
-    :root {
-      --radius-sm: 8px;
-      --radius-lg: 16px;
-      --shadow-card: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.07);
-      --shadow-card-hover: 0 2px 4px rgba(0,0,0,0.05), 0 8px 26px rgba(0,0,0,0.11);
-      --focus-ring: 0 0 0 3px rgba(var(--primary-rgb), 0.16);
-      --ease-out: cubic-bezier(0.22, 0.68, 0, 1);
-    }
-    body[data-skin="warm-dark"] {
-      --shadow-card: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.4);
-      --shadow-card-hover: 0 2px 4px rgba(0,0,0,0.35), 0 8px 26px rgba(0,0,0,0.5);
-    }
-
-    /* ── 2. 頁面切換淡入（只用 opacity，避免 transform 影響 fixed 元素）── */
-    @keyframes pagefade-v252 { from { opacity: 0; } to { opacity: 1; } }
-    .page.active { animation: pagefade-v252 0.22s ease-out both; }
-    @media (prefers-reduced-motion: reduce) {
-      .page.active { animation: none; }
-    }
-
-    /* ── 3. 卡片陰影統一（柔和雙層陰影）── */
-    .period-card, .overview-card, .stat-card, .history-day,
-    .date-bar, .legend-card {
-      box-shadow: var(--shadow-card);
-    }
-    .period-card:hover { box-shadow: var(--shadow-card-hover); }
-    .stat-card, .overview-card { transition: box-shadow 0.2s var(--ease-out); }
-    .stat-card:hover, .overview-card:hover { box-shadow: var(--shadow-card-hover); }
-
-    /* ── 4. 輸入框焦點一致化：主題色光暈 ── */
-    .date-bar input[type="date"]:focus,
-    .field-input-wrap input[type="number"]:focus,
-    .settings-row input[type="number"]:focus,
-    .history-filter input[type="month"]:focus,
-    .calc-field input[type="number"]:focus,
-    .calc-field select:focus,
-    .period-note textarea:focus,
-    .snack-select:focus {
-      box-shadow: var(--focus-ring);
-      transition: box-shadow 0.15s ease, border-color 0.15s ease;
-    }
-
-    /* ── 5. 鍵盤導覽 focus-visible（無障礙）── */
-    button:focus-visible, select:focus-visible, input:focus-visible {
-      outline: 2px solid rgba(var(--primary-rgb), 0.6);
-      outline-offset: 2px;
-    }
-    button:focus:not(:focus-visible) { outline: none; }
-
-    /* ── 6. 導覽列：active 膠囊 + 點按回饋 ── */
-    nav button { position: relative; transition: color 0.18s ease, background 0.18s ease; }
-    nav button.active .nav-ico { transform: translateY(-1px); transition: transform 0.18s var(--ease-out); }
-    nav button:active { background: rgba(var(--primary-rgb), 0.08); }
-
-    /* ── 7. 按鈕點按回饋（觸覺感）── */
-    .save-btn:active { transform: translateY(1px) scale(0.99); }
-    .date-nav-btn:active { transform: scale(0.92); }
-    .date-nav-btn, .save-btn { transition: all 0.18s var(--ease-out); }
-    #quick-calc-fab { transition: transform 0.18s var(--ease-out), box-shadow 0.18s ease; }
-    #quick-calc-fab:hover { transform: scale(1.06); box-shadow: 0 5px 20px rgba(0,0,0,0.32); }
-    #quick-calc-fab:active { transform: scale(0.94); }
-
-    /* ── 8. 計算機 modal 進場動畫 ── */
-    @keyframes calcmodal-up-v252 {
-      from { opacity: 0; transform: translateY(14px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    .calc-overlay .calc-modal { animation: calcmodal-up-v252 0.24s var(--ease-out) both; }
-    @media (prefers-reduced-motion: reduce) {
-      .calc-overlay .calc-modal { animation: none; }
-    }
-
-    /* ── 9. 數字排版：統計數值用等寬數字，避免跳動 ── */
-    .stat-card .stat-value, .calc-result-value, .crh-range {
-      font-variant-numeric: tabular-nums;
-    }
-
-    /* ── 10. 細節：捲軸樣式（桌面）── */
-    @media (hover: hover) {
-      ::-webkit-scrollbar { width: 8px; height: 8px; }
-      ::-webkit-scrollbar-thumb { background: rgba(var(--primary-rgb), 0.25); border-radius: 4px; }
-      ::-webkit-scrollbar-thumb:hover { background: rgba(var(--primary-rgb), 0.4); }
-      ::-webkit-scrollbar-track { background: transparent; }
-    }
-
-    /* ── 11. 標題層級微調 ── */
-    .calc-section-title { letter-spacing: 0.4px; }
-    header h1 { letter-spacing: 0.3px; }
-
-    /* ── 12. 暗色主題卡片細邊（深底層次感）── */
-    body[data-skin="warm-dark"] .period-card,
-    body[data-skin="warm-dark"] .overview-card,
-    body[data-skin="warm-dark"] .stat-card,
-    body[data-skin="warm-dark"] .history-day,
-    body[data-skin="warm-dark"] .date-bar {
-      border: 1px solid rgba(255,215,145,0.13);
-    }
-    /* ═══════════════ END v2.52.0 UI POLISH LAYER ═══════════════ */
   </style>
   <audio id="mealAlarmAudio" src="data:audio/wav;base64,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AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA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AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA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" preload="auto"></audio>
 </head>
@@ -4047,24 +3930,6 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
-
-      <!-- v2.52.0 -->
-      <div class="cl-item">
-        <div class="cl-header">
-          <span class="cl-badge cl-badge-minor">v2.52.0</span>
-          <span class="cl-date">2026-06-11</span>
-          <span class="cl-tag">介面美化＋錯誤修正</span>
-        </div>
-        <ul class="cl-list">
-          <li>修正：移除重複殘留的舊版計算機 modal（147 行死代碼、28 個重複 id，含過時 ISF/目標血糖預設值）</li>
-          <li>修正：補齊 4 個從未定義的 CSS 變數（--surface/--hover/--primary-rgb/--text-primary），事件篩選鈕與使用者切換鈕 active 背景、待辦月曆 hover 恢復正常</li>
-          <li>修正：自訂主題自動推導 --primary-rgb，半透明主題色效果在自訂皮膚下正常顯示</li>
-          <li>美化：UI Polish 層——卡片柔和雙層陰影、輸入框主題色焦點光暈、頁面切換淡入、計算機 modal 進場動畫</li>
-          <li>美化：按鈕點按回饋（儲存鈕/日期鈕/計算機 FAB）、導覽列 active 動效、統計數值等寬字體防跳動</li>
-          <li>美化：鍵盤導覽 focus-visible 無障礙外框、桌面捲軸主題色樣式、黃土暗色卡片細邊</li>
-          <li>所有動畫支援 prefers-reduced-motion（減少動態偏好時自動停用）</li>
-        </ul>
-      </div>
 
       <!-- v2.51.1 -->
       <div class="cl-item">
@@ -10848,12 +10713,6 @@ function _applyCustomSkinStyle(vars) {
   var c1 = vars['_cgm1']   || he;
   var cvLines = Object.keys(vars).filter(function(k){return k.startsWith('--');})
     .map(function(k){return k+':'+vars[k]+';'}).join(' ');
-  // v2.52.0: derive --primary-rgb so rgba(var(--primary-rgb),x) works in custom skin
-  var _ph = (vars['--primary'] || '#E4572E').replace('#','');
-  if (_ph.length === 3) _ph = _ph[0]+_ph[0]+_ph[1]+_ph[1]+_ph[2]+_ph[2];
-  if (/^[0-9a-fA-F]{6}$/.test(_ph)) {
-    cvLines += ' --primary-rgb:' + parseInt(_ph.substr(0,2),16) + ',' + parseInt(_ph.substr(2,2),16) + ',' + parseInt(_ph.substr(4,2),16) + ';';
-  }
   el.textContent = 'body[data-skin="custom"]{' + cvLines + '}'
     + 'body[data-skin="custom"] header{background:linear-gradient(135deg,' + hs + ' 0%,' + he + ' 100%);box-shadow:0 2px 8px ' + hs + '66;}'
     + 'body[data-skin="custom"] .cgm-widget{background:linear-gradient(135deg,' + c0 + ' 0%,' + c1 + ' 100%);box-shadow:0 4px 16px ' + hs + '44;}'
@@ -12236,7 +12095,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.52.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.51.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -15716,6 +15575,153 @@ function checkTodoAlerts() {
   </div>
 </div>
 
+<div id="calcOverlay" class="calc-overlay" onclick="calcOverlayClick(event)">
+  <div class="calc-modal">
+    <div class="calc-modal-header">
+      <h2 id="calc-modal-title">💊 餐前劑量計算</h2>
+      <button class="calc-close-btn" type="button" onclick="closeCalcModal()">✕</button>
+    </div>
+    <div class="calc-body">
+
+      <!-- 基本資訊 -->
+      <div class="calc-section">
+        <div class="calc-section-title">基本資訊</div>
+        <div class="calc-grid-2">
+          <div class="calc-field">
+            <label>餐別</label>
+            <select id="calc-meal-period" onchange="calcUpdateMeal()">
+              <option value="breakfast">🌅 早餐</option>
+              <option value="lunch">☀️ 午餐</option>
+              <option value="dinner">🌙 晚餐</option>
+            </select>
+          </div>
+          <div class="calc-field">
+            <label>目前血糖 (mg/dL)</label>
+            <input type="number" id="calc-bg" min="0" step="1" value="180" oninput="calcRecalc()" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 飲食紀錄 -->
+      <div class="calc-section">
+        <div class="calc-section-title">飲食紀錄</div>
+        <div class="calc-food-row" style="align-items:flex-start;">
+          <span class="calc-food-badge badge-set" style="margin-top:4px;">套餐</span>
+          <div style="flex:1;display:flex;flex-direction:column;gap:5px;min-width:0;">
+            <input type="search" id="calc-set-search" class="calc-set-search"
+              placeholder="🔍 搜尋套餐名稱…" oninput="calcFilterMealSets(this.value)">
+            <select id="calc-meal-set" onchange="calcApplyMealSet(this.value)" style="width:100%;">
+              <option value="">── 選擇套餐（自動填入）──</option>
+            </select>
+          </div>
+        </div>
+        <hr class="calc-set-divider">
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-main">主餐</span>
+          <select id="calc-food-1" onchange="calcUpdateFood1()"></select>
+          <input type="number" id="calc-qty-1" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-side">餐食2</span>
+          <select id="calc-food-2" onchange="calcRecalc()"></select>
+          <input type="number" id="calc-qty-2" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-fruit">甜點</span>
+          <select id="calc-food-3" onchange="calcRecalc()">
+            <option value="">不選擇</option>
+            <option value="guava">芭樂 100公克 (碳水10.6克)</option>
+            <option value="apple">蘋果 100公克 (碳水11.9克)</option>
+            <option value="cherry">櫻桃 100公克 (碳水19.12克)</option>
+            <option value="banana_peel">香蕉帶皮 100公克 (碳水10.6克)</option>
+            <option value="banana">香蕉去皮 100公克 (碳水22.1克)</option>
+            <option value="pineapple">鳳梨 100公克 (碳水13.6克)</option>
+            <option value="dragon_fruit">火龍果 100公克 (碳水12.36克)</option>
+            <option value="strawberry">草莓去蒂 100公克 (碳水9.3克)</option>
+            <option value="kiwi">奇異果 100公克 (碳水14.6克)</option>
+          </select>
+          <input type="number" id="calc-qty-3" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-drink">飲品</span>
+          <select id="calc-food-4" onchange="calcRecalc()">
+            <option value="">不選擇</option>
+            <option value="milk_100">牛奶 100公克 (碳水4.8克)</option>
+            <option value="milk_150">牛奶 150公克 (碳水7克)</option>
+            <option value="milk_200">牛奶 200公克 (碳水10克)</option>
+            <option value="yogurt_100">優酪乳 100公克 (碳水12克)</option>
+            <option value="yakult">養樂多 90ML (碳水14.7克)</option>
+          </select>
+          <input type="number" id="calc-qty-4" min="0" step="0.1" value="1" oninput="calcRecalc()" />
+        </div>
+        <div class="calc-food-row">
+          <span class="calc-food-badge badge-other">其他</span>
+          <input type="text" id="calc-other-name" placeholder="食物名稱（選填）"
+                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 8px;font-size:0.8rem;outline:none;width:100%;color:var(--text);" />
+          <input type="number" id="calc-other-carbs" min="0" step="1" placeholder="克"
+                 style="border:1.5px solid var(--border);border-radius:8px;padding:6px 4px;font-size:0.82rem;outline:none;text-align:center;width:100%;"
+                 oninput="calcRecalc()" />
+        </div>
+      </div>
+
+      <!-- 劑量計算 -->
+      <div class="calc-section">
+        <div class="calc-section-title">劑量計算</div>
+        <div class="calc-grid-2">
+          <div class="calc-field">
+            <label>預計碳水量 (克)</label>
+            <input type="number" id="calc-carbs" min="0" step="1" value="60" oninput="calcRecalc()" />
+          </div>
+          <div class="calc-field">
+            <label>有效胰島素 IOB (單位)</label>
+            <input type="number" id="calc-iob" min="0" step="0.1" value="0" oninput="calcRecalc()" />
+          </div>
+        </div>
+        <div class="calc-preset-row">
+          <div class="calc-preset-item">
+            <span>CIR 醣類係數</span>
+            <strong id="calc-cir-display">10</strong>
+            <span>g / 單位</span>
+          </div>
+          <div class="calc-preset-item">
+            <span>ISF 敏感係數</span>
+            <strong id="calc-isf-display">50</strong>
+            <span>mg/dL / 單位</span>
+          </div>
+          <div class="calc-preset-item">
+            <span>目標血糖</span>
+            <strong id="calc-target-display">110</strong>
+            <span>mg/dL</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 警示 -->
+      <div id="calc-warnings"></div>
+
+      <!-- 計算結果 -->
+      <div class="calc-result-box">
+        <div class="calc-result-main"><span id="calc-result-dose">0</span><small> 單位</small></div>
+        <div class="calc-result-label">建議估算劑量</div>
+        <div class="calc-breakdown">
+          <div class="calc-breakdown-item"><span>碳水劑量</span><strong id="calc-meal-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>血糖校正</span><strong id="calc-corr-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>扣除 IOB</span><strong id="calc-iob-dose">0</strong></div>
+          <div class="calc-breakdown-item"><span>計算值</span><strong id="calc-raw-dose">0</strong></div>
+        </div>
+      </div>
+
+      <!-- 餐別備註 -->
+      <div id="calc-meal-notes" class="calc-notes" style="display:none"></div>
+
+      <!-- 進位提示 -->
+      <div id="calc-round-hint"></div>
+
+      <!-- 帶入按鈕 -->
+      <button class="calc-apply-btn" type="button" onclick="calcApply()">✅ 帶入紀錄表</button>
+    </div>
+  </div>
+</div>
 
 
 

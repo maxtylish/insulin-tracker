@@ -1,4 +1,4 @@
-const CACHE = 'insulin-tracker-v8';
+const CACHE = 'insulin-tracker-v7';
 const CORE = [
   '/insulin-tracker/',
   '/insulin-tracker/index.html',
