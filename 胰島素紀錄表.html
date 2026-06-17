@@ -3339,8 +3339,9 @@ function renderSnackSection(sectionId, items) {
       var mealD = carb / sec.cir;
       var corrD = bg > 0 ? (bg - sec.target) / sec.isf : 0;
       var total = Math.max(0, mealD + corrD);
+      var totalRnd = Math.round(total * 2) / 2;
       hint = '碳水 ' + mealD.toFixed(1) + 'u';
-      if (bg > 0) hint += (corrD >= 0 ? ' + 修正 ' : ' − 修正 ') + Math.abs(corrD).toFixed(1) + 'u = <strong>' + total.toFixed(1) + 'u</strong>';
+      if (bg > 0) hint += (corrD >= 0 ? ' + 修正 ' : ' − 修正 ') + Math.abs(corrD).toFixed(1) + 'u = <strong>' + (Number.isInteger(totalRnd) ? totalRnd : totalRnd.toFixed(1)) + 'u</strong>';
       else hint += ' <span style="color:#94a3b8;font-weight:400">（未輸入血糖）</span>';
       hint += '<br><span style="color:#94a3b8;font-weight:400">' + sec.cirLabel + ' / ISF=' + sec.isf + ' / 目標' + sec.target + '</span>';
       doseCardClass = ' has-calc';
@@ -3483,7 +3484,7 @@ function calcSnackDose(sectionId, idx) {
   var mealD  = carb / sec.cir;
   var corrD  = bg > 0 ? (bg - sec.target) / sec.isf : 0;
   var total = Math.max(0, mealD + corrD);
-  var display = Math.round(total * 10) / 10; // 保留小數點後一位
+  var display = Math.round(total * 2) / 2; // 四捨五入至 0.5 單位
 
   // Auto-fill dose
   if (doseEl) {
@@ -4139,7 +4140,7 @@ function calcUpdateFood1() {
 
 // ── Core calculation ──
 function calcFmt(v) {
-  const r = Math.round(v * 10) / 10;
+  const r = Math.round(v * 2) / 2;
   return Number.isInteger(r) ? String(r) : r.toFixed(1);
 }
 
