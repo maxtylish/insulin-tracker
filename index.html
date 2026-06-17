@@ -6711,7 +6711,7 @@ function renderInsChips(periodId) {
   for (var i = 0; i < dates.length && recent.length < 4; i++) {
     var rec = allD[dates[i]][periodId];
     if (rec && rec.insulin) {
-      var v = parseFloat(rec.insulin);
+      var v = Math.round(parseFloat(rec.insulin) * 2) / 2;
       if (v > 0 && recent.indexOf(v) === -1) recent.push(v);
     }
   }
