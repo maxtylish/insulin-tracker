@@ -4042,11 +4042,36 @@ alter table user_todos enable row level security;
 <div class="settings-section">
     <h3>📋 更新日誌</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:16px;">
-      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.48.3</strong>
+      目前版本：<strong id="app-version-display" style="color:var(--primary);font-size:0.95rem;">v2.52.1</strong>
     </p>
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.52.2 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.52.2</span>
+          <span class="cl-date">2026-06-22</span>
+          <span class="cl-tag">Bug 修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【長效計時】修正 CGM 面板長效 durationH 誤傳 12h（應為 42h），導致 Tresiba 提早失效</li>
+          <li>【長效計時】加入注射時間防禦 guard：若 injectMs > nowMs，忽略該筆資料，防止顯示異常大 後起效 數值</li>
+        </ul>
+      </div>
+
+      <!-- v2.52.1 -->
+      <div class="cl-item">
+        <div class="cl-header">
+          <span class="cl-badge cl-badge-patch">v2.52.1</span>
+          <span class="cl-date">2026-06-22</span>
+          <span class="cl-tag">長效倒數修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>修正：排除尚未到達的睡前施打時間，避免長效胰島素錯誤顯示數小時後才起效</li>
+        </ul>
+      </div>
 
       <!-- v2.52.0 -->
       <div class="cl-item">
@@ -12236,7 +12261,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.52.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.52.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -14282,8 +14307,11 @@ function updateBasalTimeBar() {
     var d2 = new Date(today + 'T00:00:00'); d2.setDate(d2.getDate() - j);
     var ds2 = d2.getFullYear() + '-' + String(d2.getMonth()+1).padStart(2,'0') + '-' + String(d2.getDate()).padStart(2,'0');
     var rec2 = (all[ds2] || {}).bedtime;
-    if (rec2 && rec2.insulin && rec2.time)
-      basalCandidates.push({ dt: new Date(ds2 + 'T' + rec2.time + ':00'), site: rec2.site || SITE_DEFAULTS.bedtime || '' });
+    if (rec2 && rec2.insulin && rec2.time) {
+      var _bdt = new Date(ds2 + 'T' + rec2.time + ':00');
+      if (_bdt.getTime() <= nowMs)
+        basalCandidates.push({ dt: _bdt, site: rec2.site || SITE_DEFAULTS.bedtime || '' });
+    }
   }
 
   var activeRapids = rapidCandidates.filter(function(r) {
@@ -14325,6 +14353,8 @@ function updateBasalTimeBar() {
         var nowMs    = Date.now();
         var onsetMin = (SITE_ALARM_MAP[last.site] && SITE_ALARM_MAP[last.site].def) || 20;
         var injectMs = last.dt.getTime();
+        // 防禦：注射時間不能比現在晚，若有未來時間資料直接忽略
+        if (injectMs > nowMs + 60000) return '';
         var onsetMs  = injectMs + onsetMin * 60000;
         var endMs    = onsetMs  + durationH * 3600000;
         var isExp = nowMs >= endMs;
@@ -14388,7 +14418,7 @@ function updateBasalTimeBar() {
         return rowHtml;
       }).filter(Boolean);
       var pr = _rapidRows.join('<div style="height:1px;background:rgba(255,255,255,0.08);margin:2px 0;"></div>');
-      var pb = lastBasal ? _compactInsRow(lastBasal, 12, _cgmColors.basal, '💉', '長效') : '';
+      var pb = lastBasal ? _compactInsRow(lastBasal, 42, _cgmColors.basal, '💉', '長效') : '';
       // 當沒有速效作用中，顯示「無速效作用中」 placeholder
       var prFinal = pr || ('<div class="cgm-insulin-row" style="opacity:.42;">'
         + '<div class="cgm-ins-header">⚡ 速效</div>'
