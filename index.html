@@ -3533,8 +3533,15 @@
       <!-- Panel 4: 胰島素劑量趨勢 -->
       <div id="stat-panel-insulin" class="stat-panel" style="display:none">
         <div class="chart-card">
-          <h3>胰島素劑量趨勢</h3>
-          <div class="chart-sub">每日各時段劑量（含修正劑量）</div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2px;">
+            <h3 style="margin:0;">胰島素劑量趨勢</h3>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <button onclick="_switchInsulinTab(-1)" style="background:transparent;border:1px solid var(--border,#e2e8f0);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:1rem;color:var(--text-muted);display:flex;align-items:center;justify-content:center;line-height:1;">&#8249;</button>
+              <span id="dose-tab-label" style="font-size:.82rem;font-weight:600;color:var(--primary,#6366f1);min-width:72px;text-align:center;">劑量＋修正</span>
+              <button onclick="_switchInsulinTab(1)" style="background:transparent;border:1px solid var(--border,#e2e8f0);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:1rem;color:var(--text-muted);display:flex;align-items:center;justify-content:center;line-height:1;">&#8250;</button>
+            </div>
+          </div>
+          <div class="chart-sub" id="dose-tab-sub">每日各時段劑量（含修正劑量）</div>
           <canvas id="insulinChart" height="200"></canvas>
         </div>
       </div>
@@ -4047,6 +4054,31 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.52.4 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.52.4</span>
+          <span class="cl-date">2026-06-22</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【劑量趨勢】拆分為三分頁，左右箭頭切換：① 劑量＋修正（原圖 + 補打堆疊）② 僅劑量 ③ 僅修正劑量</li>
+        </ul>
+      </div>
+
+      <!-- v2.52.3 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.52.3</span>
+          <span class="cl-date">2026-06-22</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【CGM 面板】補打記錄現在跟正餐一樣出現在 CGM widget 右側，顯示劑量 + 作用計時（如 ⚡ 補打 2U 起效中 · 肚子）</li>
+          <li>【CGM 面板】正餐 / 補打的 CGM 胰島素列均在 header 顯示施打劑量（如 ⚡ 早餐 4U 起效中 · 肚子）</li>
+        </ul>
+      </div>
 
       <!-- v2.52.2 -->
       <div class="cl-entry">
@@ -6317,6 +6349,10 @@ const DEFAULT_SETTINGS = {
 let settings = loadSettings();
 let bgChart = null;
 let insulinChart = null;
+var _insulinSubTab   = 0;   // 0=劑量+修正, 1=僅劑量, 2=僅修正
+var _insulinAllDS    = {};  // { combined, doseOnly, corrOnly }
+var _insulinLabels   = [];
+var _insulinBaseOpts = {};
 let iobChart = null;
 
 // ══════════════════════════════════════════
@@ -9113,20 +9149,26 @@ function renderCharts() {
     });
   }
 
-  if (insulinChart) insulinChart.destroy();
-  insulinChart = new Chart(document.getElementById('insulinChart'), {
-    type: 'bar',
-    data: { labels: labels, datasets: insulinDatasets },
-    options: Object.assign({}, baseOpts, {
-      scales: Object.assign({}, baseOpts.scales, {
-        y: Object.assign({}, baseOpts.scales.y, {
-          title: { display: true, text: '單位', font: { size: 10 } },
-          stacked: true
-        }),
-        x: Object.assign({}, baseOpts.scales.x, { stacked: true })
-      })
-    })
-  });
+  // ── 建立修正劑量 dataset ──
+  var corrDS = {
+    label: '補打修正',
+    data: dates.map(function(d){
+      var corrs = (all[d] && all[d].corrections) || [];
+      var total = corrs.reduce(function(s,r){ return s + (parseFloat(r.dose)||0); }, 0);
+      return total || null;
+    }),
+    borderColor: '#ef4444', backgroundColor: '#ef444488',
+    tension: 0.3, fill: false, pointRadius: 4, spanGaps: true
+  };
+  // 存全域供切換用
+  _insulinLabels   = labels;
+  _insulinBaseOpts = baseOpts;
+  _insulinAllDS    = {
+    combined: insulinDatasets.concat([corrDS]),
+    doseOnly: insulinDatasets,
+    corrOnly: [corrDS]
+  };
+  _renderInsulinSubTab();
 
   renderIOBChart();
   renderMealPanel();
@@ -9308,6 +9350,45 @@ function tresibaActivity(t) {
   // Very slow exponential decay over 42h effective duration
   return Math.exp(-(t - RAMP) * Math.log(2) / 28);
 }
+
+// ── 胰島素劑量趨勢三分頁 ────────────────────────────────
+var _DOSE_TAB_META = [
+  { label: '劑量＋修正', sub: '每日各時段劑量（含修正劑量）', key: 'combined' },
+  { label: '僅劑量',     sub: '每日各時段基礎劑量',           key: 'doseOnly'  },
+  { label: '僅修正劑量', sub: '每日補打修正劑量合計',         key: 'corrOnly'  }
+];
+
+function _switchInsulinTab(dir) {
+  _insulinSubTab = (_insulinSubTab + dir + 3) % 3;
+  _renderInsulinSubTab();
+}
+
+function _renderInsulinSubTab() {
+  var meta = _DOSE_TAB_META[_insulinSubTab];
+  var labelEl = document.getElementById('dose-tab-label');
+  var subEl   = document.getElementById('dose-tab-sub');
+  if (labelEl) labelEl.textContent = meta.label;
+  if (subEl)   subEl.textContent   = meta.sub;
+  var ds = (_insulinAllDS[meta.key] || []);
+  var isStacked = meta.key !== 'corrOnly';
+  if (insulinChart) { insulinChart.destroy(); insulinChart = null; }
+  var canvasEl = document.getElementById('insulinChart');
+  if (!canvasEl) return;
+  insulinChart = new Chart(canvasEl, {
+    type: 'bar',
+    data: { labels: _insulinLabels, datasets: ds },
+    options: Object.assign({}, _insulinBaseOpts, {
+      scales: Object.assign({}, _insulinBaseOpts.scales, {
+        y: Object.assign({}, (_insulinBaseOpts.scales||{}).y, {
+          title: { display: true, text: '單位', font: { size: 10 } },
+          stacked: isStacked
+        }),
+        x: Object.assign({}, (_insulinBaseOpts.scales||{}).x, { stacked: isStacked })
+      })
+    })
+  });
+}
+// ──────────────────────────────────────────────────────────
 
 function renderIOBChart() {
   var iobCanvas = document.getElementById('iobChart');
@@ -12261,7 +12342,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.52.2';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.52.4';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -14289,14 +14370,14 @@ function updateBasalTimeBar() {
       if (rec && rec.insulin && rec.time) {
         var _rdt = new Date(ds + 'T' + rec.time + ':00');
         if (_rdt.getTime() <= nowMs)
-          rapidCandidates.push({ dt: _rdt, site: rec.site || SITE_DEFAULTS[pid] || '', mealLabel: {morning:'早餐',noon:'午餐',evening:'晚餐'}[pid] || '速效' });
+          rapidCandidates.push({ dt: _rdt, site: rec.site || SITE_DEFAULTS[pid] || '', mealLabel: {morning:'早餐',noon:'午餐',evening:'晚餐'}[pid] || '速效', dose: rec.insulin || '' });
       }
     });
     (day.corrections || []).forEach(function(r) {
       if (r.dose && r.time) {
         var _rdt2 = new Date(ds + 'T' + r.time + ':00');
         if (_rdt2.getTime() <= nowMs)
-          rapidCandidates.push({ dt: _rdt2, site: r.site || '', mealLabel: '補打' });
+          rapidCandidates.push({ dt: _rdt2, site: r.site || '', mealLabel: '補打', dose: r.dose || '' });
       }
     });
   }
@@ -14364,7 +14445,8 @@ function updateBasalTimeBar() {
         if (isExp) {
           pct = '0';
           timeStr = durationH <= 4 ? '作用結束' : '峰值結束';
-          headerStr = emoji + ' ' + shortLabel + (last.site ? ' · ' + last.site : '');
+          var _doseStr3 = (last.dose && parseFloat(last.dose) > 0) ? ' ' + (+parseFloat(last.dose)) + 'U' : '';
+          headerStr = emoji + ' ' + shortLabel + _doseStr3 + (last.site ? ' · ' + last.site : '');
         } else if (nowMs < onsetMs) {
           var secsToOnset = Math.ceil((onsetMs - nowMs) / 1000);
           pct = Math.max(0, Math.min(100, (1 - (onsetMs - nowMs) / (onsetMin * 60000)) * 100)).toFixed(1);
@@ -14375,7 +14457,8 @@ function updateBasalTimeBar() {
             var _bom = Math.floor(secsToOnset / 60), _bos = secsToOnset % 60;
             timeStr = _bom + 'm' + String(_bos).padStart(2,'0') + 's 後起效';
           }
-          headerStr = emoji + ' ' + shortLabel + (last.site ? ' · ' + last.site : '');
+          var _doseStr4 = (last.dose && parseFloat(last.dose) > 0) ? ' ' + (+parseFloat(last.dose)) + 'U' : '';
+          headerStr = emoji + ' ' + shortLabel + _doseStr4 + (last.site ? ' · ' + last.site : '');
         } else {
           var remainMs = endMs - nowMs;
           if (durationH <= 4) {
@@ -14393,7 +14476,8 @@ function updateBasalTimeBar() {
           }
           pct = (remainMs / (durationH * 3600000) * 100).toFixed(1);
           timeStr = timeStr + ' · ' + Math.round(parseFloat(pct)) + '%';
-          headerStr = emoji + ' ' + shortLabel + ' 起效中' + (last.site ? ' · ' + last.site : '');
+          var _doseStr5 = (last.dose && parseFloat(last.dose) > 0) ? ' ' + (+parseFloat(last.dose)) + 'U' : '';
+          headerStr = emoji + ' ' + shortLabel + _doseStr5 + ' 起效中' + (last.site ? ' · ' + last.site : '');
         }
         var _timerBadge = '';
         if (_insQuickTimer && !isExp) {
