@@ -3916,7 +3916,7 @@ alter table user_todos enable row level security;
 <div class="settings-section">
     <h3>💊 餐前計算參數</h3>
     <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px;">
-      修改後點「預覽變更」確認，再按「確認儲存」才會生效，防止誤觸。
+      修改後按「儲存係數」，跳出視窗確認數值即完成儲存，防止誤觸。
     </p>
     <div class="meal-params-table">
       <div class="mpt-header">
@@ -4054,6 +4054,19 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.52.5 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.52.5</span>
+          <span class="cl-date">2026-07-01</span>
+          <span class="cl-tag">錯誤修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【重大】修正餐前係數（CIR/ISF/目標血糖）跨裝置同步失效：loadSettingsFromCloud() 同步雲端資料時，未回寫本機獨立備份 insulin_meal_params，導致舊裝置的本機備份永遠蓋掉剛從雲端同步下來的新值，造成「另一裝置改了但這裝置看不到」</li>
+          <li>更新餐前計算參數頁面過時的操作說明文字（單一按鈕 + 彈窗確認流程）</li>
+        </ul>
+      </div>
 
       <!-- v2.52.4 -->
       <div class="cl-entry">
@@ -6428,6 +6441,12 @@ async function loadSettingsFromCloud() {
       // Protect sb_url/sb_key — they are NOT part of settings, safe to overwrite all
       Object.assign(settings, cloudData);
       saveSettingsToStorage();
+      // v2.52.5 fix: insulin_meal_params is a device-local backup decoupled from insulin_settings;
+      // must be refreshed when cloud data is newer, otherwise the stale local backup permanently
+      // shadows the freshly-synced cloud value in getMealPreset().
+      if (cloudData.mealParams) {
+        try { localStorage.setItem('insulin_meal_params', JSON.stringify(cloudData.mealParams)); } catch(e) {}
+      }
       if (typeof loadSettingsUI === 'function') loadSettingsUI();
       if (typeof loadMealParamsUI === 'function') try { loadMealParamsUI(); } catch(e) {}
       console.log('[loadSettingsFromCloud] applied cloud settings, updated_at:', res.data.updated_at);
@@ -12342,7 +12361,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.52.4';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.52.5';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
