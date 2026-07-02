@@ -922,6 +922,7 @@
       background: white; transition: border-color 0.2s;
     }
     .snack-row-target input:focus { border-color: #10b981; }
+    .snack-row-target .target-preset-select { border-color: #a7f3d0; }
     .snack-target-unit { color: var(--text-muted); font-weight: 500; }
     /* Row 3: dose result card */
     .snack-row-dose {
@@ -2302,6 +2303,25 @@
       outline: none; background: white;
     }
     .corr-target-input:focus { border-color: #1d4ed8; }
+    .target-preset-select {
+      border: 1.5px solid var(--border); border-radius: 6px;
+      font-size: .7rem; padding: 2px 4px; max-width: 96px;
+      background: white; color: var(--text-muted); outline: none;
+    }
+    .corr-target-row .target-preset-select { border-color: #93c5fd; color: #1d4ed8; }
+    .tp-row {
+      display: grid; grid-template-columns: 1fr 90px 32px; gap: 8px;
+      margin-bottom: 8px; align-items: center;
+    }
+    .tp-val {
+      border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 6px 8px; font-size: .85rem; outline: none; background: white;
+    }
+    .tp-del-btn {
+      background: #fee2e2; color: #b91c1c; border: none;
+      border-radius: 6px; width: 30px; height: 30px; cursor: pointer;
+      font-size: .8rem; font-weight: 700;
+    }
     .corr-timer-row {
       font-size: .68rem; margin-top: 5px; padding: 2px 7px;
       border-radius: 5px; font-weight: 600; display: none;
@@ -3973,6 +3993,17 @@ alter table user_todos enable row level security;
       <div id="mp-confirm-row" style="display:none;"></div>
     </div>
   </div>
+<div class="settings-section">
+    <h3>🎯 目標血糖情境預設</h3>
+    <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px;">
+      自訂常用情境（例如運動前、生病時），之後在補打/補糖畫面可以快速選用不同的目標血糖，不需要每次手動輸入。
+    </p>
+    <div id="target-preset-list"></div>
+    <div style="display:flex;gap:10px;margin-top:10px;align-items:center;flex-wrap:wrap;">
+      <button class="mp-confirm-btn" type="button" onclick="addTargetPresetRow()">➕ 新增情境</button>
+      <button class="mp-confirm-btn" type="button" onclick="saveTargetPresets()">💾 儲存情境</button>
+    </div>
+  </div>
       </div>
 
       <!-- ── Panel: CGM 連動 ── -->
@@ -4079,6 +4110,19 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.52.7 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.52.7</span>
+          <span class="cl-date">2026-07-03</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【設定 → 餐前】新增「目標血糖情境預設」：可自訂常用情境（例如運動前、生病時）與對應目標血糖</li>
+          <li>【補打/補糖】目標血糖欄位旁新增快選下拉，選情境即自動帶入數值並重算劑量</li>
+        </ul>
+      </div>
 
       <!-- v2.52.6 -->
       <div class="cl-entry">
@@ -6396,6 +6440,7 @@ const DEFAULT_SETTINGS = {
   nsToken: '',
   nsAutoFill: true,
   mealParams: null,  // { breakfast:{cir,isf,target}, lunch:{...}, dinner:{...} }
+  targetPresets: [], // v2.52.7: [{ label, value }] 情境化目標血糖預設（運動前/生病時等）
 };
 
 let settings = loadSettings();
@@ -6488,6 +6533,7 @@ async function loadSettingsFromCloud() {
       }
       if (typeof loadSettingsUI === 'function') loadSettingsUI();
       if (typeof loadMealParamsUI === 'function') try { loadMealParamsUI(); } catch(e) {}
+      if (typeof _refreshTargetPresetSelects === 'function') try { _refreshTargetPresetSelects(); } catch(e) {}
       console.log('[loadSettingsFromCloud] applied cloud settings, updated_at:', res.data.updated_at);
       showToast('☁️ 設定已從雲端同步');
     } else if (localTime > cloudTime) {
@@ -9758,6 +9804,7 @@ function renderSnackSection(sectionId, items) {
           '<input type="number" class="snack-val" data-idx="' + idx + '" data-field="target"' +
             ' value="' + (targetOverrideInit != null ? targetOverrideInit : sec.target) + '" min="80" max="300" step="1"' +
             ' oninput="calcSnackDose(\'' + sectionId + '\',' + idx + ')" />' +
+          '<select class="target-preset-select" onchange="applyTargetPreset(this)">' + _targetPresetOptionsHTML() + '</select>' +
           '<span class="snack-target-unit">mg/dL</span>' +
         '</div>' +
 
@@ -10058,6 +10105,94 @@ function saveMealParams() {
 
 function confirmSaveMealParams() { saveMealParams(); }  // backward compat
 
+// ── Target BG situational presets (v2.52.7) ──────────────────────────────
+function _targetPresetOptionsHTML() {
+  var list = (settings.targetPresets || []);
+  var html = '<option value="">快選…</option>';
+  list.forEach(function(p) {
+    if (p && p.label && p.value != null && p.value !== '' && !isNaN(p.value)) {
+      html += '<option value="' + p.value + '">' + p.label + '（' + p.value + '）</option>';
+    }
+  });
+  return html;
+}
+
+function _refreshTargetPresetSelects() {
+  document.querySelectorAll('.target-preset-select').forEach(function(sel) {
+    sel.innerHTML = _targetPresetOptionsHTML();
+  });
+}
+
+function applyTargetPreset(selectEl) {
+  var val = selectEl.value;
+  if (val === '') return;
+  var input = selectEl.previousElementSibling;
+  if (input && input.tagName === 'INPUT') {
+    input.value = val;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  selectEl.selectedIndex = 0;
+}
+
+function renderTargetPresetList() {
+  var listEl = document.getElementById('target-preset-list');
+  if (!listEl) return;
+  var list = (settings.targetPresets || []);
+  if (list.length === 0) {
+    listEl.innerHTML = '<div style="font-size:0.8rem;color:var(--text-muted);padding:6px 0;">尚無自訂情境，點下方「新增情境」開始設定</div>';
+    return;
+  }
+  listEl.innerHTML = list.map(function(p, idx) {
+    return '<div class="tp-row" data-idx="' + idx + '">' +
+      '<input type="text" class="tp-val" data-field="label" placeholder="情境名稱（如：運動前）" value="' + (p.label || '') + '" />' +
+      '<input type="number" class="tp-val" data-field="value" placeholder="目標值" min="80" max="300" step="1" value="' + (p.value != null ? p.value : '') + '" />' +
+      '<button type="button" class="tp-del-btn" onclick="removeTargetPresetRow(' + idx + ')">✕</button>' +
+    '</div>';
+  }).join('');
+}
+
+function _collectTargetPresetDraft() {
+  var listEl = document.getElementById('target-preset-list');
+  if (!listEl) return [];
+  var rows = listEl.querySelectorAll('.tp-row');
+  var result = [];
+  rows.forEach(function(row) {
+    var labelEl = row.querySelector('[data-field="label"]');
+    var valueEl = row.querySelector('[data-field="value"]');
+    var label = labelEl ? labelEl.value.trim() : '';
+    var value = valueEl ? valueEl.value.trim() : '';
+    result.push({ label: label, value: value === '' ? null : parseFloat(value) });
+  });
+  return result;
+}
+
+function addTargetPresetRow() {
+  var draft = _collectTargetPresetDraft();
+  draft.push({ label: '', value: null });
+  settings.targetPresets = draft; // 暫存草稿，尚未寫入 localStorage/雲端
+  renderTargetPresetList();
+}
+
+function removeTargetPresetRow(idx) {
+  var draft = _collectTargetPresetDraft();
+  draft.splice(idx, 1);
+  settings.targetPresets = draft;
+  renderTargetPresetList();
+}
+
+function saveTargetPresets() {
+  if (!requireAppPwd('🔒 儲存目標血糖情境')) return;
+  var draft = _collectTargetPresetDraft().filter(function(p) {
+    return p.label && p.value != null && !isNaN(p.value);
+  });
+  settings.targetPresets = draft;
+  saveSettingsToStorage();
+  showToast('✅ 情境預設已儲存！');
+  syncSettingsToCloud();
+  renderTargetPresetList();
+  _refreshTargetPresetSelects();
+}
+
 function loadSettingsUI() {
   document.getElementById('set-low').value        = settings.low;
   document.getElementById('set-normalLow').value  = settings.normalLow;
@@ -10069,6 +10204,7 @@ function loadSettingsUI() {
   document.getElementById('set-ns-autofill').checked = settings.nsAutoFill !== false;
   loadNotifSettingsUI();
   loadMealParamsUI();  // fix: 確保 ISF/CIR/目標血糖顯示已儲存的值，而非 HTML 預設值
+  renderTargetPresetList();  // v2.52.7: 渲染目標血糖情境預設清單
   // 確保書籤狀態正確
   if (typeof switchSettingsPanel === 'function') switchSettingsPanel(_settingsActivePanel || 'cloud');
 }
@@ -10467,6 +10603,7 @@ function renderSupplList(type, items) {
               + '<input type="number" class="corr-target-input suppl-val" data-idx="' + idx + '" data-field="target"'
               + ' value="' + targetInputVal + '" min="80" max="300" step="1"'
               + ' oninput="updateCorrSuggestion(' + idx + ')" />'
+              + '<select class="target-preset-select" onchange="applyTargetPreset(this)">' + _targetPresetOptionsHTML() + '</select>'
               + '<span>mg/dL</span>'
             + '</div>'
             + '<div class="corr-timer-row" id="corr-timer-' + idx + '"></div>'
@@ -12436,7 +12573,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.52.6';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.52.7';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
