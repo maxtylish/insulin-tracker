@@ -910,6 +910,19 @@
       gap: 8px;
       margin-bottom: 10px;
     }
+    /* Row 2b: target BG override */
+    .snack-row-target {
+      display: flex; align-items: center; gap: 6px;
+      font-size: .78rem; color: var(--text-muted); font-weight: 600;
+      margin-bottom: 10px;
+    }
+    .snack-row-target input {
+      width: 66px; border: 1.5px solid var(--border); border-radius: 8px;
+      padding: 6px 8px; font-size: .9rem; font-weight: 700; outline: none;
+      background: white; transition: border-color 0.2s;
+    }
+    .snack-row-target input:focus { border-color: #10b981; }
+    .snack-target-unit { color: var(--text-muted); font-weight: 500; }
     /* Row 3: dose result card */
     .snack-row-dose {
       background: white;
@@ -2277,6 +2290,18 @@
     }
     .backup-calc-link:hover { opacity: 1; color: var(--primary); }
     .corr-sugg-meta  { font-size: .7rem; color: #64748b; margin-top: 2px; }
+    .corr-target-row {
+      display: flex; align-items: center; gap: 6px;
+      font-size: .72rem; color: #1d4ed8; font-weight: 600; margin-top: 4px;
+    }
+    .corr-target-row label { font-weight: 600; }
+    .corr-target-row span  { font-weight: 500; color: #64748b; }
+    .corr-target-input {
+      width: 62px; border: 1.5px solid #93c5fd; border-radius: 6px;
+      padding: 2px 6px; font-size: .8rem; font-weight: 700; color: #1d4ed8;
+      outline: none; background: white;
+    }
+    .corr-target-input:focus { border-color: #1d4ed8; }
     .corr-timer-row {
       font-size: .68rem; margin-top: 5px; padding: 2px 7px;
       border-radius: 5px; font-weight: 600; display: none;
@@ -4054,6 +4079,20 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.52.6 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.52.6</span>
+          <span class="cl-date">2026-07-02</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【補打】建議劑量框新增可編輯「目標血糖」欄位，可依當下情況（例如運動前後、生病時）臨時調整目標血糖，不影響餐前計算參數的永久設定</li>
+          <li>【補糖】每筆點心紀錄新增可編輯「目標血糖」欄位，同上，逐筆調整</li>
+          <li>修正補打建議劑量的 ISF/目標血糖來源：先前固定讀取預設值，未套用使用者在「餐前計算參數」自訂的設定</li>
+        </ul>
+      </div>
 
       <!-- v2.52.5 -->
       <div class="cl-entry">
@@ -9646,15 +9685,18 @@ function renderSnackSection(sectionId, items) {
     // Pre-compute hint & dose card state
     var carb = hasSubItems ? subAutoCarb : (parseFloat(item.carb) || 0);
     var bg   = parseFloat(item.bg)   || 0;
+    // v2.52.6: per-row target BG override (falls back to dynamic preset target)
+    var targetOverrideInit = (item.target != null && item.target !== '' && !isNaN(parseFloat(item.target))) ? parseFloat(item.target) : null;
+    var effTargetInit = targetOverrideInit != null ? targetOverrideInit : sec.target;
     var hint = '', doseCardClass = '', doseAutoClass = '';
     if (carb > 0) {
       var mealD = carb / sec.cir;
-      var corrD = bg > 0 ? (bg - sec.target) / sec.isf : 0;
+      var corrD = bg > 0 ? (bg - effTargetInit) / sec.isf : 0;
       var total = Math.max(0, mealD + corrD);
       hint = '碳水 ' + mealD.toFixed(1) + 'u';
       if (bg > 0) hint += (corrD >= 0 ? ' + 修正 ' : ' − 修正 ') + Math.abs(corrD).toFixed(1) + 'u = <strong>' + total.toFixed(1) + 'u</strong>';
       else hint += ' <span style="color:#94a3b8;font-weight:400">（未輸入血糖）</span>';
-      hint += '<br><span style="color:#94a3b8;font-weight:400">' + sec.cirLabel + ' / ISF=' + sec.isf + ' / 目標' + sec.target + '</span>';
+      hint += '<br><span style="color:#94a3b8;font-weight:400">' + sec.cirLabel + ' / ISF=' + sec.isf + ' / 目標' + effTargetInit + '</span>';
       doseCardClass = ' has-calc';
       doseAutoClass = ' snack-dose-auto';
     }
@@ -9708,6 +9750,15 @@ function renderSnackSection(sectionId, items) {
               ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)"' +
               ' style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 8px;font-size:0.95rem;font-weight:700;outline:none;background:white;transition:border-color 0.2s;text-align:center;letter-spacing:0.5px;font-variant-numeric:tabular-nums" />' +
           '</div>' +
+        '</div>' +
+
+        // ── Row 2b: target BG override ──
+        '<div class="snack-row-target">' +
+          '<label>目標血糖</label>' +
+          '<input type="number" class="snack-val" data-idx="' + idx + '" data-field="target"' +
+            ' value="' + (targetOverrideInit != null ? targetOverrideInit : sec.target) + '" min="80" max="300" step="1"' +
+            ' oninput="calcSnackDose(\'' + sectionId + '\',' + idx + ')" />' +
+          '<span class="snack-target-unit">mg/dL</span>' +
         '</div>' +
 
         // ── Row 3: dose result card ──
@@ -9899,13 +9950,17 @@ function calcSnackDose(sectionId, idx) {
   var rowEl  = document.getElementById(sectionId + '-row-' + idx);
   if (!rowEl) return;
 
-  var carbEl = rowEl.querySelector('[data-field="carb"]');
-  var bgEl   = rowEl.querySelector('[data-field="bg"]');
-  var doseEl = document.getElementById(sectionId + '-dose-' + idx);
-  var hintEl = document.getElementById(sectionId + '-hint-' + idx);
+  var carbEl   = rowEl.querySelector('[data-field="carb"]');
+  var bgEl     = rowEl.querySelector('[data-field="bg"]');
+  var targetEl = rowEl.querySelector('[data-field="target"]');
+  var doseEl   = document.getElementById(sectionId + '-dose-' + idx);
+  var hintEl   = document.getElementById(sectionId + '-hint-' + idx);
 
   var carb = parseFloat((carbEl && carbEl.value) || 0) || 0;
   var bg   = parseFloat((bgEl   && bgEl.value)   || 0) || 0;
+  // v2.52.6: per-instance target BG override
+  var targetOverride = targetEl ? parseFloat(targetEl.value) : NaN;
+  var effTarget = !isNaN(targetOverride) ? targetOverride : sec.target;
 
   if (carb <= 0) {
     if (hintEl) hintEl.innerHTML = '';
@@ -9914,7 +9969,7 @@ function calcSnackDose(sectionId, idx) {
   }
 
   var mealD  = carb / sec.cir;
-  var corrD  = bg > 0 ? (bg - sec.target) / sec.isf : 0;
+  var corrD  = bg > 0 ? (bg - effTarget) / sec.isf : 0;
   var total = Math.max(0, mealD + corrD);
   var display = Math.round(total * 10) / 10; // 保留小數點後一位
 
@@ -9937,7 +9992,7 @@ function calcSnackDose(sectionId, idx) {
     } else {
       hint += ' <span style="color:#94a3b8">（未輸入血糖）</span>';
     }
-    hint += '<br><span style="color:#94a3b8;font-weight:400">' + sec.cirLabel + ' / ISF=' + sec.isf + ' / 目標' + sec.target + '</span>';
+    hint += '<br><span style="color:#94a3b8;font-weight:400">' + sec.cirLabel + ' / ISF=' + sec.isf + ' / 目標' + effTarget + '</span>';
     hintEl.innerHTML = hint;
   }
 }
@@ -10121,20 +10176,25 @@ function showToast(msg) {
 
 // ── Correction dose helpers ───────────────────────────
 function getCorrectionPreset() {
-  // Pick ISF/target by current hour
+  // Pick meal key by current hour, then resolve through getMealPreset()
+  // so corrections respect the user's saved CIR/ISF/target settings.
+  // (v2.52.6 fix: previously read CALC_MEAL_PRESETS directly, ignoring
+  // any customization made on the 餐前計算參數 page.)
   var h = new Date().getHours();
-  if (h >= 6  && h < 11) return CALC_MEAL_PRESETS.breakfast;
-  if (h >= 11 && h < 15) return CALC_MEAL_PRESETS.lunch;
-  if (h >= 15 && h < 22) return CALC_MEAL_PRESETS.dinner;
-  return CALC_MEAL_PRESETS.dinner;  // overnight → use dinner preset
+  var mealKey = 'dinner';
+  if (h >= 6  && h < 11) mealKey = 'breakfast';
+  else if (h >= 11 && h < 15) mealKey = 'lunch';
+  else if (h >= 15 && h < 22) mealKey = 'dinner';
+  return (typeof getMealPreset === 'function') ? getMealPreset(mealKey) : CALC_MEAL_PRESETS[mealKey];
 }
 
-function calcCorrectionSuggestion(bg) {
+function calcCorrectionSuggestion(bg, targetOverride) {
   var bgNum = parseFloat(bg);
   if (!bgNum || isNaN(bgNum) || bgNum < 20) return null;
   var preset  = getCorrectionPreset();
   var isf     = preset.isf;
-  var target  = preset.target;
+  // v2.52.6: allow per-instance target BG override (different situations may need a different target)
+  var target  = (targetOverride != null && !isNaN(targetOverride)) ? targetOverride : preset.target;
   // Base correction: (current BG - target) / ISF
   var dose    = (bgNum - target) / isf;
   // Trend adjustment: add expected BG change over next 30 min
@@ -10147,27 +10207,31 @@ function calcCorrectionSuggestion(bg) {
   return Math.round(dose * 2) / 2;
 }
 
-function corrSuggMeta() {
+function corrSuggMeta(targetOverride) {
   var p = getCorrectionPreset();
   var trendPart = '';
   if (lastCGMEntry && lastCGMEntry.delta != null) {
     var d = lastCGMEntry.delta;
     trendPart = '　趨勢 ' + (d >= 0 ? '+' : '') + Math.round(d * 10) / 10 + ' mg/5min';
   }
-  return 'ISF ' + p.isf + '　目標 ' + p.target + ' mg/dL' + trendPart;
+  // 目標血糖改由下方可編輯欄位顯示，這裡只顯示 ISF + 趨勢
+  return 'ISF ' + p.isf + trendPart;
 }
 
 function updateCorrSuggestion(idx) {
-  var bgEl   = document.querySelector('#corrections-row-' + idx + ' [data-field="bg"]');
-  var boxEl  = document.getElementById('corr-sugg-box-' + idx);
-  var doseEl = document.getElementById('corr-sugg-dose-' + idx);
-  var metaEl = document.getElementById('corr-sugg-meta-' + idx);
+  var bgEl     = document.querySelector('#corrections-row-' + idx + ' [data-field="bg"]');
+  var boxEl    = document.getElementById('corr-sugg-box-' + idx);
+  var doseEl   = document.getElementById('corr-sugg-dose-' + idx);
+  var metaEl   = document.getElementById('corr-sugg-meta-' + idx);
+  var targetEl = document.querySelector('#corrections-row-' + idx + ' [data-field="target"]');
   if (!bgEl || !boxEl) return;
-  var sug = calcCorrectionSuggestion(bgEl.value);
+  var targetOverride = targetEl ? parseFloat(targetEl.value) : NaN;
+  if (isNaN(targetOverride)) targetOverride = null;
+  var sug = calcCorrectionSuggestion(bgEl.value, targetOverride);
   if (sug === null) { boxEl.style.display = 'none'; return; }
   boxEl.style.display = 'flex';
   if (doseEl) doseEl.textContent = sug;
-  if (metaEl) metaEl.textContent = corrSuggMeta();
+  if (metaEl) metaEl.textContent = corrSuggMeta(targetOverride);
 }
 
 function fillCorrDose(idx) {
@@ -10360,8 +10424,12 @@ function renderSupplList(type, items) {
     if (isCorr) {
       var bgVal   = item.bg   || '';
       var doseVal = item.dose || '';
-      var sugg    = bgVal ? calcCorrectionSuggestion(bgVal) : null;
-      var meta    = bgVal ? corrSuggMeta() : '';
+      // v2.52.6: per-row target BG override (falls back to dynamic preset target)
+      var targetOverrideInit = (item.target != null && item.target !== '' && !isNaN(parseFloat(item.target))) ? parseFloat(item.target) : null;
+      var presetForRow    = getCorrectionPreset();
+      var targetInputVal  = targetOverrideInit != null ? targetOverrideInit : presetForRow.target;
+      var sugg    = bgVal ? calcCorrectionSuggestion(bgVal, targetOverrideInit) : null;
+      var meta    = bgVal ? corrSuggMeta(targetOverrideInit) : '';
       var hint    = CORR_SITE_HINTS[item.site] || '';
 
       return '<div class="suppl-row" id="corrections-row-' + idx + '">'
@@ -10394,6 +10462,13 @@ function renderSupplList(type, items) {
               + '<span class="corr-sugg-unit">單位【速效】</span>'
             + '</div>'
             + '<div class="corr-sugg-meta" id="corr-sugg-meta-' + idx + '">' + meta + '</div>'
+            + '<div class="corr-target-row">'
+              + '<label>目標</label>'
+              + '<input type="number" class="corr-target-input suppl-val" data-idx="' + idx + '" data-field="target"'
+              + ' value="' + targetInputVal + '" min="80" max="300" step="1"'
+              + ' oninput="updateCorrSuggestion(' + idx + ')" />'
+              + '<span>mg/dL</span>'
+            + '</div>'
             + '<div class="corr-timer-row" id="corr-timer-' + idx + '"></div>'
             + '<a class="backup-calc-link" href="https://maxtylish.github.io/insulin_calculator/" target="_blank" rel="noopener">📐 備用計算機 ↗</a>'
           + '</div>'
@@ -12361,7 +12436,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.52.5';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.52.6';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
