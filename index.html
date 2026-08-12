@@ -4172,6 +4172,34 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.56.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.56.0</span>
+          <span class="cl-date">2026-08-12</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【時間回查血糖】輸入或調整時間後，自動向 CGM 查詢「該時間點」的血糖並帶入，適用注射、補打、補糖與三個點心區</li>
+          <li>例：14:30 才補登 14:09 的補糖，輸入 14:09 即帶入 14:09 當下的血糖值，而非現在的血糖</li>
+          <li>只在血糖欄空白時帶入，不會覆蓋手動輸入；容許誤差 ±10 分鐘，超過或查無資料則不動作</li>
+          <li>帶入時血糖欄會綠色閃爍一次，滑鼠移上去可看到來源時間與誤差分鐘數</li>
+          <li>當日資料快取 2 分鐘、過去日期快取 30 分鐘，避免重複打 Nightscout API</li>
+        </ul>
+      </div>
+
+      <!-- v2.55.1 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.55.1</span>
+          <span class="cl-date">2026-08-12</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【點心／補糖】食物下拉新增「義美低糖豆奶 一罐＝碳水8.5克」</li>
+        </ul>
+      </div>
+
       <!-- v2.55.0 -->
       <div class="cl-entry">
         <div class="cl-header">
@@ -6535,6 +6563,7 @@ const SNACK_FOOD_OPTIONS = [
   { value: 'milk_200',           label: '🥛 牛奶 200公克 (碳水10克)' },
   { value: 'yogurt_100',         label: '🥛 優酪乳 100公克 (碳水12克)' },
   { value: 'yakult',             label: '🧃 養樂多 90ML (碳水14.7克)' },
+  { value: 'yimei_soymilk_lowsugar', label: '🥤 義美低糖豆奶 一罐 (碳水8.5克)' },
   { value: 'guava',              label: '🍈 芭樂 100公克 (碳水10.6克)' },
   { value: 'apple',              label: '🍎 蘋果 100公克 (碳水11.9克)' },
   { value: 'banana_peel',        label: '🍌 香蕉帶皮 100公克 (碳水10.6克)' },
@@ -6980,6 +7009,7 @@ function onTimeBlur(el) {
   el.value = h.toString().padStart(2, '0') + ':' + min.toString().padStart(2, '0');
   var pid = el.id ? el.id.replace('-time', '') : '';
   if (pid) updatePeriodSaveBtnState(pid);
+  autoFillBGForTime(el);   // v2.56.0: 回查該時間點的 CGM 血糖
 }
 // Auto-fill time with NOW only when user first focuses BG or insulin field
 // and the time field for that period is still empty.
@@ -7081,6 +7111,104 @@ async function fetchNSEntries(dateStr) {
     if (!res.ok) return [];
     return await res.json();
   } catch(e) { return []; }
+}
+
+// ── v2.56.0: 依輸入的時間點回查 CGM 血糖 ────────────────────────────────
+var NS_BG_LOOKUP_TOL_MIN = 10;   // 容許誤差（分鐘）；超過就不帶入
+var _nsDayEntriesCache   = {};   // dateStr → { ts, entries }
+
+async function _nsEntriesForDate(dateStr) {
+  var c = _nsDayEntriesCache[dateStr];
+  var ttl = (dateStr === todayStr()) ? 120000 : 1800000;  // 今天 2 分鐘，過去 30 分鐘
+  if (c && (Date.now() - c.ts) < ttl) return c.entries;
+  var entries = await fetchNSEntries(dateStr);
+  if (entries && entries.length) _nsDayEntriesCache[dateStr] = { ts: Date.now(), entries: entries };
+  return entries || [];
+}
+
+// 回傳 { sgv, diffMin } 或 null（找不到 / 超出容差 / 未來時間）
+async function getBGAtTime(dateStr, hhmm) {
+  if (!settings.nsUrl) return null;
+  var m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || '');
+  if (!m) return null;
+  var t = new Date(dateStr + 'T00:00:00');
+  if (isNaN(t.getTime())) return null;
+  t.setHours(parseInt(m[1], 10), parseInt(m[2], 10), 0, 0);
+  var tMs = t.getTime();
+  if (tMs > Date.now() + 60000) return null;   // 未來時間不查
+  var entries = await _nsEntriesForDate(dateStr);
+  var best = null, bestDiff = Infinity;
+  for (var i = 0; i < entries.length; i++) {
+    var e = entries[i];
+    if (!e || e.sgv == null) continue;
+    var d = e.date || (e.dateString ? Date.parse(e.dateString) : 0);
+    if (!d) continue;
+    var diff = Math.abs(d - tMs);
+    if (diff < bestDiff) { bestDiff = diff; best = e; }
+  }
+  if (!best || bestDiff > NS_BG_LOOKUP_TOL_MIN * 60000) return null;
+  return { sgv: Math.round(best.sgv), diffMin: Math.round(bestDiff / 60000) };
+}
+
+// 綠色閃一下，讓使用者知道值是自動帶入的
+function _flashAutoFilled(el, msg) {
+  if (!el) return;
+  el.title = msg;
+  var prev = el.style.boxShadow;
+  el.style.transition = 'box-shadow .2s';
+  el.style.boxShadow  = '0 0 0 3px rgba(16,185,129,.5)';
+  setTimeout(function(){ el.style.boxShadow = prev || ''; }, 1400);
+}
+
+// 找出該時間欄位所屬的血糖欄 + 對應的重算函式（皆為純 UI，不觸發儲存）
+function _bgPeerForTimeInput(el) {
+  // 1) 主卡片：id = "<period>-time"
+  if (el.id && /-time$/.test(el.id)) {
+    var pid = el.id.replace(/-time$/, '');
+    var mainBg = document.getElementById(pid + '-bg');
+    if (mainBg) return { bg: mainBg, after: function(){ onBGInput(pid); } };
+  }
+  if (!el.closest) return null;
+  // 2) 點心區：.snack-row  id = "<sectionId>-row-<idx>"
+  var srow = el.closest('.snack-row');
+  if (srow) {
+    var sbg = srow.querySelector('[data-field="bg"]');
+    var sm  = /^(.+)-row-(\d+)$/.exec(srow.id || '');
+    if (sbg && sm) {
+      var sid = sm[1], sidx = parseInt(sm[2], 10);
+      return { bg: sbg, after: function(){ calcSnackDose(sid, sidx); } };
+    }
+  }
+  // 3) 補打 / 補糖：.suppl-row  id = "corrections-row-N" / "carbs-row-N"
+  var prow = el.closest('.suppl-row');
+  if (prow) {
+    var pbg = prow.querySelector('[data-field="bg"]');
+    var pm  = /^(corrections|carbs)-row-(\d+)$/.exec(prow.id || '');
+    if (pbg && pm) {
+      var isCorr = pm[1] === 'corrections';
+      var pidx   = parseInt(pm[2], 10);
+      return { bg: pbg, after: function(){ if (isCorr) updateCorrSuggestion(pidx); } };
+    }
+  }
+  return null;
+}
+
+// 由 onTimeBlur() 呼叫：血糖欄空白時，帶入該時間點的 CGM 值
+async function autoFillBGForTime(el) {
+  try {
+    if (!settings.nsUrl || !el || !el.value) return;
+    var peer = _bgPeerForTimeInput(el);
+    if (!peer || !peer.bg || peer.bg.value) return;   // 已有值 → 不覆蓋
+    var dateEl  = document.getElementById('todayDate');
+    var dateStr = (dateEl && dateEl.value) || todayStr();
+    var hhmm    = el.value;
+    var hit     = await getBGAtTime(dateStr, hhmm);
+    if (!hit) return;
+    if (peer.bg.value) return;   // await 期間使用者已自行填值 → 放棄
+    peer.bg.value = hit.sgv;
+    _flashAutoFilled(peer.bg, '📡 ' + hhmm + ' 的 CGM 讀值（誤差 ' + hit.diffMin + ' 分鐘）');
+    if (peer.after) peer.after();
+  } catch (e) { /* 靜默失敗，不影響輸入 */ }
 }
 
 const NS_TREND = {
@@ -12755,7 +12883,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.55.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.56.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
