@@ -404,24 +404,85 @@
 
     .period-time-input {
       display: flex;
-      align-items: center;
-      gap: 6px;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
       font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-right: 8px;   /* v2.54.0: nudge label + input slightly left */
+    }
+    .period-time-input .time-input-label {
+      font-size: 0.68rem;
       color: var(--text-muted);
     }
     .period-time-input .time-input {
       border: 1px solid var(--border);
       border-radius: 6px;
-      padding: 4px 8px;
+      padding: 4px 6px;
       font-size: 0.82rem;
       color: var(--text);
       outline: none;
-      width: 72px;
+      width: 62px;
       text-align: center;
       letter-spacing: 0.5px;
       font-variant-numeric: tabular-nums;
     }
     .period-time-input .time-input:focus { border-color: var(--primary); }
+
+    /* ── v2.53.0: 時間欄位左右微調箭頭（±1 分鐘） ── */
+    .time-input-row {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .time-step-btn {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 1px solid var(--border);
+      background: #fff;
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .time-step-btn:active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .time-step-btn-sm {
+      width: 15px;
+      height: 15px;
+      font-size: 0.6rem;
+    }
+    /* ── v2.54.0: 🔃 一鍵帶入現在時間 ── */
+    .time-now-btn {
+      font-size: 0.68rem;
+      border-color: var(--primary);
+      color: var(--primary);
+      margin-left: 2px;
+    }
+    .time-now-btn:active {
+      background: var(--primary);
+      border-color: var(--primary);
+      transform: rotate(-180deg);
+    }
+    .time-now-btn { transition: transform 0.25s ease, background 0.15s, border-color 0.15s; }
+    .suppl-field .time-input-row .time-input,
+    .snack-field .time-input-row .time-input {
+      width: auto;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
 
     .fields-row {
       display: grid;
@@ -4111,6 +4172,35 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.54.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.54.0</span>
+          <span class="cl-date">2026-08-12</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【主餐選項】午餐／晚餐新增「愛麵族烏龍麵 1塊(255.5克)＝碳水68克」</li>
+          <li>【主餐選項】午餐／晚餐新增「愛麵族烏龍麵 ½塊(127克)＝碳水34克」</li>
+          <li>【主餐選項】午餐／晚餐新增「寶寶咖哩(全聯) 1包/盒＝碳水17.2克」</li>
+          <li>【時間欄位】注射時間標籤與輸入框整體向左微調 8px，避免貼齊卡片右緣</li>
+          <li>【時間欄位】新增 🔃 按鈕，按一下即帶入現在時間（會覆蓋既有值）</li>
+        </ul>
+      </div>
+
+      <!-- v2.53.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.53.0</span>
+          <span class="cl-date">2026-07-11</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【時間欄位】所有時間輸入框（注射時間、補打、補糖）旁新增 ‹ › 左右微調箭頭，可用點擊以 1 分鐘為單位快速調整</li>
+          <li>【UI】主卡片「注射時間」文字移至輸入框上方，讓左右微調箭頭有足夠空間顯示在輸入框兩側</li>
+        </ul>
+      </div>
+
       <!-- v2.52.7 -->
       <div class="cl-entry">
         <div class="cl-header">
@@ -6807,6 +6897,36 @@ function getNowTime() {
   const now = new Date();
   return now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
 }
+// v2.53.0: ‹ › 小箭頭，左右微調時間欄位（±1 分鐘，跨日 wrap-around）
+function stepTimeInput(btn, delta) {
+  var scope = btn.closest('.time-input-row') || btn.parentElement;
+  var input = scope ? scope.querySelector('.time-input') : null;
+  if (!input) return;
+  var m = input.value.match(/^(\d{1,2}):(\d{2})$/);
+  var h, min;
+  if (m) {
+    h = parseInt(m[1], 10);
+    min = parseInt(m[2], 10);
+  } else {
+    var now = getNowTime().split(':');
+    h = parseInt(now[0], 10);
+    min = parseInt(now[1], 10);
+  }
+  var total = ((h * 60 + min + delta) % 1440 + 1440) % 1440;
+  h = Math.floor(total / 60);
+  min = total % 60;
+  input.value = String(h).padStart(2, '0') + ':' + String(min).padStart(2, '0');
+  onTimeBlur(input);
+}
+// v2.54.0: 🔃 一鍵把「現在時間」寫入該列的時間欄位
+function fillNowTime(btn) {
+  var scope = btn.closest('.time-input-row') || btn.parentElement;
+  var input = scope ? scope.querySelector('.time-input') : null;
+  if (!input) return;
+  input.value = getNowTime();
+  onTimeBlur(input);
+  input.dispatchEvent(new Event('change', { bubbles: true }));
+}
 function currentMonthStr() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
@@ -8357,11 +8477,16 @@ function buildPeriodCards() {
         + '</div>'
         + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">'
           + '<div class="period-time-input">'
-            + '<span>注射時間</span>'
-            + '<input type="text" class="time-input" id="' + p.id + '-time"'
-            + ' value="" inputmode="numeric" maxlength="5" placeholder="--:--"'
-            + ' onfocus="autoFillTime(\'' + p.id + '\')"'
-            + ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />'
+            + '<span class="time-input-label">注射時間</span>'
+            + '<div class="time-input-row">'
+              + '<button type="button" class="time-step-btn" onclick="stepTimeInput(this,-1)" aria-label="時間往前1分鐘">‹</button>'
+              + '<input type="text" class="time-input" id="' + p.id + '-time"'
+              + ' value="" inputmode="numeric" maxlength="5" placeholder="--:--"'
+              + ' onfocus="autoFillTime(\'' + p.id + '\')"'
+              + ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />'
+              + '<button type="button" class="time-step-btn" onclick="stepTimeInput(this,1)" aria-label="時間往後1分鐘">›</button>'
+              + '<button type="button" class="time-step-btn time-now-btn" onclick="fillNowTime(this)" title="帶入現在時間" aria-label="帶入現在時間">🔃</button>'
+            + '</div>'
           + '</div>'
           + calcBtn
         + '</div>'
@@ -9790,11 +9915,15 @@ function renderSnackSection(sectionId, items) {
           '</div>' +
           '<div class="snack-field">' +
             '<label>時間</label>' +
-            '<input type="text" class="snack-val time-input" data-idx="' + idx + '" data-field="time"' +
-              ' value="' + (item.time || getNowTime()) + '"' +
-              ' inputmode="numeric" maxlength="5" placeholder="--:--"' +
-              ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)"' +
-              ' style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 8px;font-size:0.95rem;font-weight:700;outline:none;background:white;transition:border-color 0.2s;text-align:center;letter-spacing:0.5px;font-variant-numeric:tabular-nums" />' +
+            '<div class="time-input-row">' +
+              '<button type="button" class="time-step-btn" onclick="stepTimeInput(this,-1)" aria-label="時間往前1分鐘">‹</button>' +
+              '<input type="text" class="snack-val time-input" data-idx="' + idx + '" data-field="time"' +
+                ' value="' + (item.time || getNowTime()) + '"' +
+                ' inputmode="numeric" maxlength="5" placeholder="--:--"' +
+                ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)"' +
+                ' style="width:100%;border:1.5px solid var(--border);border-radius:8px;padding:8px 4px;font-size:0.95rem;font-weight:700;outline:none;background:white;transition:border-color 0.2s;text-align:center;letter-spacing:0.5px;font-variant-numeric:tabular-nums" />' +
+              '<button type="button" class="time-step-btn" onclick="stepTimeInput(this,1)" aria-label="時間往後1分鐘">›</button>' +
+            '</div>' +
           '</div>' +
         '</div>' +
 
@@ -10583,10 +10712,14 @@ function renderSupplList(type, items) {
           + '</div>'
           + '<div class="suppl-field">'
             + '<label>時間</label>'
-            + '<input type="text" data-idx="' + idx + '" data-field="time"'
-            + ' class="suppl-val time-input" value="' + (item.time || '') + '"'
-            + ' inputmode="numeric" maxlength="5" placeholder="--:--"'
-            + ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />'
+            + '<div class="time-input-row">'
+              + '<button type="button" class="time-step-btn" onclick="stepTimeInput(this,-1)" aria-label="時間往前1分鐘">‹</button>'
+              + '<input type="text" data-idx="' + idx + '" data-field="time"'
+              + ' class="suppl-val time-input" value="' + (item.time || '') + '"'
+              + ' inputmode="numeric" maxlength="5" placeholder="--:--"'
+              + ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />'
+              + '<button type="button" class="time-step-btn" onclick="stepTimeInput(this,1)" aria-label="時間往後1分鐘">›</button>'
+            + '</div>'
           + '</div>'
         + '</div>'
         // Suggestion box
@@ -10684,14 +10817,16 @@ function renderSupplList(type, items) {
         + '<div class="carb-row-top">'
           + '<span class="carb-bg-label">血糖</span>'
           + '<input type="number" data-idx="' + idx + '" data-field="bg" class="suppl-val"'
-          + ' style="width:60px" value="' + (item.bg || '') + '"'
+          + ' style="width:54px" value="' + (item.bg || '') + '"'
           + ' min="20" max="600" step="1" placeholder="--"'
           + ' onfocus="autoFillCarbBG(\'' + rowId + '\')" />'
           + '<span class="carb-sep">mg</span>'
-          + '<input type="text" data-idx="' + idx + '" data-field="time" class="suppl-val"'
-          + ' style="width:52px" value="' + (item.time || '') + '"'
+          + '<button type="button" class="time-step-btn time-step-btn-sm" onclick="stepTimeInput(this,-1)" aria-label="時間往前1分鐘">‹</button>'
+          + '<input type="text" data-idx="' + idx + '" data-field="time" class="suppl-val time-input"'
+          + ' style="width:42px" value="' + (item.time || '') + '"'
           + ' inputmode="numeric" maxlength="5" placeholder="時間"'
           + ' oninput="onTimeInput(this)" onblur="onTimeBlur(this)" />'
+          + '<button type="button" class="time-step-btn time-step-btn-sm" onclick="stepTimeInput(this,1)" aria-label="時間往後1分鐘">›</button>'
           + '<div style="flex:1"></div>'
           + '<button class="corr-cgm-btn" type="button" onclick="autoFillCarbBG(\'' + rowId + '\')" style="flex-shrink:0;padding:3px 7px">CGM</button>'
         + '</div>'
@@ -11436,6 +11571,9 @@ const CALC_CARB_FOODS = {
   chunshuitang_butter_toast: 50,   // 春水堂奶酥厚片 一份
   soymilk_unsweetened: 3,          // 無糖豆奶 100g
   multigrain_rice: 68.9,           // 五穀米 100克
+  aimianzu_udon_full: 68,          // 愛麵族烏龍麵 1塊 (255.5克)
+  aimianzu_udon_half: 34,          // 愛麵族烏龍麵 1/2塊 (127克)
+  baby_curry_pxmart: 17.2,         // 寶寶咖哩(全聯) 1包/盒
 };
 
 const CALC_MAIN_OPTIONS = {
@@ -11470,6 +11608,9 @@ const CALC_MAIN_OPTIONS = {
     { value: 'soup_dumpling',   label: '湯包 1顆 (碳水4.3克)' },
     { value: 'chunshuitang_kung_noodle',  label: '🍜 春水堂功夫麵 一份(220克) (碳水64克)' },
     { value: 'chunshuitang_butter_toast', label: '🍞 春水堂奶酥厚片 一份 (碳水50克)' },
+    { value: 'aimianzu_udon_full',        label: '🍜 愛麵族烏龍麵 1塊(255.5克) (碳水68克)' },
+    { value: 'aimianzu_udon_half',        label: '🍜 愛麵族烏龍麵 ½塊(127克) (碳水34克)' },
+    { value: 'baby_curry_pxmart',         label: '🍛 寶寶咖哩(全聯) 1包/盒 (碳水17.2克)' },
   ],
   dinner: [
     { value: 'white_rice',      label: '白飯 100公克 (碳水30克)' },
@@ -11484,6 +11625,9 @@ const CALC_MAIN_OPTIONS = {
     { value: 'soup_dumpling',   label: '湯包 1顆 (碳水4.3克)' },
     { value: 'chunshuitang_kung_noodle',  label: '🍜 春水堂功夫麵 一份(220克) (碳水64克)' },
     { value: 'chunshuitang_butter_toast', label: '🍞 春水堂奶酥厚片 一份 (碳水50克)' },
+    { value: 'aimianzu_udon_full',        label: '🍜 愛麵族烏龍麵 1塊(255.5克) (碳水68克)' },
+    { value: 'aimianzu_udon_half',        label: '🍜 愛麵族烏龍麵 ½塊(127克) (碳水34克)' },
+    { value: 'baby_curry_pxmart',         label: '🍛 寶寶咖哩(全聯) 1包/盒 (碳水17.2克)' },
   ],
 };
 
@@ -12573,7 +12717,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.52.7';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.54.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
