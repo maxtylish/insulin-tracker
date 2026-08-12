@@ -4172,6 +4172,31 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.55.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.55.0</span>
+          <span class="cl-date">2026-08-12</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【飲品】新增「義美低糖豆奶 一罐＝碳水8.5克」</li>
+        </ul>
+      </div>
+
+      <!-- v2.54.1 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.54.1</span>
+          <span class="cl-date">2026-08-12</span>
+          <span class="cl-tag">修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【計算劑量】寶寶咖哩(全聯) 改為「餐食2」專屬選項，不再佔用主餐下拉，可與烏龍麵等主餐同時選取</li>
+          <li>【計算劑量】切換主餐或套餐時，「餐食2」已選項目若仍存在則自動保留，不再被清空</li>
+        </ul>
+      </div>
+
       <!-- v2.54.0 -->
       <div class="cl-entry">
         <div class="cl-header">
@@ -4182,7 +4207,7 @@ alter table user_todos enable row level security;
         <ul class="cl-list">
           <li>【主餐選項】午餐／晚餐新增「愛麵族烏龍麵 1塊(255.5克)＝碳水68克」</li>
           <li>【主餐選項】午餐／晚餐新增「愛麵族烏龍麵 ½塊(127克)＝碳水34克」</li>
-          <li>【主餐選項】午餐／晚餐新增「寶寶咖哩(全聯) 1包/盒＝碳水17.2克」</li>
+          <li>【餐食2】午餐／晚餐新增「寶寶咖哩(全聯) 1包/盒＝碳水17.2克」</li>
           <li>【時間欄位】注射時間標籤與輸入框整體向左微調 8px，避免貼齊卡片右緣</li>
           <li>【時間欄位】新增 🔃 按鈕，按一下即帶入現在時間（會覆蓋既有值）</li>
         </ul>
@@ -11574,6 +11599,7 @@ const CALC_CARB_FOODS = {
   aimianzu_udon_full: 68,          // 愛麵族烏龍麵 1塊 (255.5克)
   aimianzu_udon_half: 34,          // 愛麵族烏龍麵 1/2塊 (127克)
   baby_curry_pxmart: 17.2,         // 寶寶咖哩(全聯) 1包/盒
+  yimei_soymilk_lowsugar: 8.5,     // 義美低糖豆奶 一罐
 };
 
 const CALC_MAIN_OPTIONS = {
@@ -11610,7 +11636,6 @@ const CALC_MAIN_OPTIONS = {
     { value: 'chunshuitang_butter_toast', label: '🍞 春水堂奶酥厚片 一份 (碳水50克)' },
     { value: 'aimianzu_udon_full',        label: '🍜 愛麵族烏龍麵 1塊(255.5克) (碳水68克)' },
     { value: 'aimianzu_udon_half',        label: '🍜 愛麵族烏龍麵 ½塊(127克) (碳水34克)' },
-    { value: 'baby_curry_pxmart',         label: '🍛 寶寶咖哩(全聯) 1包/盒 (碳水17.2克)' },
   ],
   dinner: [
     { value: 'white_rice',      label: '白飯 100公克 (碳水30克)' },
@@ -11627,7 +11652,17 @@ const CALC_MAIN_OPTIONS = {
     { value: 'chunshuitang_butter_toast', label: '🍞 春水堂奶酥厚片 一份 (碳水50克)' },
     { value: 'aimianzu_udon_full',        label: '🍜 愛麵族烏龍麵 1塊(255.5克) (碳水68克)' },
     { value: 'aimianzu_udon_half',        label: '🍜 愛麵族烏龍麵 ½塊(127克) (碳水34克)' },
-    { value: 'baby_curry_pxmart',         label: '🍛 寶寶咖哩(全聯) 1包/盒 (碳水17.2克)' },
+  ],
+};
+
+// ── v2.54.1: 只出現在「餐食2」的配菜／醬料（不進主餐下拉，可與主餐同時選） ──
+const CALC_SIDE_ONLY_OPTIONS = {
+  breakfast: [],
+  lunch: [
+    { value: 'baby_curry_pxmart', label: '🍛 寶寶咖哩(全聯) 1包/盒 (碳水17.2克)' },
+  ],
+  dinner: [
+    { value: 'baby_curry_pxmart', label: '🍛 寶寶咖哩(全聯) 1包/盒 (碳水17.2克)' },
   ],
 };
 
@@ -11913,11 +11948,14 @@ function calcUpdateMeal() {
 function calcUpdateFood1() {
   const meal    = document.getElementById('calc-meal-period').value;
   const opts    = CALC_MAIN_OPTIONS[meal] || CALC_MAIN_OPTIONS.breakfast;
+  const sideOpts = (typeof CALC_SIDE_ONLY_OPTIONS !== 'undefined' && CALC_SIDE_ONLY_OPTIONS[meal]) || [];
   const mainVal = document.getElementById('calc-food-1').value;
   const sel2    = document.getElementById('calc-food-2');
+  const prev2   = sel2.value;   // v2.54.1: keep 餐食2 selection across rebuilds
+  const list2   = opts.filter(o => o.value !== mainVal).concat(sideOpts);
   sel2.innerHTML = '<option value="">不選擇</option>' +
-    opts.filter(o => o.value !== mainVal)
-        .map(o => '<option value="' + o.value + '">' + o.label + '</option>').join('');
+    list2.map(o => '<option value="' + o.value + '">' + o.label + '</option>').join('');
+  if (prev2 && list2.some(o => o.value === prev2)) sel2.value = prev2;
   calcRecalc();
 }
 
@@ -12717,7 +12755,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.54.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.55.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -16074,6 +16112,7 @@ function checkTodoAlerts() {
             <option value="yogurt_100">優酪乳 100g (碳水12g)</option>
             <option value="yakult">養樂多 90ML (碳水14.7g)</option>
             <option value="soymilk_unsweetened">無糖豆奶 100g (碳水3g)</option>
+            <option value="yimei_soymilk_lowsugar">義美低糖豆奶 一罐 (碳水8.5g)</option>
           </select>
           <input type="number" id="calc-qty-4" min="0" step="0.1" value="1" oninput="calcRecalc()" />
         </div>
