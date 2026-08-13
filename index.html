@@ -2729,6 +2729,16 @@
     .vial-icon-btn:hover { background:var(--primary); color:#fff; border-color:var(--primary); }
     .vial-icon-btn.danger { border-color:#ef4444; color:#ef4444; }
     .vial-icon-btn.danger:hover { background:#ef4444; color:#fff; }
+    /* ── v2.57.0: 備註獨立一行，完整可讀 ── */
+    .vial-note-row {
+      display:flex; align-items:flex-start; gap:5px;
+      margin-top:5px; padding:5px 8px;
+      background:var(--bg); border:1px solid var(--border);
+      border-left:3px solid var(--primary); border-radius:8px;
+      font-size:.74rem; line-height:1.45; color:var(--text);
+      white-space:pre-wrap; word-break:break-word;
+    }
+    .vial-note-row .vnr-icon { flex-shrink:0; opacity:.7; }
     .vial-row-badge { margin-top:5px; }
     .vial-inactive-row .vial-type-name { opacity:.5; }
     .vial-inactive-row .vial-loc-tag  { opacity:.4; }
@@ -4171,6 +4181,22 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.57.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.57.0</span>
+          <span class="cl-date">2026-08-13</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【胰島素備註】備註改為卡片上獨立一行完整顯示，不再被擠成細長條看不清楚</li>
+          <li>【修正】「標記 A/B/C/D/E/筆針」原本與「備註」共用同一欄位，按標記會蓋掉整段備註；現已拆為獨立的 mark 欄位，兩者互不影響（舊資料自動搬遷，原本存在備註裡的單一標記會自動轉為標記）</li>
+          <li>【修正】刪除胰島素改為軟刪除（deletedAt 墓碑並同步雲端），解決刪除後被其他裝置的舊清單合併「復活」的問題；墓碑保留 90 天後自動清除</li>
+          <li>【修正】雲端合併規則調整：同一支藥瓶以「已刪除」狀態優先，刪除不會被未更新的裝置蓋回</li>
+          <li>【安全】備註輸出前加上 HTML 轉義</li>
+        </ul>
+      </div>
 
       <!-- v2.56.0 -->
       <div class="cl-entry">
@@ -6708,12 +6734,10 @@ async function loadFromCloud() {
             // Merge: union by id — cloud wins for conflicts, keep local-only items
             var localVials = JSON.parse(localStorage.getItem('insulin_vials') || '[]');
             var cloudVials = row.data.vials;
-            var merged = cloudVials.slice();
-            localVials.forEach(function(lv) {
-              if (!merged.some(function(cv) { return cv.id === lv.id; })) merged.push(lv);
-            });
+            // v2.57.0: 同 id 以「已刪除」優先，避免刪掉的藥瓶被合併復活
+            var merged = _mergeVials(cloudVials, localVials);
             localStorage.setItem('insulin_vials', JSON.stringify(merged));
-            if (merged.length !== cloudVials.length) syncVialsToCloud(merged); // push merged back
+            if (JSON.stringify(merged) !== JSON.stringify(cloudVials)) syncVialsToCloud(merged); // push merged back
           }
         } else {
           // Merge cloud into local: prefer whichever period record has actual time data
@@ -12883,7 +12907,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.56.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.57.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -13469,7 +13493,12 @@ function calcUnopenedExpYM(mfgYM, months) {
   return y + '/' + String(m + 1).padStart(2, '0');
 }
 
-function getInsulinVials() {
+// v2.57.0: 快速標記可用的字母（與自由備註分離）
+var VIAL_MARKS = ['A','B','C','D','E','筆針'];
+var VIAL_TOMB_TTL_MS = 90 * 86400000;   // 墓碑保留 90 天後才真正清掉
+
+// 讀出原始清單（含 deletedAt 墓碑）；同時做欄位正規化與一次性遷移
+function _getVialsRaw() {
   try {
     var raw = JSON.parse(localStorage.getItem('insulin_vials') || 'null');
     if (raw && !Array.isArray(raw)) {
@@ -13478,23 +13507,69 @@ function getInsulinVials() {
         var v = raw[type];
         arr.push({ id: 'v' + Date.now().toString(36) + type,
           type: type, mfgYM: (v.mfgDate||'').slice(0,7),
-          serialNo: '', openDate: v.openDate||'', expDate: v.expDate||'' });
+          serialNo: '', openDate: v.openDate||'', expDate: v.expDate||'', note: '', mark: '' });
       });
       localStorage.setItem('insulin_vials', JSON.stringify(arr));
       return arr;
     }
     if (!Array.isArray(raw)) return [];
+    var changed = false;
+    var now = Date.now();
+    var kept = [];
     raw.forEach(function(v) {
-      if (!v.mfgYM && v.mfgDate) v.mfgYM = v.mfgDate.slice(0,7);
+      if (!v || !v.id) { changed = true; return; }
+      // 過期墓碑真正清除
+      if (v.deletedAt && (now - v.deletedAt) > VIAL_TOMB_TTL_MS) { changed = true; return; }
+      if (!v.mfgYM && v.mfgDate) { v.mfgYM = v.mfgDate.slice(0,7); }
       if (v.serialNo === undefined) v.serialNo = '';
+      // v2.57.0 遷移：舊資料把 A/B/C/D/E/筆針 存在 note，搬到獨立的 mark
+      if (v.mark === undefined) {
+        if (VIAL_MARKS.indexOf(v.note) !== -1) { v.mark = v.note; v.note = ''; }
+        else { v.mark = ''; }
+        changed = true;
+      }
+      kept.push(v);
     });
-    return raw;
+    if (changed) localStorage.setItem('insulin_vials', JSON.stringify(kept));
+    return kept;
   } catch(e) { return []; }
 }
 
-function _saveVialsToStorage(arr) {
+// 對外：只回傳未刪除的藥瓶
+function getInsulinVials() {
+  return _getVialsRaw().filter(function(v){ return !v.deletedAt; });
+}
+
+// 直接寫入原始清單（呼叫端已自行處理墓碑）
+function _saveVialsRaw(arr) {
   localStorage.setItem('insulin_vials', JSON.stringify(arr));
   syncVialsToCloud(arr);
+}
+
+// 呼叫端通常只拿得到「未刪除」的清單，這裡把既有墓碑補回去再存，
+// 避免 quickNoteVial / saveVial 之類的儲存把軟刪除記錄洗掉。
+function _saveVialsToStorage(arr) {
+  var live = (arr || []).filter(function(v){ return v && v.id; });
+  var seen = {};
+  live.forEach(function(v){ seen[v.id] = true; });
+  var tombs = _getVialsRaw().filter(function(v){ return v.deletedAt && !seen[v.id]; });
+  _saveVialsRaw(live.concat(tombs));
+}
+
+// v2.57.0: 藥瓶合併 — 同 id 以「已刪除」優先（刪除具黏性），其餘 cloud wins
+function _mergeVials(cloudVials, localVials) {
+  var byId = {}, order = [];
+  function put(v, isCloud) {
+    if (!v || !v.id) return;
+    var cur = byId[v.id];
+    if (!cur) { byId[v.id] = v; order.push(v.id); return; }
+    if (v.deletedAt && !cur.deletedAt) { byId[v.id] = v; return; }  // 刪除狀態優先
+    if (!v.deletedAt && cur.deletedAt) return;                      // 保留已刪除
+    if (isCloud) byId[v.id] = v;                                    // 都在 → cloud wins
+  }
+  (cloudVials || []).forEach(function(v){ put(v, true); });
+  (localVials  || []).forEach(function(v){ put(v, false); });
+  return order.map(function(id){ return byId[id]; });
 }
 
 async function syncVialsToCloud(arr) {
@@ -13520,12 +13595,10 @@ async function pullVialsFromCloud() {
     if (!res.error && res.data && Array.isArray(res.data.data && res.data.data.vials)) {
       var cloudVials = res.data.data.vials;
       var localVials = JSON.parse(localStorage.getItem('insulin_vials') || '[]');
-      // Merge: union by id, cloud wins for same id
-      var merged = cloudVials.slice();
-      localVials.forEach(function(lv) {
-        if (!merged.some(function(cv) { return cv.id === lv.id; })) merged.push(lv);
-      });
+      // v2.57.0: 同 id 以「已刪除」優先（刪除具黏性），其餘 cloud wins
+      var merged = _mergeVials(cloudVials, localVials);
       localStorage.setItem('insulin_vials', JSON.stringify(merged));
+      if (JSON.stringify(merged) !== JSON.stringify(cloudVials)) syncVialsToCloud(merged);
       renderInsulinVials();
       return true;
     }
@@ -13551,7 +13624,7 @@ async function manualSyncVials(btn) {
 function addInsulinVial() {
   var arr = getInsulinVials();
   var id  = 'v' + Date.now().toString(36);
-  arr.push({ id: id, type: 'novorapid', location: 'home', mfgYM: '', serialNo: '', openDate: '', expDate: '', note: '', pickupDate: '', isNew: true, addedAt: Date.now() });
+  arr.push({ id: id, type: 'novorapid', location: 'home', mfgYM: '', serialNo: '', openDate: '', expDate: '', note: '', mark: '', pickupDate: '', isNew: true, addedAt: Date.now() });
   _saveVialsToStorage(arr);
   _vialEditIds[id] = true;
   renderInsulinVials();
@@ -13592,7 +13665,7 @@ function saveVial(id) {
 function cancelEditVial(id) {
   var arr = getInsulinVials();
   var v   = arr.find(function(x){ return x.id === id; });
-  if (v && !v.mfgYM && !v.serialNo && !v.openDate && !v.expDate && !v.note) { deleteVial(id); return; }
+  if (v && !v.mfgYM && !v.serialNo && !v.openDate && !v.expDate && !v.note && !v.mark) { deleteVial(id); return; }
   delete _vialEditIds[id]; _rerenderVialItem(id);
 }
 
@@ -13617,14 +13690,19 @@ function toggleVialActive(id) {
   showToast(v.active === false ? '⏸ 已停用此胰島素' : (v.openDate ? '💉 已恢復（已拆封）' : '📦 已恢復（未拆封）'));
 }
 
+// v2.57.0: 改為軟刪除（寫 deletedAt 墓碑並推上雲端），
+// 否則其他裝置的舊清單會在合併時把這筆「復活」。
 function deleteVial(id) {
   if (!confirm('確定刪除這支胰島素紀錄？')) return;
-  var allArr = getInsulinVials();
-  var vial   = allArr.find(function(x){ return x.id === id; });
-  if (vial) deleteVialGCalEvents(vial);
-  _saveVialsToStorage(allArr.filter(function(x){ return x.id !== id; }));
+  var raw  = _getVialsRaw();
+  var vial = raw.find(function(x){ return x.id === id; });
+  if (!vial) { renderInsulinVials(); return; }
+  deleteVialGCalEvents(vial);
+  vial.deletedAt = Date.now();
+  _saveVialsRaw(raw);
   delete _vialEditIds[id];
   renderInsulinVials(); checkInsulinExpiry();
+  if (typeof showToast === 'function') showToast('🗑 已刪除這支胰島素');
 }
 
 function _vialExpiryBadge(expStr) {
@@ -13753,16 +13831,19 @@ function _vialItemHTML(v, idx, isEdit) {
           ? '<span class="vial-serial-tag" style="color:var(--danger);"><span class="sv-label">失效</span>'
             + (function(){ var p=openExpFmt.split('-'); return p[1]+'/'+p[2]; })() + '</span>' : '')
       + (pickupFmt ? '<span class="vial-serial-tag"><span class="sv-label">領取</span>' + pickupFmt + '</span>' : '')
-      + (v.note ? '<span class="vial-note-tag">📝 ' + v.note + '</span>' : '')
       + (addedFmt ? '<span class="vial-serial-tag" style="margin-left:auto;opacity:.6;"><span class="sv-label">加入</span>' + addedFmt + '</span>' : '')
       + '</div>';
-    var qnChips = ['A','B','C','D','E','筆針'].map(function(l){
-      var act = (v.note === l) ? ' active' : '';
+    var qnChips = VIAL_MARKS.map(function(l){
+      var act = (v.mark === l) ? ' active' : '';
       return '<button class="vial-qn-chip' + act + '" data-vid="' + v.id + '" data-l="' + l + '"'
         + ' onclick="quickNoteVial(this.dataset.vid,this.dataset.l)">' + l + '</button>';
     }).join('');
     var quickNoteRow = '<div class="vial-quick-note-row">'
       + '<span class="vial-qn-label">標記</span>' + qnChips + '</div>';
+    // v2.57.0: 備註獨立一行，完整顯示不再被擠成細長條
+    var noteRow = v.note
+      ? '<div class="vial-note-row"><span class="vnr-icon">📝</span><span>' + _escVialText(v.note) + '</span></div>'
+      : '';
 
     return '<div class="vial-row vloc-' + loc + inactiveCls + '" id="vial-item-' + v.id + '">'
       + '<div class="vial-row-top">'
@@ -13785,9 +13866,17 @@ function _vialItemHTML(v, idx, isEdit) {
       + '</div>'
       + infoRow
       + quickNoteRow
+      + noteRow
       + (badge ? '<div class="vial-row-badge">' + badge + '</div>' : '')
       + '</div>';
   }
+}
+
+// v2.57.0: 備註是自由文字，輸出前做基本轉義
+function _escVialText(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 function _rerenderVialItem(id) {
@@ -14079,7 +14168,7 @@ function quickNoteVial(id, letter) {
   var arr = getInsulinVials();
   var v = arr.find(function(x){ return x.id === id; });
   if (!v) return;
-  v.note = (v.note === letter) ? '' : letter;  // toggle
+  v.mark = (v.mark === letter) ? '' : letter;  // v2.57.0: 寫獨立的 mark，不再蓋掉備註
   _saveVialsToStorage(arr);
   renderInsulinVials();
 }
@@ -14161,7 +14250,8 @@ function renderInsulinVials() {
       var def2 = INSULIN_VIAL_DEFS[v.type] || {};
       return (v.serialNo || '').toLowerCase().includes(q)
           || (def2.label || v.type || '').toLowerCase().includes(q)
-          || (v.note || '').toLowerCase().includes(q);
+          || (v.note || '').toLowerCase().includes(q)
+          || (v.mark || '').toLowerCase().includes(q);
     });
   }
 
