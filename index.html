@@ -106,6 +106,8 @@
     body[data-skin="warm-dark"]  { --primary-rgb: 156,102,21;  --surface: #3d2d15; --hover: rgba(255,215,145,0.08); }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    /* v2.57.1: 最後防線，避免任何單一元素把整頁撐出橫向捲軸 */
+    html, body { max-width: 100%; overflow-x: hidden; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "Microsoft JhengHei", sans-serif;
@@ -479,10 +481,20 @@
     .time-now-btn { transition: transform 0.25s ease, background 0.15s, border-color 0.15s; }
     .suppl-field .time-input-row .time-input,
     .snack-field .time-input-row .time-input {
-      width: auto;
-      flex: 1 1 auto;
+      width: 100%;
+      /* v2.57.1: flex-basis 必須是 0，否則 <input> 的內在寬度(約 219px)
+         會在 grid/flex 的內在尺寸計算階段撐開欄位，min-width:0 壓不下來 */
+      flex: 1 1 0;
       min-width: 0;
     }
+    /* v2.57.1: grid / flex 子項預設 min-width:auto，會用 min-content 當下限，
+       在窄螢幕上把欄位撐爆；這裡統一解除 */
+    .corr-bg-row > *,
+    .suppl-row-top > *,
+    .snack-row-nums > * {
+      min-width: 0;
+    }
+    .time-input-row { min-width: 0; }
 
     .fields-row {
       display: grid;
@@ -1253,7 +1265,10 @@
       display: flex;
       gap: 10px;
       align-items: center;
+      flex-wrap: wrap;          /* v2.57.2: 320px 寬時「匯出 CSV」不再被擠出畫面 */
     }
+    .history-filter > * { min-width: 0; }
+    .history-filter input[type="month"] { flex: 1 1 8rem; min-width: 0; }
     .history-filter label { font-size: 0.83rem; color: var(--text-muted); white-space: nowrap; }
     .history-filter input[type="month"] {
       flex: 1;
@@ -2340,7 +2355,9 @@
       align-items: center;
       justify-content: space-between;
       gap: 8px;
+      flex-wrap: wrap;          /* v2.57.1: 窄螢幕允許「帶入」按鈕換行 */
     }
+    .corr-suggestion > * { min-width: 0; }
     .corr-sugg-label { font-size: .75rem; color: #1d4ed8; font-weight: 600; }
     .corr-sugg-dose  { font-size: 1.35rem; font-weight: 800; color: #1d4ed8; font-variant-numeric: tabular-nums; }
     .corr-sugg-unit  { font-size: .72rem; color: #3b82f6; font-weight: 500; }
@@ -2353,7 +2370,7 @@
     .backup-calc-link:hover { opacity: 1; color: var(--primary); }
     .corr-sugg-meta  { font-size: .7rem; color: #64748b; margin-top: 2px; }
     .corr-target-row {
-      display: flex; align-items: center; gap: 6px;
+      display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
       font-size: .72rem; color: #1d4ed8; font-weight: 600; margin-top: 4px;
     }
     .corr-target-row label { font-weight: 600; }
@@ -2406,8 +2423,9 @@
       margin-bottom: 8px;
     }
     .carb-row-top, .carb-row-bottom {
-      display: flex; align-items: center; gap: 4px; flex-wrap: nowrap;
+      display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
     }
+    .carb-main-row, .carb-row-top, .carb-row-bottom { min-width: 0; }
     .carb-main-row input {
       height: 34px; border: 1.5px solid var(--border); border-radius: 8px;
       padding: 0 5px; font-size: .85rem; background: var(--surface);
@@ -4181,6 +4199,34 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.57.2 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.57.2</span>
+          <span class="cl-date">2026-08-13</span>
+          <span class="cl-tag">修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【手機跑版】歷史紀錄的月份篩選列改為可換行，320px 窄螢幕不再把「匯出 CSV」擠出畫面</li>
+          <li>【手機跑版】管理／處方的藥品表格改為獨立橫向捲動，原本超出的欄位（用法、途徑、天數、總量、金額）在窄螢幕會被直接裁掉看不到</li>
+        </ul>
+      </div>
+
+      <!-- v2.57.1 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.57.1</span>
+          <span class="cl-date">2026-08-13</span>
+          <span class="cl-tag">修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【手機跑版】修正補打／補糖／點心區在窄螢幕上橫向溢出：時間輸入框的內在寬度會撐開 grid 欄位，導致整頁可左右捲動、時間框與 › 箭頭被切掉</li>
+          <li>【手機跑版】「建議補打劑量」卡片與「目標血糖」列改為可換行，窄螢幕不再把「帶入」按鈕擠出畫面</li>
+          <li>【手機跑版】補糖列由 nowrap 改為可換行</li>
+          <li>【手機跑版】加上 overflow-x 防護，避免日後任何元素再把整頁撐寬</li>
+        </ul>
+      </div>
 
       <!-- v2.57.0 -->
       <div class="cl-entry">
@@ -12907,7 +12953,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.57.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.57.2';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -14661,7 +14707,9 @@ function renderPrescriptionList() {
     // ── Drug table display (matches real 慢性處方簽 layout) ──
     var drugsHTML = '';
     if (rx.drugs && rx.drugs.length) {
-      drugsHTML = '<table style="width:100%;border-collapse:collapse;font-size:0.76rem;margin-top:4px;">'
+      // v2.57.2: 表格最小寬約 422px，窄螢幕原本會被外層裁掉；改為獨立橫向捲動
+      drugsHTML = '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:4px;">'
+        + '<table style="width:100%;min-width:420px;border-collapse:collapse;font-size:0.76rem;">'
         + '<thead><tr style="background:#f1f5f9;">'
           + '<th style="padding:5px 6px;text-align:left;color:var(--text-muted);font-weight:600;white-space:nowrap;">費用</th>'
           + '<th style="padding:5px 6px;text-align:left;color:var(--text-muted);font-weight:600;">藥品名稱及規格</th>'
@@ -14686,7 +14734,7 @@ function renderPrescriptionList() {
               + '<td style="padding:5px 6px;text-align:right;white-space:nowrap;color:#64748b;">' + (_demoMode ? 'X 元' : (dr.amount ? dr.amount + ' 元' : '—')) + '</td>'
             + '</tr>';
           }).join('')
-        + '</tbody></table>';
+        + '</tbody></table></div>';
     } else {
       drugsHTML = '<span style="color:var(--text-muted);font-size:.82rem;">尚未新增藥品</span>';
     }
