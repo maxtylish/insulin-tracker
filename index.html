@@ -1661,19 +1661,108 @@
       background:var(--bg); color:var(--text); outline:none;
     }
     .calc-set-search:focus { border-color:var(--primary); }
-    /* ── 快速計算機按鈕 ── */
-    .qc-btn {
-      padding:14px 8px; font-size:1.1rem; font-weight:600;
-      border:none; border-radius:10px; cursor:pointer;
-      background:var(--card); color:var(--text); transition:all .1s;
-      box-shadow:0 1px 3px rgba(0,0,0,.08);
+    /* ══ v2.58.1 快速計算機：毛玻璃半透明浮動面板 ══════════════════════ */
+    .qc-overlay {
+      position: fixed; inset: 0; z-index: 1200;
+      display: none;                       /* JS 以 inline style 切換成 flex */
+      align-items: flex-end; justify-content: flex-end;
+      padding: 0 12px 78px;
+      background: rgba(15,23,42,.16);      /* 背景大幅變淡，看得到底下的計算內容 */
+      -webkit-backdrop-filter: blur(1.5px);
+      backdrop-filter: blur(1.5px);
+      animation: qc-fade .16s ease-out;
     }
-    .qc-btn:active { transform:scale(0.94); }
-    .qc-btn.qc-fn { background:#e2e8f0; color:#374151; }
-    .qc-btn.qc-op { background:#f97316; color:#fff; }
-    .qc-btn.qc-eq { background:var(--primary); color:#fff; }
-    body[data-skin='warm-dark'] .qc-btn { background:#2a1f0e; color:#FFD791; }
-    body[data-skin='warm-dark'] .qc-btn.qc-fn { background:#362812; color:#FFD791; }
+    @keyframes qc-fade { from { opacity:0 } to { opacity:1 } }
+    @keyframes qc-pop  { from { opacity:0; transform:translateY(14px) scale(.96) } to { opacity:1; transform:none } }
+
+    .qc-panel {
+      width: 268px; max-width: 100%;
+      border-radius: 22px;
+      padding: 12px 12px 14px;
+      background: rgba(255,255,255,.72);   /* 半透明本體 */
+      -webkit-backdrop-filter: blur(22px) saturate(1.5);
+      backdrop-filter: blur(22px) saturate(1.5);
+      border: 1px solid rgba(255,255,255,.75);
+      box-shadow: 0 18px 44px rgba(15,23,42,.22), 0 2px 8px rgba(15,23,42,.10);
+      animation: qc-pop .2s cubic-bezier(.22,1,.36,1);
+    }
+    .qc-head {
+      display: flex; align-items: center; gap: 6px;
+      padding: 0 4px 8px; font-size: .76rem; font-weight: 700;
+      color: var(--text-muted); letter-spacing: .02em;
+    }
+    .qc-head-title { display: flex; align-items: center; gap: 5px; }
+    .qc-close {
+      margin-left: auto; width: 24px; height: 24px; border-radius: 50%;
+      border: none; cursor: pointer; font-size: .82rem; line-height: 1;
+      background: rgba(15,23,42,.07); color: var(--text-muted);
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s, color .15s;
+    }
+    .qc-close:hover { background: rgba(15,23,42,.14); color: var(--text); }
+
+    .qc-screen {
+      border-radius: 15px; padding: 8px 13px 10px; margin-bottom: 11px;
+      background: rgba(255,255,255,.55);
+      border: 1px solid rgba(15,23,42,.06);
+      text-align: right;
+    }
+    .qc-expr {
+      min-height: 15px; font-size: .74rem; font-weight: 600;
+      color: var(--text-muted); opacity: .8;
+      font-variant-numeric: tabular-nums; word-break: break-all;
+    }
+    .qc-value {
+      font-size: 1.95rem; font-weight: 800; line-height: 1.15;
+      color: var(--text); font-variant-numeric: tabular-nums;
+      word-break: break-all; letter-spacing: -.01em;
+    }
+
+    .qc-pad { display: grid; grid-template-columns: repeat(4,1fr); gap: 7px; }
+    .qc-btn {
+      height: 46px; font-size: 1.05rem; font-weight: 700;
+      border: 1px solid rgba(255,255,255,.6); border-radius: 14px; cursor: pointer;
+      background: rgba(255,255,255,.68); color: var(--text);
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform .09s ease, background .15s ease, box-shadow .15s ease;
+      box-shadow: 0 1px 2px rgba(15,23,42,.06);
+    }
+    .qc-btn:hover  { background: rgba(255,255,255,.92); }
+    .qc-btn:active { transform: scale(.93); box-shadow: none; }
+    .qc-btn.qc-fn  { background: rgba(15,23,42,.07); color: var(--text-muted); font-size: .95rem; }
+    .qc-btn.qc-fn:hover { background: rgba(15,23,42,.13); }
+    .qc-btn.qc-op  {
+      background: rgba(249,115,22,.14); color: #ea580c;
+      border-color: rgba(249,115,22,.28); font-size: 1.2rem;
+    }
+    .qc-btn.qc-op:hover  { background: rgba(249,115,22,.24); }
+    .qc-btn.qc-op.active { background: #f97316; color: #fff; border-color: #f97316; }
+    .qc-btn.qc-eq  {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #fff; border-color: transparent;
+      box-shadow: 0 3px 10px rgba(0,0,0,.16);
+    }
+    .qc-btn.qc-zero { grid-column: span 2; }
+
+    /* 深色系皮膚 */
+    body[data-skin='warm-dark'] .qc-panel,
+    body[data-skin='midnight']  .qc-panel { background: rgba(40,32,18,.74); border-color: rgba(255,215,145,.22); }
+    body[data-skin='warm-dark'] .qc-screen,
+    body[data-skin='midnight']  .qc-screen { background: rgba(0,0,0,.20); border-color: rgba(255,215,145,.14); }
+    body[data-skin='warm-dark'] .qc-btn,
+    body[data-skin='midnight']  .qc-btn { background: rgba(255,255,255,.10); color: #FFD791; border-color: rgba(255,215,145,.18); }
+    body[data-skin='warm-dark'] .qc-btn:hover,
+    body[data-skin='midnight']  .qc-btn:hover { background: rgba(255,255,255,.18); }
+    body[data-skin='warm-dark'] .qc-btn.qc-fn,
+    body[data-skin='midnight']  .qc-btn.qc-fn { background: rgba(255,255,255,.06); }
+    body[data-skin='warm-dark'] .qc-close,
+    body[data-skin='midnight']  .qc-close { background: rgba(255,255,255,.10); }
+
+    @media (max-width: 360px) { .qc-panel { width: 100%; } }
+    @media (prefers-reduced-motion: reduce) {
+      .qc-overlay, .qc-panel { animation: none; }
+    }
 
 
     .danger-btn {
@@ -3301,7 +3390,10 @@
     .save-btn:active { transform: translateY(1px) scale(0.99); }
     .date-nav-btn:active { transform: scale(0.92); }
     .date-nav-btn, .save-btn { transition: all 0.18s var(--ease-out); }
-    #quick-calc-fab { transition: transform 0.18s var(--ease-out), box-shadow 0.18s ease; }
+    #quick-calc-fab { z-index: 200; transition: transform 0.18s var(--ease-out), box-shadow 0.18s ease; }
+    /* v2.58.0: 計算 modal (z-index:1000) 開啟時，把 🧮 浮動鈕提到上層，
+       並讓快速計算機本身再高一層，才能疊在劑量計算視窗之上 */
+    body.calc-modal-open #quick-calc-fab { z-index: 1100; }
     #quick-calc-fab:hover { transform: scale(1.06); box-shadow: 0 5px 20px rgba(0,0,0,0.32); }
     #quick-calc-fab:active { transform: scale(0.94); }
 
@@ -4199,6 +4291,61 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.58.3 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.58.3</span>
+          <span class="cl-date">2026-08-14</span>
+          <span class="cl-tag">修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【快速計算機】按下運算子後沒有立即重繪，運算式副顯示與運算子高亮要等下一次按鍵才更新</li>
+        </ul>
+      </div>
+
+      <!-- v2.58.2 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.58.2</span>
+          <span class="cl-date">2026-08-14</span>
+          <span class="cl-tag">修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【計算劑量】修正切換餐別重新開啟計算視窗時，「餐食2」的選擇會殘留上一餐的配菜（v2.54.1 保留餐食2 選擇的副作用）</li>
+        </ul>
+      </div>
+
+      <!-- v2.58.1 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.58.1</span>
+          <span class="cl-date">2026-08-14</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【快速計算機】全新毛玻璃設計：面板半透明（不透明度 72%）並加上背景模糊，計算時看得到底下的劑量內容；背景遮罩也從 55% 降到 16%</li>
+          <li>【快速計算機】改為右下角浮動面板（不再是置中的全螢幕彈窗），開合帶淡入上浮動畫</li>
+          <li>【快速計算機】新增運算式副顯示行（例：153 ×），按下的運算子會高亮，不用再猜按到哪個</li>
+          <li>【快速計算機】按鍵重新設計：圓角加大、半透明底、= 改為主色漸層、深色皮膚同步適配</li>
+          <li>【修正】🧮 浮動鈕的 inline z-index 蓋過 CSS 規則，上一版仍會被計算視窗遮住</li>
+        </ul>
+      </div>
+
+      <!-- v2.58.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.58.0</span>
+          <span class="cl-date">2026-08-14</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【餐前劑量計算】重新開啟同一餐別時，自動保留上次選的食物、數量、其他碳水與 IOB，方便比較「換吃別的」的劑量差異；不再每次歸零</li>
+          <li>【餐前劑量計算】還原時顯示提示列，可一鍵「清空」；標題列另外新增 🔄 清空按鈕</li>
+          <li>【餐前劑量計算】切換到不同餐別時仍會重置，避免帶錯上一餐的內容；點心劑量計算維持每次全新</li>
+          <li>【修正】🧮 快速計算機浮動鈕的 z-index (200) 低於劑量計算視窗 (1000)，開著計算視窗時完全被蓋住；現已提到上層，計算視窗標題列也直接放了 🧮 按鈕</li>
+        </ul>
+      </div>
 
       <!-- v2.57.2 -->
       <div class="cl-entry">
@@ -11957,6 +12104,7 @@ function openSnackCalcModal(sectionId) {
   var mealKey = SNACK_MEAL_MAP[sectionId] || 'lunch';
   var titleEl = document.getElementById('calc-modal-title');
   if (titleEl) titleEl.textContent = '🍎 點心劑量計算';
+  document.body.classList.add('calc-modal-open');   // v2.58.0: 讓 🧮 浮動鈕浮在 modal 上
   document.getElementById('calc-meal-period').value = mealKey;
   if (lastCGMEntry && lastCGMEntry.sgv) {
     document.getElementById('calc-bg').value = Math.round(lastCGMEntry.sgv);
@@ -12008,6 +12156,77 @@ function carbCalcRecalc() {
 const PERIOD_TO_MEAL = { morning: 'breakfast', noon: 'lunch', evening: 'dinner' };
 let calcTargetPeriod = 'morning';
 
+// ── v2.58.0: 記住上次的計算內容（同一餐別重開時還原）─────────────────────
+var _calcSavedState = null;
+
+function _calcSnapshot() {
+  try {
+    var g = function(id) { var e = document.getElementById(id); return e ? e.value : ''; };
+    var s = { period: calcTargetPeriod, meal: g('calc-meal-period'),
+              foods: {}, qtys: {},
+              otherName: g('calc-other-name'), otherCarbs: g('calc-other-carbs'),
+              carbs: g('calc-carbs'), iob: g('calc-iob'), ts: Date.now() };
+    var any = false;
+    [1,2,3,4].forEach(function(i) {
+      s.foods[i] = g('calc-food-' + i);
+      s.qtys[i]  = g('calc-qty-' + i) || '1';
+      if (s.foods[i]) any = true;
+    });
+    if (s.otherCarbs) any = true;
+    return any ? s : null;   // 什麼都沒填就不用記
+  } catch(e) { return null; }
+}
+
+function _calcRestore(s) {
+  if (!s) return false;
+  try {
+    var set = function(id, v) { var e = document.getElementById(id); if (e) e.value = v; };
+    set('calc-meal-period', s.meal || '');
+    calcUpdateMeal();                       // 依餐別重建主餐下拉（會清掉選擇）
+    set('calc-food-1', s.foods[1] || '');
+    calcUpdateFood1();                      // 依主餐重建餐食2下拉
+    [2,3,4].forEach(function(i){ set('calc-food-' + i, s.foods[i] || ''); });
+    [1,2,3,4].forEach(function(i){ set('calc-qty-' + i, s.qtys[i] || '1'); });
+    set('calc-other-name',  s.otherName  || '');
+    set('calc-other-carbs', s.otherCarbs || '');
+    set('calc-iob',   s.iob   || 0);
+    set('calc-carbs', s.carbs || 60);       // 若有選食物，calcRecalc() 會重算覆蓋
+    calcRecalc();
+    return true;
+  } catch(e) { return false; }
+}
+
+// 把飲食欄位回復成預設值（開新的一餐 / 按 🔄 清空 時使用）
+function _calcResetFields() {
+  var set = function(id, v) { var e = document.getElementById(id); if (e) e.value = v; };
+  [1,2,3,4].forEach(function(i){ set('calc-qty-' + i, 1); });
+  // v2.58.2: 四個食物欄位都要清。food-2 自 v2.54.1 起會被 calcUpdateFood1()
+  // 刻意保留，不明確清掉的話換餐別時會殘留上一餐的配菜。
+  [1,2,3,4].forEach(function(i){ set('calc-food-' + i, ''); });
+  set('calc-iob', 0);
+  set('calc-other-carbs', '');
+  set('calc-other-name', '');
+  set('calc-carbs', 60);
+  var w = document.getElementById('calc-warnings');
+  if (w) w.innerHTML = '';
+}
+
+// 🔄 清空：丟掉記住的內容並回到預設
+function calcResetForm() {
+  _calcSavedState = null;
+  _calcResetFields();
+  var msEl = document.getElementById('calc-meal-set');
+  if (msEl) msEl.value = '';
+  calcUpdateMeal();
+  _calcSetRestoredHint(false);
+  if (typeof showToast === 'function') showToast('🔄 已清空計算內容');
+}
+
+function _calcSetRestoredHint(on) {
+  var el = document.getElementById('calc-restored-hint');
+  if (el) el.style.display = on ? 'flex' : 'none';
+}
+
 // ── Open / Close ──
 function openCalcModal(periodId) {
   calcIsSnackMode    = false;
@@ -12034,22 +12253,21 @@ function openCalcModal(periodId) {
       }
     }
 
-    // Reset food & IOB
-    [1,2,3,4].forEach(i => {
-      document.getElementById('calc-qty-' + i).value = 1;
-    });
-    document.getElementById('calc-food-3').value = '';
-    document.getElementById('calc-food-4').value = '';
-    document.getElementById('calc-iob').value = 0;
-    const otherCarbsEl = document.getElementById('calc-other-carbs');
-    const otherNameEl  = document.getElementById('calc-other-name');
-    if (otherCarbsEl) otherCarbsEl.value = '';
-    if (otherNameEl)  otherNameEl.value  = '';
-    document.getElementById('calc-carbs').value = 60;
-    document.getElementById('calc-warnings').innerHTML = '';
+    // v2.58.0: 同一餐別重開 → 還原上次輸入；不同餐別 → 照舊重置
+    var restored = false;
+    if (_calcSavedState && _calcSavedState.period === periodId) {
+      restored = _calcRestore(_calcSavedState);
+    }
+    if (!restored) {
+      _calcResetFields();
+      var _msEl = document.getElementById('calc-meal-set');
+      if (_msEl) _msEl.value = '';
+      calcUpdateMeal();
+    }
+    _calcSetRestoredHint(restored);
 
-    calcUpdateMeal();
     document.getElementById('calcOverlay').classList.add('open');
+    document.body.classList.add('calc-modal-open');
   } catch(err) {
     showToast('❌ 錯誤：' + err.message);
     console.error('openCalcModal error:', err);
@@ -12057,11 +12275,18 @@ function openCalcModal(periodId) {
 }
 
 function closeCalcModal() {
+  // v2.58.0: 關閉前記住內容（點心模式不記，它每次都是新的一筆）
+  if (!calcIsSnackMode) {
+    var snap = _calcSnapshot();
+    if (snap) _calcSavedState = snap;
+  }
   calcIsSnackMode    = false;
   calcSnackSectionId = null;
   var titleEl = document.getElementById('calc-modal-title');
   if (titleEl) titleEl.textContent = '💊 餐前劑量計算';
   document.getElementById('calcOverlay').classList.remove('open');
+  document.body.classList.remove('calc-modal-open');
+  if (typeof closeQuickCalc === 'function') closeQuickCalc();
 }
 
 function calcOverlayClick(e) {
@@ -12953,7 +13178,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.57.2';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.58.3';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -15464,9 +15689,23 @@ function closeQuickCalc() {
   var el = document.getElementById('quickCalcOverlay');
   if (el) el.style.display = 'none';
 }
+var QC_OP_SYMBOL = { '/': '÷', '*': '×', '-': '−', '+': '+' };
+
 function _qcUpdateDisplay() {
   var el = document.getElementById('qc-display');
   if (el) el.textContent = _qc.display;
+  // v2.58.1: 副顯示行顯示目前的運算式，並高亮已按下的運算子
+  var ex = document.getElementById('qc-expr');
+  if (ex) {
+    ex.textContent = (_qc.operator && _qc.operand !== null)
+      ? (_qc.operand + ' ' + (QC_OP_SYMBOL[_qc.operator] || _qc.operator))
+      : '';
+  }
+  var btns = document.querySelectorAll('#quickCalcOverlay .qc-btn.qc-op');
+  for (var i = 0; i < btns.length; i++) {
+    var on = _qc.waiting && _qc.operator === btns[i].getAttribute('data-op');
+    btns[i].classList.toggle('active', !!on);
+  }
 }
 function qcDigit(d) {
   if (_qc.waiting) { _qc.display = String(d); _qc.waiting = false; }
@@ -15484,6 +15723,7 @@ function qcOp(op) {
   _qc.operand = parseFloat(_qc.display);
   _qc.operator = op;
   _qc.waiting = true;
+  _qcUpdateDisplay();   // v2.58.3: 立即更新運算式副顯示與運算子高亮
 }
 function qcEquals() {
   if (_qc.operator === null) return;
@@ -16293,7 +16533,7 @@ function checkTodoAlerts() {
 
 <!-- ── 快速計算機浮動按鈕 ── -->
 <button id="quick-calc-fab" onclick="openQuickCalc()" title="快速計算機"
-  style="position:fixed;bottom:80px;right:14px;z-index:200;
+  style="position:fixed;bottom:80px;right:14px;
   width:46px;height:46px;border-radius:50%;
   background:var(--primary);color:#fff;border:none;
   font-size:1.3rem;cursor:pointer;
@@ -16305,7 +16545,11 @@ function checkTodoAlerts() {
   <div class="calc-modal">
     <div class="calc-modal-header">
       <h2 id="calc-modal-title">💊 餐前劑量計算</h2>
-      <button class="calc-close-btn" type="button" onclick="closeCalcModal()">✕</button>
+      <div style="display:flex;align-items:center;gap:4px;">
+        <button class="calc-close-btn" type="button" onclick="openQuickCalc()" title="快速計算機">🧮</button>
+        <button class="calc-close-btn" type="button" onclick="calcResetForm()" title="清空計算內容">🔄</button>
+        <button class="calc-close-btn" type="button" onclick="closeCalcModal()">✕</button>
+      </div>
     </div>
     <div class="calc-body">
 
@@ -16331,6 +16575,16 @@ function checkTodoAlerts() {
       <!-- 飲食紀錄 -->
       <div class="calc-section">
         <div class="calc-section-title">飲食紀錄</div>
+
+        <!-- v2.58.0: 還原提示 -->
+        <div id="calc-restored-hint" style="display:none;align-items:center;gap:6px;
+             background:#ecfdf5;border:1px solid #a7f3d0;color:#047857;
+             border-radius:8px;padding:5px 9px;margin-bottom:8px;font-size:.75rem;">
+          <span>↩️ 已保留上次的計算內容，可直接改食物比較劑量</span>
+          <button type="button" onclick="calcResetForm()"
+            style="margin-left:auto;flex-shrink:0;background:none;border:1px solid #a7f3d0;
+                   color:#047857;border-radius:6px;padding:1px 7px;font-size:.72rem;cursor:pointer;">清空</button>
+        </div>
 
         <!-- 套餐快選 -->
         <div style="margin-bottom:8px;">
@@ -16514,40 +16768,37 @@ function checkTodoAlerts() {
 
 
 <!-- ══ Quick Calculator Modal ══ -->
-<div id="quickCalcOverlay" class="calc-overlay" style="display:none"
+<div id="quickCalcOverlay" class="qc-overlay" style="display:none"
   onclick="if(event.target.id==='quickCalcOverlay')closeQuickCalc()">
-  <div class="calc-modal" style="max-width:290px;">
-    <div class="calc-modal-header">
-      <h2>🧮 快速計算機</h2>
-      <button class="calc-close-btn" type="button" onclick="closeQuickCalc()">✕</button>
+  <div class="qc-panel" role="dialog" aria-label="快速計算機">
+    <div class="qc-head">
+      <span class="qc-head-title">🧮 快速計算機</span>
+      <button class="qc-close" type="button" onclick="closeQuickCalc()" aria-label="關閉">✕</button>
     </div>
-    <div style="padding:14px 12px 16px;">
-      <div id="qc-display"
-        style="text-align:right;font-size:2rem;font-weight:700;
-        min-height:54px;padding:8px 12px;background:var(--bg);
-        border-radius:10px;margin-bottom:12px;color:var(--text);
-        word-break:break-all;letter-spacing:0.01em;">0</div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
-        <button class="qc-btn qc-fn" onclick="qcClear()">AC</button>
-        <button class="qc-btn qc-fn" onclick="qcToggleSign()">±</button>
-        <button class="qc-btn qc-fn" onclick="qcPercent()">%</button>
-        <button class="qc-btn qc-op" onclick="qcOp('/')">÷</button>
-        <button class="qc-btn" onclick="qcDigit(7)">7</button>
-        <button class="qc-btn" onclick="qcDigit(8)">8</button>
-        <button class="qc-btn" onclick="qcDigit(9)">9</button>
-        <button class="qc-btn qc-op" onclick="qcOp('*')">×</button>
-        <button class="qc-btn" onclick="qcDigit(4)">4</button>
-        <button class="qc-btn" onclick="qcDigit(5)">5</button>
-        <button class="qc-btn" onclick="qcDigit(6)">6</button>
-        <button class="qc-btn qc-op" onclick="qcOp('-')">−</button>
-        <button class="qc-btn" onclick="qcDigit(1)">1</button>
-        <button class="qc-btn" onclick="qcDigit(2)">2</button>
-        <button class="qc-btn" onclick="qcDigit(3)">3</button>
-        <button class="qc-btn qc-op" onclick="qcOp('+')">+</button>
-        <button class="qc-btn" style="grid-column:span 2" onclick="qcDigit(0)">0</button>
-        <button class="qc-btn" onclick="qcDot()">.</button>
-        <button class="qc-btn qc-eq" onclick="qcEquals()">=</button>
-      </div>
+    <div class="qc-screen">
+      <div class="qc-expr" id="qc-expr"></div>
+      <div class="qc-value" id="qc-display">0</div>
+    </div>
+    <div class="qc-pad">
+      <button class="qc-btn qc-fn" onclick="qcClear()">AC</button>
+      <button class="qc-btn qc-fn" onclick="qcToggleSign()">±</button>
+      <button class="qc-btn qc-fn" onclick="qcPercent()">%</button>
+      <button class="qc-btn qc-op" data-op="/" onclick="qcOp('/')">÷</button>
+      <button class="qc-btn" onclick="qcDigit(7)">7</button>
+      <button class="qc-btn" onclick="qcDigit(8)">8</button>
+      <button class="qc-btn" onclick="qcDigit(9)">9</button>
+      <button class="qc-btn qc-op" data-op="*" onclick="qcOp('*')">×</button>
+      <button class="qc-btn" onclick="qcDigit(4)">4</button>
+      <button class="qc-btn" onclick="qcDigit(5)">5</button>
+      <button class="qc-btn" onclick="qcDigit(6)">6</button>
+      <button class="qc-btn qc-op" data-op="-" onclick="qcOp('-')">−</button>
+      <button class="qc-btn" onclick="qcDigit(1)">1</button>
+      <button class="qc-btn" onclick="qcDigit(2)">2</button>
+      <button class="qc-btn" onclick="qcDigit(3)">3</button>
+      <button class="qc-btn qc-op" data-op="+" onclick="qcOp('+')">+</button>
+      <button class="qc-btn qc-zero" onclick="qcDigit(0)">0</button>
+      <button class="qc-btn" onclick="qcDot()">.</button>
+      <button class="qc-btn qc-eq" onclick="qcEquals()">=</button>
     </div>
   </div>
 </div>
