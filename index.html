@@ -4292,6 +4292,19 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.58.4 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.58.4</span>
+          <span class="cl-date">2026-08-27</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【計算劑量】午餐／晚餐主餐新增「石二鍋 冷凍烏龍麵一塊(小)＝碳水26.2克」</li>
+          <li>【計算劑量】午餐／晚餐新增「丸美屋 皮卡丘咖哩【145g裝】＝碳水14克」（餐食2配菜，同「寶寶咖哩」用法，可與主餐同時選取）</li>
+        </ul>
+      </div>
+
       <!-- v2.58.3 -->
       <div class="cl-entry">
         <div class="cl-header">
@@ -11945,6 +11958,8 @@ const CALC_CARB_FOODS = {
   aimianzu_udon_half: 34,          // 愛麵族烏龍麵 1/2塊 (127克)
   baby_curry_pxmart: 17.2,         // 寶寶咖哩(全聯) 1包/盒
   yimei_soymilk_lowsugar: 8.5,     // 義美低糖豆奶 一罐
+  shierguo_udon_small: 26.2,       // 石二鍋 冷凍烏龍麵一塊(小)
+  wanmeiwu_pikachu_curry: 14,      // 丸美屋 皮卡丘咖哩【145g裝】
 };
 
 const CALC_MAIN_OPTIONS = {
@@ -11981,6 +11996,7 @@ const CALC_MAIN_OPTIONS = {
     { value: 'chunshuitang_butter_toast', label: '🍞 春水堂奶酥厚片 一份 (碳水50克)' },
     { value: 'aimianzu_udon_full',        label: '🍜 愛麵族烏龍麵 1塊(255.5克) (碳水68克)' },
     { value: 'aimianzu_udon_half',        label: '🍜 愛麵族烏龍麵 ½塊(127克) (碳水34克)' },
+    { value: 'shierguo_udon_small',       label: '🍜 石二鍋 冷凍烏龍麵一塊(小) (碳水26.2克)' },
   ],
   dinner: [
     { value: 'white_rice',      label: '白飯 100公克 (碳水30克)' },
@@ -11997,6 +12013,7 @@ const CALC_MAIN_OPTIONS = {
     { value: 'chunshuitang_butter_toast', label: '🍞 春水堂奶酥厚片 一份 (碳水50克)' },
     { value: 'aimianzu_udon_full',        label: '🍜 愛麵族烏龍麵 1塊(255.5克) (碳水68克)' },
     { value: 'aimianzu_udon_half',        label: '🍜 愛麵族烏龍麵 ½塊(127克) (碳水34克)' },
+    { value: 'shierguo_udon_small',       label: '🍜 石二鍋 冷凍烏龍麵一塊(小) (碳水26.2克)' },
   ],
 };
 
@@ -12005,9 +12022,11 @@ const CALC_SIDE_ONLY_OPTIONS = {
   breakfast: [],
   lunch: [
     { value: 'baby_curry_pxmart', label: '🍛 寶寶咖哩(全聯) 1包/盒 (碳水17.2克)' },
+    { value: 'wanmeiwu_pikachu_curry', label: '🍛 丸美屋 皮卡丘咖哩【145g裝】 (碳水14克)' },
   ],
   dinner: [
     { value: 'baby_curry_pxmart', label: '🍛 寶寶咖哩(全聯) 1包/盒 (碳水17.2克)' },
+    { value: 'wanmeiwu_pikachu_curry', label: '🍛 丸美屋 皮卡丘咖哩【145g裝】 (碳水14克)' },
   ],
 };
 
@@ -13178,7 +13197,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.58.3';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.58.4';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
