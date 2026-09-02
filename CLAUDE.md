@@ -31,6 +31,7 @@ getAllData() / setAllData()        ← 所有讀寫必須經過這兩個函式
 | `insulin_todos` | 待辦事項 | `getTodos()` / `setTodos()` |
 | `insulin_settings` | 設定值 | `loadSettings()` / `saveSettingsToStorage()` |
 | `insulin_supplies` | 耗材庫存 | `getSupplies()` / `setSupplies()` |
+| `insulin_school_lunch` | 學校午餐份量調整（portions，最近 90 天） | `smStore()` / `smSaveStore()` |
 
 ---
 
@@ -112,6 +113,45 @@ loadFromCloud()     // 3. async：合併 cloud 資料到 allDataCache
 - `"""..."""` 字串內 `\'` 會被解釋為 `'`，JS 內單引號需用 `\\'`
 - 每個 replace 只替換第一個出現（`str.replace(OLD, NEW, 1)`）
 - 腳本最後印出每個 patch 的 ✅/❌ 狀態
+
+---
+
+## 學校午餐菜單（v2.59.0）
+
+`SCHOOL_MENU` / `SCHOOL_STAPLE_C100` / `SCHOOL_STAPLE_G` 是**程式內參考常數**，位於 `TAIWAN_FOOD_DB` 之前。
+
+- 菜單本身不進 localStorage，改菜單＝改常數＝要更新 `APP_VERSION`
+- 主食碳水一律走 `smStapleC100(主食名) * SCHOOL_STAPLE_G / 100`，
+  **禁止**把 110g 的醣量寫死成常數（麵食 / 米食 / 糯米類密度差很多）
+- ⚠️ **估算原則（v2.61.0 起，使用者明確指示）：寧可低估。**
+  高血糖可以補打，打太多造成的低血糖收不回來。所有醣量估算一律取低標。
+  - 不確定的菜色（勾芡、醬汁、滷味、魚漿加工品）→ 取可能區間的下緣
+  - 明確是澱粉的菜色（湯圓、河粉、冬粉、西米露、炊飯、雞肉飯、薯麵）→ 照實算，不再往下調
+  - **調高任何 `c` 值或 `SCHOOL_STAPLE_C100` 之前必須先告知使用者影響的單位數**，
+    這是直接影響孩童胰島素劑量的參數，不是一般 UI 常數
+- 低 GI／高油主食日（`SCHOOL_STAPLE_SLOW`）會顯示低血糖提示：醣類吸收比胰島素慢，
+  餐後 1～2 小時可能先偏低。施打時機的建議一律交給醫療團隊，程式不主動建議分次或延後
+- 每道菜的 `h:1` 代表「隱藏醣」（配菜或湯本身就是澱粉／含糖），
+  新增菜色時務必判斷：河粉、冬粉、湯圓、西米露、勾芡濃湯、炊飯、薯麵、關東煮都算
+- 份量調整存在 `insulin_school_lunch.portions[date][rowIndex] = ratio`，
+  `rowIndex 0` 固定是主食。此 key **不經過** `getAllData()` / `setAllData()` / `allDataCache`，
+  也**不在** `clearAllData()` 內清除（它不是紀錄資料）
+- 計算機的 `_smCalcCarbs` 與 `fdbTotal()` 同層級，在 `calcRecalc()` 內累加進 `totalCarbs`；
+  `_calcResetFields()` 必須把它歸零
+
+---
+
+## 食物碳水值的鐵則（v2.62.0 事故後補上）
+
+`CALC_CARB_FOODS` / `TAIWAN_FOOD_DB` / `SCHOOL_*` 的每 100 公克數值，**一律用煮熟後的重量**。
+
+曾發生：`multigrain_rice` 填 68.9（生米乾重），夾在白飯 30、烏龍麵 24.6、義大利麵 27.4（皆熟重）之間，
+選到就高估兩倍碳水，以 CIR 10 每 100 公克多打約 3.7 單位。
+
+- 新增任何主食類食物前，先問「這個數字是生的還是煮好的」
+- 生重的品項必須在 key 與 label 都標明（如 `multigrain_rice_raw` /「【生米未煮】」）
+- 快速自檢：熟飯麵類每 100g 碳水應落在 22～40；出現 60 以上幾乎一定是生重或乾貨
+- label 裡寫的克數必須等於 `CALC_CARB_FOODS` 的值，改一個要改兩處
 
 ---
 

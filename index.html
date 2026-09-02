@@ -3433,7 +3433,36 @@
       border: 1px solid rgba(255,215,145,0.13);
     }
     /* ═══════════════ END v2.52.0 UI POLISH LAYER ═══════════════ */
-  </style>
+  
+/* ══ v2.59.0 學校午餐菜單 ══ */
+.sl-card{border:1px solid var(--border,#e2e8f0);border-radius:12px;padding:10px 12px;margin:12px 0 4px;background:var(--card,#fff);}
+.sl-card-off{color:var(--text-muted,#94a3b8);font-size:.86rem;text-align:center;padding:14px;}
+.sl-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.sl-title{font-weight:700;font-size:.92rem;}
+.sl-total{font-weight:800;font-size:1.05rem;color:#d97706;}
+.sl-row{padding:6px 0;border-top:1px dashed var(--border,#e2e8f0);}
+.sl-row:first-of-type{border-top:none;}
+.sl-row-off{opacity:.42;}
+.sl-line{display:flex;align-items:center;gap:7px;}
+.sl-tag{flex:0 0 auto;font-size:.66rem;padding:1px 6px;border-radius:6px;background:#eef2f7;color:#475569;}
+.sl-t-s{background:#fef3c7;color:#92400e;}
+.sl-t-p{background:#e0f2fe;color:#075985;}
+.sl-t-f{background:#fce7f3;color:#9d174d;}
+.sl-name{flex:1 1 auto;font-size:.86rem;line-height:1.3;}
+.sl-warn{color:#dc2626;}
+.sl-carb{flex:0 0 auto;font-size:.84rem;font-weight:700;font-variant-numeric:tabular-nums;}
+.sl-note{font-size:.7rem;color:var(--text-muted,#94a3b8);margin:2px 0 0 46px;}
+.sl-ratio{display:flex;gap:4px;margin:5px 0 0 46px;}
+.sl-rbtn{font-size:.68rem;padding:2px 8px;border-radius:6px;border:1px solid var(--border,#e2e8f0);background:transparent;color:var(--text-muted,#94a3b8);cursor:pointer;}
+.sl-rbtn.on{background:var(--primary,#2563eb);border-color:var(--primary,#2563eb);color:#fff;font-weight:700;}
+.sl-alert{margin-top:8px;padding:6px 9px;border-radius:8px;background:#fef2f2;color:#b91c1c;font-size:.74rem;line-height:1.45;}
+.sl-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:.68rem;color:var(--text-muted,#94a3b8);}
+.sl-reset{font-size:.68rem;padding:2px 8px;border-radius:6px;border:1px solid var(--border,#e2e8f0);background:transparent;color:var(--text-muted,#94a3b8);cursor:pointer;}
+.sl-alert-slow{background:#eff6ff;color:#1d4ed8;margin-top:6px;}
+.sl-calc-box{margin:0 0 10px;}
+.sl-calc-btn{width:100%;padding:9px;border-radius:10px;border:1px dashed var(--primary,#2563eb);background:transparent;color:var(--primary,#2563eb);font-size:.86rem;font-weight:700;cursor:pointer;}
+.sl-calc-btn.on{background:var(--primary,#2563eb);color:#fff;border-style:solid;}
+</style>
   <audio id="mealAlarmAudio" src="data:audio/wav;base64,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AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA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AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA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" preload="auto"></audio>
 </head>
 <body>
@@ -4291,6 +4320,70 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.62.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.62.0</span>
+          <span class="cl-date">2026-09-02</span>
+          <span class="cl-tag">修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【重大／劑量安全】修正計算劑量的「五穀米 100公克」碳水值：原本填 68.9 克，那是<strong>生米乾重</strong>的數值，但同一份清單裡的白飯 30、烏龍麵 24.6、義大利麵 27.4 全都是<strong>煮熟後</strong>的重量。選到這一項會高估約兩倍碳水，以 CIR 10 計算每 100 公克多打約 3.7 單位</li>
+          <li>【計算劑量】「五穀米」更名為「五穀飯 100公克【煮熟】(碳水32克)」，數值對齊食材庫的五穀米飯</li>
+          <li>【計算劑量】另外新增「五穀米 100公克【生米未煮】(碳水68.9克)」選項，煮飯前秤生米的情況仍可使用，兩者標示清楚不會再混淆</li>
+          <li>【影響範圍】僅影響劑量計算機的主餐下拉選單。歷史紀錄、食材庫查詢、學校午餐菜單皆不受影響；先前存下的計算內容重開後會自動改用修正後的 32 克</li>
+        </ul>
+      </div>
+
+      <!-- v2.61.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.61.0</span>
+          <span class="cl-date">2026-09-02</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【學校午餐】改為單一估算基準，移除 v2.60.0 的雙基準切換。原則：<strong>寧可低估</strong>——高血糖可以補打，打太多造成的低血糖收不回來</li>
+          <li>【學校午餐】主食固定用 APP 實測校準值（白飯 30g/100g，與 TAIWAN_FOOD_DB 一致）</li>
+          <li>【學校午餐】不確定的菜色一律取低標：勾芡、醬汁、滷味、魚漿加工品共 22 道調降（咖哩雞 10→8、關東煮 10→8、玉米濃湯 12→10、蜜汁雞腿 7→5 等）</li>
+          <li>【學校午餐】明確是澱粉的菜色維持原值不調降（湯圓、河粉、冬粉、西米露、炊飯、雞肉飯、薯麵），因為這些估得準，亂調只會增加誤差</li>
+          <li>【學校午餐】低 GI／高油主食日（十穀、紅藜、蕎麥、胚芽、紫米、米食）新增低血糖提示：醣類吸收比胰島素慢，餐後 1～2 小時可能先偏低</li>
+          <li>【學校午餐】卡片底部標示估算原則與「預設為整份吃完」，提醒沒吃完要按份量鍵下修</li>
+        </ul>
+      </div>
+
+      <!-- v2.60.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.60.0</span>
+          <span class="cl-date">2026-09-02</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【學校午餐】主食醣量新增兩套基準可即時切換：「APP 實測 30」（白飯 30g/100g，與 TAIWAN_FOOD_DB 一致）與「標準值 37」（食品成分資料庫值，約高 23%）</li>
+          <li>【學校午餐】卡片下方直接顯示另一套基準的總醣量，方便 A/B 對照；切換後總醣量與計算機帶入值同步重算</li>
+          <li>【學校午餐】預設改為「標準值 37」。⚠️ 此基準比原本高約 23%，白飯日每餐約多 0.8 單位（CIR 10），切換後請加強餐後血糖觀察</li>
+          <li>【學校午餐】基準選擇存於 insulin_school_lunch.stapleMode，不影響計算機的食材庫與 TAIWAN_FOOD_DB</li>
+        </ul>
+      </div>
+
+      <!-- v2.59.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.59.0</span>
+          <span class="cl-date">2026-09-02</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【學校午餐】新增黎明國小 8/31～9/30 菜單。今日記錄頁「中」分頁會顯示當日菜色、逐項碳水與總醣量</li>
+          <li>【學校午餐】主食固定 110g，但依飯類換算（白飯 30g/100g、麵食 26、糯米類 36…），避免麵食日高估碳水</li>
+          <li>【學校午餐】自動標示「隱藏醣」配菜與湯品（河粉、冬粉、湯圓、西米露、濃湯、炊飯等）</li>
+          <li>【學校午餐】每道菜可單獨調份量（全／2/3／1/2／沒吃），總醣量即時重算</li>
+          <li>【計算劑量】午餐計算機新增「帶入今日校餐」，一鍵帶入估算碳水量（可再點一次取消）</li>
+          <li>【資料安全】菜單為程式內參考常數，份量調整存於獨立 key insulin_school_lunch（保留最近 90 天），完全不經過 getAllData()／setAllData()／allDataCache，對現有紀錄零影響</li>
+        </ul>
+      </div>
 
       <!-- v2.58.4 -->
       <div class="cl-entry">
@@ -8942,7 +9035,8 @@ function buildPeriodCards() {
             + '</div>'
             + alarmRow;
         })()
-      + (function(){
+      + (p.id === 'noon' ? '<div id="school-lunch-slot"></div>' : '')
+    + (function(){
           var lbl = { morning:'儲存早餐', noon:'儲存午餐', evening:'儲存晚餐', bedtime:'儲存睡前紀錄' }[p.id] || '儲存此餐';
           return '<button class="period-save-btn" id="save-btn-' + p.id + '"'
             + ' disabled'
@@ -9041,6 +9135,7 @@ function loadDayData() {
   SNACK_SECTIONS.forEach(s => renderSnackSection(s.id, dayData[s.id] || []));
   updateBasalTimeBar();
   buildCgmCarousel();
+  if (typeof renderSchoolLunch === 'function') renderSchoolLunch();
 }
 
 function savePeriod(periodId) {
@@ -11953,7 +12048,9 @@ const CALC_CARB_FOODS = {
   chunshuitang_kung_noodle: 64,    // 春水堂功夫麵 一份(220克)
   chunshuitang_butter_toast: 50,   // 春水堂奶酥厚片 一份
   soymilk_unsweetened: 3,          // 無糖豆奶 100g
-  multigrain_rice: 68.9,           // 五穀米 100克
+  multigrain_rice: 32,             // 五穀飯 100克【熟重】v2.62.0 修正：原 68.9 是生米乾重，
+                                   // 與同列的白飯30/烏龍麵24.6（皆為熟重）不同基準，會高估兩倍
+  multigrain_rice_raw: 68.9,       // 五穀米 100克【生米乾重，煮前秤】
   aimianzu_udon_full: 68,          // 愛麵族烏龍麵 1塊 (255.5克)
   aimianzu_udon_half: 34,          // 愛麵族烏龍麵 1/2塊 (127克)
   baby_curry_pxmart: 17.2,         // 寶寶咖哩(全聯) 1包/盒
@@ -11965,7 +12062,8 @@ const CALC_CARB_FOODS = {
 const CALC_MAIN_OPTIONS = {
   breakfast: [
     { value: 'white_rice',         label: '白飯 100公克 (碳水30克)' },
-    { value: 'multigrain_rice',     label: '五穀米 100公克 (碳水68.9克)' },
+    { value: 'multigrain_rice',     label: '五穀飯 100公克【煮熟】(碳水32克)' },
+    { value: 'multigrain_rice_raw', label: '五穀米 100公克【生米未煮】(碳水68.9克)' },
     { value: 'udon',               label: '烏龍麵 100公克 (碳水24.6克)' },
     { value: 'yangchun_noodle',    label: '陽春麵 100公克 (碳水27.8克)' },
     { value: 'oil_noodle',         label: '油麵 100公克 (碳水25.5克)' },
@@ -11983,7 +12081,8 @@ const CALC_MAIN_OPTIONS = {
   ],
   lunch: [
     { value: 'white_rice',      label: '白飯 100公克 (碳水30克)' },
-    { value: 'multigrain_rice',  label: '五穀米 100公克 (碳水68.9克)' },
+    { value: 'multigrain_rice',  label: '五穀飯 100公克【煮熟】(碳水32克)' },
+    { value: 'multigrain_rice_raw', label: '五穀米 100公克【生米未煮】(碳水68.9克)' },
     { value: 'udon',            label: '烏龍麵 100公克 (碳水24.6克)' },
     { value: 'yangchun_noodle', label: '陽春麵 100公克 (碳水27.8克)' },
     { value: 'oil_noodle',      label: '油麵 100公克 (碳水25.5克)' },
@@ -12000,7 +12099,8 @@ const CALC_MAIN_OPTIONS = {
   ],
   dinner: [
     { value: 'white_rice',      label: '白飯 100公克 (碳水30克)' },
-    { value: 'multigrain_rice',  label: '五穀米 100公克 (碳水68.9克)' },
+    { value: 'multigrain_rice',  label: '五穀飯 100公克【煮熟】(碳水32克)' },
+    { value: 'multigrain_rice_raw', label: '五穀米 100公克【生米未煮】(碳水68.9克)' },
     { value: 'udon',            label: '烏龍麵 100公克 (碳水24.6克)' },
     { value: 'yangchun_noodle', label: '陽春麵 100公克 (碳水27.8克)' },
     { value: 'oil_noodle',      label: '油麵 100公克 (碳水25.5克)' },
@@ -12226,6 +12326,7 @@ function _calcResetFields() {
   set('calc-other-carbs', '');
   set('calc-other-name', '');
   set('calc-carbs', 60);
+  if (typeof _smCalcCarbs !== 'undefined') _smCalcCarbs = 0;
   var w = document.getElementById('calc-warnings');
   if (w) w.innerHTML = '';
 }
@@ -12285,6 +12386,7 @@ function openCalcModal(periodId) {
     }
     _calcSetRestoredHint(restored);
 
+    if (typeof smRenderCalcChip === 'function') smRenderCalcChip(periodId);
     document.getElementById('calcOverlay').classList.add('open');
     document.body.classList.add('calc-modal-open');
   } catch(err) {
@@ -12409,6 +12511,191 @@ function calcFmt(v) {
 
 
 // ── 台灣食材碳水資料庫 (per 100g) ─────────────────────────────────────────
+/* ══════════════════════════════════════════════════════════════════════
+   🏫 學校午餐菜單（v2.59.0 Phase 1）
+   ⚠️ 安全性：本區塊為「純參考資料 + 獨立 localStorage key」，
+      完全不經過 getAllData() / setAllData() / allDataCache，
+      也不會被 saveDayData() 覆蓋，對現有資料存儲路徑零影響。
+   儲存 key：insulin_school_lunch
+      { portions: { 'YYYY-MM-DD': { itemIndex: ratio } } }   ratio = 1 / 0.67 / 0.5 / 0
+   ══════════════════════════════════════════════════════════════════════ */
+var SCHOOL_LUNCH_KEY  = 'insulin_school_lunch';
+var SCHOOL_STAPLE_G   = 110;   // 固定飯量（克）
+
+// 主食每 100g 熟重碳水；以 app 實測校準值「白飯 30」為基準，其餘對齊 TAIWAN_FOOD_DB
+// 主食每 100g 熟重碳水（單一保守基準）
+// 以 APP 實測校準值「白飯 30」為準，與 TAIWAN_FOOD_DB 一致。
+// ⚠️ 估算原則：寧可低估。高血糖可補打，打太多的低血糖無法收回。
+var SCHOOL_STAPLE_C100 = {
+  '白米飯':30, '芝麻飯':30, '海苔飯':30,
+  '蕎麥飯':31, '胚芽飯':31,
+  '十穀飯':32, '紅藜飯':32,
+  '紫米飯':34, '地瓜飯':29,
+  '米食':36,   '麵食':26
+};
+function smStapleC100(name){ return SCHOOL_STAPLE_C100[name]; }
+
+// 低 GI / 高油 → 吸收較慢，提示可考慮延後或分次
+var SCHOOL_STAPLE_SLOW = { '十穀飯':1,'紅藜飯':1,'蕎麥飯':1,'胚芽飯':1,'紫米飯':1,'米食':1 };
+
+// t: x=加菜 m=主菜 a=副菜 p=湯 f=水果/乳品
+// c: 每份碳水(g)   h:1 = 隱藏醣（配菜或湯本身就是澱粉／含糖）
+var SCHOOL_MENU = {
+'2026-08-31':{s:'白米飯',d:[{n:'霸王雞腿',t:'x',c:2},{n:'砂鍋魚丁',t:'m',c:4},{n:'麻婆豆腐',t:'a',c:4},{n:'翠綠青江菜',t:'a',c:2},{n:'蘿蔔排骨湯',t:'p',c:3},{n:'保久乳',t:'f',c:10,h:1}]},
+'2026-09-01':{s:'蕎麥飯',d:[{n:'海鮮嫩蛋',t:'x',c:3},{n:'咖哩雞',t:'m',c:8,h:1,r:'咖哩勾芡＋馬鈴薯'},{n:'椒鹽魷魚丸',t:'a',c:5,h:1,r:'魚漿製品含澱粉'},{n:'薑汁蚵白菜',t:'a',c:3},{n:'日式味噌湯',t:'p',c:3},{n:'水果',t:'f',c:10,h:1}]},
+'2026-09-02':{s:'十穀飯',d:[{n:'義大腿排',t:'x',c:4},{n:'焗汁肉丁',t:'m',c:4,h:1,r:'勾芡'},{n:'花開富貴',t:'a',c:4},{n:'有機銀芽',t:'a',c:2},{n:'羅宋湯',t:'p',c:5,h:1,r:'馬鈴薯／紅蘿蔔'},{n:'水果',t:'f',c:10,h:1}]},
+'2026-09-03':{s:'胚芽飯',d:[{n:'肉燥滷蛋',t:'x',c:2},{n:'美味雞翅',t:'m',c:3},{n:'芋香白菜',t:'a',c:8,h:1,r:'芋頭'},{n:'翠綠油菜',t:'a',c:2},{n:'珍珠冬瓜奶',t:'p',c:11,h:1,r:'珍珠＋糖水'}]},
+'2026-09-04':{s:'紅藜飯',d:[{n:'鐵板豬排',t:'x',c:4},{n:'椒麻雞',t:'m',c:4},{n:'泰式河粉',t:'a',c:17,h:1,r:'米製品，等同第二份主食'},{n:'蒜香空心菜',t:'a',c:2},{n:'台中好菇湯',t:'p',c:3}]},
+'2026-09-07':{s:'芝麻飯',d:[{n:'枯醬燒魚',t:'m',c:4},{n:'筍香油豆腐',t:'a',c:4},{n:'薑汁蚵白菜',t:'a',c:3},{n:'八寶養糧粥',t:'p',c:20,h:1,r:'甜粥，湯品本身就是主食'},{n:'豆漿',t:'f',c:7,h:1}]},
+'2026-09-08':{s:'蕎麥飯',d:[{n:'海南嫩雞',t:'m',c:3},{n:'沙嗲什錦滷味',t:'a',c:5,h:1,r:'滷味含豆製品／魚漿'},{n:'有機銀芽',t:'a',c:2},{n:'肉骨茶',t:'p',c:3}]},
+'2026-09-09':{s:'米食',d:[{n:'嘉義雞肉飯',t:'m',c:22,h:1,r:'主菜是飯，等同第二份主食'},{n:'紅燒肉',t:'a',c:3},{n:'蒜香空心菜',t:'a',c:2},{n:'酸菜肉片湯',t:'p',c:3}]},
+'2026-09-10':{s:'胚芽飯',d:[{n:'梅香雞排',t:'m',c:4},{n:'鮮蔬炒蛋',t:'a',c:3},{n:'翠綠油菜',t:'a',c:2},{n:'玉米濃湯',t:'p',c:10,h:1,r:'勾芡＋玉米'}]},
+'2026-09-11':{s:'紅藜飯',d:[{n:'蒙古燴羊',t:'m',c:5,h:1,r:'勾芡'},{n:'鮮瓜蛋豆腐',t:'a',c:4},{n:'有機黑葉白菜',t:'a',c:2},{n:'竹筍先片湯',t:'p',c:3}]},
+'2026-09-14':{s:'地瓜飯',d:[{n:'鐵板豆腐',t:'m',c:4},{n:'毛豆洋蔥炒蛋',t:'a',c:5},{n:'有機荷葉白菜',t:'a',c:2},{n:'薑絲冬瓜湯',t:'p',c:2}]},
+'2026-09-15':{s:'海苔飯',d:[{n:'橙汁雞丁',t:'m',c:5,h:1,r:'糖醋醬'},{n:'蕃茄肉末玉米',t:'a',c:6,h:1,r:'玉米'},{n:'蒜香空心菜',t:'a',c:2},{n:'味噌鮮蛋湯',t:'p',c:3}]},
+'2026-09-16':{s:'麵食',d:[{n:'照燒炒麵',t:'m',c:4,h:1,r:'麵體已計入主食，此處只計照燒醬'},{n:'蒲燒鯖魚',t:'a',c:4,h:1,r:'蒲燒醬含糖'},{n:'翠綠油菜',t:'a',c:2},{n:'日式火鍋湯',t:'p',c:4}]},
+'2026-09-17':{s:'蕎麥飯',d:[{n:'蜜汁雞腿',t:'m',c:5,h:1,r:'蜜汁含糖'},{n:'沙茶滷味',t:'a',c:4},{n:'翠綠青江菜',t:'a',c:2},{n:'酸辣湯',t:'p',c:4,h:1,r:'勾芡'}]},
+'2026-09-18':{s:'紫米飯',d:[{n:'蒜泥白肉',t:'m',c:1},{n:'彩繪翅腿',t:'a',c:3},{n:'翠綠絲瓜',t:'a',c:2},{n:'海帶芽蛋花湯',t:'p',c:3}]},
+'2026-09-21':{s:'米食',d:[{n:'元氣香Q炊飯',t:'x',c:27,h:1,r:'加菜是炊飯＝第二份主食'},{n:'如意彩絲',t:'m',c:4},{n:'田園嫩薯',t:'a',c:8,h:1,r:'馬鈴薯'},{n:'翠綠油菜',t:'a',c:2},{n:'蘿蔔丸子湯',t:'p',c:3,h:1,r:'丸子含澱粉'}]},
+'2026-09-22':{s:'十穀飯',d:[{n:'風味豬排',t:'m',c:4},{n:'關東煮',t:'a',c:8,h:1,r:'甜不辣／黑輪／魚漿'},{n:'薑汁蚵白菜',t:'a',c:3},{n:'芋香西米露',t:'p',c:22,h:1,r:'西米＋芋頭＋糖水'}]},
+'2026-09-23':{s:'芝麻飯',d:[{n:'泡菜燒肉',t:'m',c:4},{n:'部隊鍋',t:'a',c:8,h:1,r:'泡麵／年糕'},{n:'翠綠青江菜',t:'a',c:2},{n:'馬鈴薯薯麵',t:'p',c:15,h:1,r:'薯麵＝主食'}]},
+'2026-09-24':{s:'胚芽飯',d:[{n:'鹽水雞',t:'m',c:1},{n:'客家小炒',t:'a',c:4},{n:'有機銀芽',t:'a',c:2},{n:'客家鹹湯圓',t:'p',c:17,h:1,r:'湯圓＝主食'}]},
+'2026-09-25':{off:'中秋節放假一天'},
+'2026-09-28':{off:'教師節放假一天'},
+'2026-09-29':{s:'紅藜飯',d:[{n:'親子丼',t:'m',c:5,h:1,r:'丼汁含糖；飯已計入主食'},{n:'螞蟻上樹',t:'a',c:13,h:1,r:'冬粉＝主食'},{n:'蒜香空心菜',t:'a',c:2},{n:'金針菇味噌排骨湯',t:'p',c:3}]},
+'2026-09-30':{s:'麵食',d:[{n:'起司義大利麵',t:'m',c:6,h:1,r:'麵體已計入主食，此處計白醬與起司'},{n:'香草雞腿',t:'a',c:2},{n:'有機高麗菜',t:'a',c:2},{n:'巧達濃湯',t:'p',c:8,h:1,r:'勾芡＋馬鈴薯'}]}
+};
+
+/* ── 儲存層（獨立 key，與 insulin_records 無關） ── */
+function smStore(){ try { return JSON.parse(localStorage.getItem(SCHOOL_LUNCH_KEY)) || {}; } catch(e){ return {}; } }
+function smSaveStore(o){ try { localStorage.setItem(SCHOOL_LUNCH_KEY, JSON.stringify(o)); } catch(e){} }
+function smPortions(date){ var s = smStore(); return (s.portions && s.portions[date]) || {}; }
+function smPrune(s){
+  if (!s.portions) return;
+  var keys = Object.keys(s.portions).sort();
+  while (keys.length > 90) { delete s.portions[keys.shift()]; }
+}
+function smSetPortion(date, idx, ratio){
+  var s = smStore();
+  if (!s.portions) s.portions = {};
+  if (!s.portions[date]) s.portions[date] = {};
+  s.portions[date][idx] = ratio;
+  smPrune(s); smSaveStore(s);
+  renderSchoolLunch();
+  if (_smCalcCarbs > 0) { _smCalcCarbs = smTotal(date); }
+  smRenderCalcChip('noon');
+  if (typeof calcRecalc === 'function' && document.getElementById('calcOverlay')
+      && document.getElementById('calcOverlay').classList.contains('open')) calcRecalc();
+}
+function smResetPortions(date){
+  var s = smStore();
+  if (s.portions && s.portions[date]) { delete s.portions[date]; smSaveStore(s); }
+  renderSchoolLunch();
+  if (_smCalcCarbs > 0) { _smCalcCarbs = smTotal(date); }
+  smRenderCalcChip('noon');
+}
+
+/* ── 計算層 ── rows[0] 一定是主食 ── */
+function smRows(date){
+  var m = SCHOOL_MENU[date];
+  if (!m || m.off) return null;
+  var rows = [], c100 = smStapleC100(m.s);
+  if (c100 != null) {
+    rows.push({ n: m.s + ' ' + SCHOOL_STAPLE_G + 'g', t: 's',
+                c: Math.round(c100 * SCHOOL_STAPLE_G / 10) / 10, h: 0,
+                r: SCHOOL_STAPLE_SLOW[m.s] ? '低 GI／高油，吸收較慢' : '' });
+  }
+  (m.d || []).forEach(function(it){ rows.push({ n: it.n, t: it.t, c: it.c, h: it.h || 0, r: it.r || '' }); });
+  return rows;
+}
+function smTotal(date){
+  var rows = smRows(date); if (!rows) return 0;
+  var p = smPortions(date), t = 0;
+  rows.forEach(function(r, i){ t += r.c * (p[i] == null ? 1 : p[i]); });
+  return Math.round(t * 10) / 10;
+}
+
+/* ── 今日記錄頁卡片 ── */
+var SM_TYPE_LABEL = { s:'主食', x:'加菜', m:'主菜', a:'副菜', p:'湯品', f:'水果' };
+var SM_RATIOS = [ {v:1,l:'全'}, {v:0.67,l:'2/3'}, {v:0.5,l:'1/2'}, {v:0,l:'x'} ];
+
+function renderSchoolLunch(){
+  var slot = document.getElementById('school-lunch-slot');
+  if (!slot) return;
+  var dEl = document.getElementById('todayDate');
+  var date = dEl ? dEl.value : '';
+  var m = SCHOOL_MENU[date];
+  if (!m) { slot.innerHTML = ''; return; }
+  if (m.off) {
+    slot.innerHTML = '<div class="sl-card sl-card-off">🏫 今日無學校午餐（' + m.off + '）</div>';
+    return;
+  }
+  var rows = smRows(date), p = smPortions(date), hidden = [], adjusted = false;
+  var html = '<div class="sl-card">'
+    + '<div class="sl-head"><span class="sl-title">🏫 今日學校午餐</span>'
+    + '<span class="sl-total">' + smTotal(date) + ' g</span></div>';
+  rows.forEach(function(r, i){
+    var q = (p[i] == null ? 1 : p[i]);
+    if (q !== 1) adjusted = true;
+    if (r.h && q > 0) hidden.push(r.n);
+    html += '<div class="sl-row' + (q === 0 ? ' sl-row-off' : '') + '">'
+      + '<div class="sl-line">'
+        + '<span class="sl-tag sl-t-' + r.t + '">' + SM_TYPE_LABEL[r.t] + '</span>'
+        + '<span class="sl-name">' + r.n + (r.h ? ' <span class="sl-warn">&#9888;</span>' : '') + '</span>'
+        + '<span class="sl-carb">' + (Math.round(r.c * q * 10) / 10) + ' g</span>'
+      + '</div>'
+      + (r.r ? '<div class="sl-note">' + r.r + '</div>' : '')
+      + '<div class="sl-ratio">' + SM_RATIOS.map(function(o){
+          return '<button type="button" class="sl-rbtn' + (q === o.v ? ' on' : '') + '"'
+               + ' onclick="smSetPortion(\'' + date + '\',' + i + ',' + o.v + ')">' + o.l + '</button>';
+        }).join('') + '</div>'
+    + '</div>';
+  });
+  if (hidden.length) {
+    html += '<div class="sl-alert">&#9888; 隱藏醣：' + hidden.join('、') + '</div>';
+  }
+  var mm = SCHOOL_MENU[date];
+  if (mm && SCHOOL_STAPLE_SLOW[mm.s]) {
+    html += '<div class="sl-alert sl-alert-slow">&#9203; ' + mm.s
+      + ' 屬低 GI／高油，醣類吸收比胰島素慢，餐後 1～2 小時可能先偏低、之後才回升。'
+      + '施打時機若要調整，請依醫療團隊指示。</div>';
+  }
+  html += '<div class="sl-foot">'
+    + '<span>保守估算（不確定的往低算）；預設為整份吃完，沒吃完請點份量</span>'
+    + (adjusted ? '<button type="button" class="sl-reset" onclick="smResetPortions(\'' + date + '\')">還原份量</button>' : '')
+    + '</div></div>';
+  slot.innerHTML = html;
+}
+
+/* ── 劑量計算機串接 ── */
+var _smCalcCarbs = 0;
+function smCalcAvailable(periodId){
+  if (periodId !== 'noon') return false;
+  var dEl = document.getElementById('todayDate');
+  var m = SCHOOL_MENU[dEl ? dEl.value : ''];
+  return !!(m && !m.off);
+}
+function smRenderCalcChip(periodId){
+  var box = document.getElementById('sl-calc-box');
+  if (!box) return;
+  if (!smCalcAvailable(periodId)) { box.style.display = 'none'; _smCalcCarbs = 0; return; }
+  var date = document.getElementById('todayDate').value;
+  box.style.display = '';
+  var btn = document.getElementById('sl-calc-btn');
+  if (btn) {
+    btn.textContent = _smCalcCarbs > 0
+      ? '✅ 已帶入校餐 ' + _smCalcCarbs + ' g（點此取消）'
+      : '🏫 帶入今日校餐 ' + smTotal(date) + ' g';
+    btn.classList.toggle('on', _smCalcCarbs > 0);
+  }
+}
+function smApplyToCalc(){
+  var date = document.getElementById('todayDate').value;
+  _smCalcCarbs = (_smCalcCarbs > 0) ? 0 : smTotal(date);
+  smRenderCalcChip('noon');
+  if (typeof calcRecalc === 'function') calcRecalc();
+}
+
 var TAIWAN_FOOD_DB = [
   // 主食
   {n:'白米飯',c:30,cat:'主食'},{n:'糙米飯',c:31,cat:'主食'},{n:'五穀米飯',c:32,cat:'主食'},
@@ -12573,6 +12860,9 @@ function calcRecalc() {
   // 加上食材庫小計
   var fdbC = (typeof fdbTotal === 'function') ? fdbTotal() : 0;
   if (fdbC > 0) { totalCarbs += fdbC; hasFood = true; }
+  // v2.59.0 學校午餐帶入量
+  var smC = (typeof _smCalcCarbs === 'number') ? _smCalcCarbs : 0;
+  if (smC > 0) { totalCarbs += smC; hasFood = true; }
 
   if (hasFood) {
     document.getElementById('calc-carbs').value = Math.round(totalCarbs * 10) / 10;
@@ -13197,7 +13487,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.58.4';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.62.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -16688,6 +16978,9 @@ function checkTodoAlerts() {
         </div>
       </div>
 
+      <div id="sl-calc-box" class="sl-calc-box" style="display:none">
+        <button type="button" id="sl-calc-btn" class="sl-calc-btn" onclick="smApplyToCalc()">🏫 帶入今日校餐</button>
+      </div>
       <!-- 劑量計算 -->
       <div class="calc-section">
         <div class="calc-section-title">劑量計算</div>
