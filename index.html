@@ -4326,6 +4326,20 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.63.1 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.63.1</span>
+          <span class="cl-date">2026-09-02</span>
+          <span class="cl-tag">修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【學校午餐】份量選項的「2/3」改成「1/3」。實際上不會出現只吃 2/3 的情況，反而是擔心碳水過高時會只吃 1/3，原本的選項用不到</li>
+          <li>【學校午餐】四個份量鍵改為由多到少排列：全 ／ 1/2 ／ 1/3 ／ 沒吃</li>
+          <li>【學校午餐】先前若已存過 2/3 的份量，會自動對應到 1/2（最接近，且碳水較低、劑量較保守的方向）</li>
+        </ul>
+      </div>
+
       <!-- v2.63.0 -->
       <div class="cl-entry">
         <div class="cl-header">
@@ -12589,7 +12603,14 @@ var SCHOOL_MENU = {
 /* ── 儲存層（獨立 key，與 insulin_records 無關） ── */
 function smStore(){ try { return JSON.parse(localStorage.getItem(SCHOOL_LUNCH_KEY)) || {}; } catch(e){ return {}; } }
 function smSaveStore(o){ try { localStorage.setItem(SCHOOL_LUNCH_KEY, JSON.stringify(o)); } catch(e){} }
-function smPortions(date){ var s = smStore(); return (s.portions && s.portions[date]) || {}; }
+function smPortions(date){
+  var s = smStore(), p = (s.portions && s.portions[date]) || {};
+  // v2.63.1：2/3 選項已移除。舊資料裡的 0.67 對應到最接近的 0.5
+  // （同時也是碳水較低、劑量較保守的方向）
+  var out = {}, k;
+  for (k in p) { out[k] = (p[k] === 0.67) ? 0.5 : p[k]; }
+  return out;
+}
 function smPrune(s){
   if (!s.portions) return;
   var keys = Object.keys(s.portions).sort();
@@ -12639,7 +12660,8 @@ function smTotal(date){
 
 /* ── 今日記錄頁卡片 ── */
 var SM_TYPE_LABEL = { s:'主食', x:'加菜', m:'主菜', a:'副菜', p:'湯品', f:'水果' };
-var SM_RATIOS = [ {v:1,l:'全'}, {v:0.67,l:'2/3'}, {v:0.5,l:'1/2'}, {v:0,l:'x'} ];
+// 份量選項（由多到少）。孩子不會吃到 2/3，但怕碳水過高時會只吃 1/3
+var SM_RATIOS = [ {v:1,l:'全'}, {v:0.5,l:'1/2'}, {v:0.33,l:'1/3'}, {v:0,l:'x'} ];
 
 // 逐項列渲染（今日記錄卡片與劑量計算機共用）
 // 回傳 { html, hidden:[隱藏醣菜名], adjusted:是否有調過份量 }
@@ -13539,7 +13561,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.63.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.63.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
