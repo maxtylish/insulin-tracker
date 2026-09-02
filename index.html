@@ -3459,6 +3459,12 @@
 .sl-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:.68rem;color:var(--text-muted,#94a3b8);}
 .sl-reset{font-size:.68rem;padding:2px 8px;border-radius:6px;border:1px solid var(--border,#e2e8f0);background:transparent;color:var(--text-muted,#94a3b8);cursor:pointer;}
 .sl-alert-slow{background:#eff6ff;color:#1d4ed8;margin-top:6px;}
+.sl-gram{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin:5px 0 0 46px;}
+.sl-gram-lbl{font-size:.68rem;color:var(--text-muted,#94a3b8);}
+.sl-gram-in{width:64px;padding:2px 6px;border-radius:6px;border:1px solid var(--border,#e2e8f0);background:var(--card,#fff);color:inherit;font-size:.8rem;font-weight:700;text-align:right;}
+.sl-gram-unit{font-size:.68rem;color:var(--text-muted,#94a3b8);}
+.sl-gram-btn{font-size:.66rem;padding:2px 7px;border-radius:6px;border:1px solid var(--border,#e2e8f0);background:transparent;color:var(--text-muted,#94a3b8);cursor:pointer;}
+.sl-calc-list .sl-gram{margin-left:44px;}
 .sl-calc-list{margin-top:8px;border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:8px 10px;}
 .sl-calc-list:empty{display:none;}
 .sl-calc-head{display:flex;align-items:center;justify-content:space-between;font-size:.76rem;font-weight:700;color:var(--text-muted,#94a3b8);margin-bottom:4px;}
@@ -4219,6 +4225,22 @@ alter table user_todos enable row level security;
       <button class="mp-confirm-btn" type="button" onclick="saveTargetPresets()">💾 儲存情境</button>
     </div>
   </div>
+<div class="settings-section">
+    <h3>🏫 學校午餐預設飯量</h3>
+    <p style="font-size:0.83rem;color:var(--text-muted);margin-bottom:12px;">
+      學校午餐卡片與劑量計算機用這個公克數換算主食醣量。<br>
+      某一天吃得比較多或比較少，直接在當天的卡片上改就好，不會動到這裡的預設值。
+    </p>
+    <div class="settings-row">
+      <div>
+        <div>預設飯量</div>
+        <div class="settings-desc">白飯、十穀飯、麵食等主食共用</div>
+      </div>
+      <input type="number" id="set-staple-g" min="0" max="500" step="5" oninput="renderStapleGPreview()" />
+    </div>
+    <div id="set-staple-preview" style="font-size:.78rem;color:var(--text-muted);line-height:1.7;margin:10px 0 4px;"></div>
+    <button class="settings-save-btn" onclick="saveStapleG()">儲存預設飯量</button>
+  </div>
       </div>
 
       <!-- ── Panel: CGM 連動 ── -->
@@ -4325,6 +4347,24 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.64.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.64.0</span>
+          <span class="cl-date">2026-09-02</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【學校午餐】主食改為可自行填寫實際公克數，不再寫死 110 克。輸入框在主食那一列，卡片與劑量計算機明細裡都能改，醣量與建議劑量即時重算</li>
+          <li>【學校午餐】主食列不再使用份量比例鍵（全／1/2／1/3／沒吃），改用公克數更精確；配菜與湯品維持份量鍵，因為那些在學校秤不到</li>
+          <li>【學校午餐】改過公克數後會出現「設為預設」（把這個數字變成之後每天的預設飯量）與「回 N 克」（只還原這一天）</li>
+          <li>【學校午餐】舊資料相容：先前若用份量鍵調過主食，會自動換算成對應的公克數沿用</li>
+          <li>【學校午餐】設定頁「餐前計算參數」新增「🏫 學校午餐預設飯量」，可自填預設公克數（預設 110），並即時預覽白飯／十穀飯／麵食在該公克數下的醣量</li>
+          <li>【學校午餐】<strong>調高</strong>預設飯量時會跳出確認視窗，直接告訴你每餐會多算幾克醣、多打幾單位；調低則直接儲存。依「打太多最致命」原則，只在增加劑量的方向設攔截</li>
+          <li>【學校午餐】自填公克數存於 insulin_school_lunch.g（每日）與 .gDefault（預設值），同樣保留最近 90 天，不影響既有紀錄</li>
+        </ul>
+      </div>
 
       <!-- v2.63.1 -->
       <div class="cl-entry">
@@ -10846,6 +10886,7 @@ function loadSettingsUI() {
   loadNotifSettingsUI();
   loadMealParamsUI();  // fix: 確保 ISF/CIR/目標血糖顯示已儲存的值，而非 HTML 預設值
   renderTargetPresetList();  // v2.52.7: 渲染目標血糖情境預設清單
+  if (typeof loadStapleGUI === 'function') loadStapleGUI();  // v2.64.0 學校午餐預設飯量
   // 確保書籤狀態正確
   if (typeof switchSettingsPanel === 'function') switchSettingsPanel(_settingsActivePanel || 'cloud');
 }
@@ -12611,10 +12652,65 @@ function smPortions(date){
   for (k in p) { out[k] = (p[k] === 0.67) ? 0.5 : p[k]; }
   return out;
 }
+/* ── 主食公克數：預設 110，可每日自填 ── */
+function smStapleGDefault(){
+  var v = smStore().gDefault;
+  return (typeof v === 'number' && v > 0 && v <= 500) ? v : SCHOOL_STAPLE_G;
+}
+function smStapleG(date){
+  var s = smStore();
+  if (s.g && typeof s.g[date] === 'number') return s.g[date];
+  // 舊資料相容：主食若曾用比例鍵調過，換算成公克後沿用
+  var p = (s.portions && s.portions[date]) || {}, r = p[0];
+  if (r != null && r !== 1) return Math.round(smStapleGDefault() * (r === 0.67 ? 0.5 : r));
+  return smStapleGDefault();
+}
+function smSetStapleG(date, g){
+  g = parseFloat(g);
+  if (!isFinite(g) || g < 0) g = 0;
+  if (g > 500) g = 500;
+  g = Math.round(g * 10) / 10;
+  var s = smStore();
+  if (!s.g) s.g = {};
+  s.g[date] = g;
+  if (s.portions && s.portions[date]) delete s.portions[date][0];  // 避免公克與比例兩套並存
+  smPrune(s); smSaveStore(s);
+  smRefreshAll(date);
+}
+function smSetStapleGDefault(date){
+  var s = smStore();
+  s.gDefault = smStapleG(date);
+  smSaveStore(s);
+  smRefreshAll(date);
+  if (typeof loadStapleGUI === 'function') loadStapleGUI();
+  if (typeof showToast === 'function') showToast('已將 ' + s.gDefault + ' 克設為每日預設飯量');
+}
+function smResetStapleG(date){
+  var s = smStore();
+  if (s.g) delete s.g[date];
+  if (s.portions && s.portions[date]) delete s.portions[date][0];
+  smSaveStore(s);
+  smRefreshAll(date);
+}
+// 卡片、計算機明細、劑量三處一起更新
+function smRefreshAll(date){
+  renderSchoolLunch();
+  smRenderCalcChip('noon');
+  if (typeof calcRecalc === 'function') {
+    var ov = document.getElementById('calcOverlay');
+    if (ov && ov.classList.contains('open')) calcRecalc();
+  }
+}
+
 function smPrune(s){
-  if (!s.portions) return;
-  var keys = Object.keys(s.portions).sort();
-  while (keys.length > 90) { delete s.portions[keys.shift()]; }
+  if (s.portions) {
+    var keys = Object.keys(s.portions).sort();
+    while (keys.length > 90) { delete s.portions[keys.shift()]; }
+  }
+  if (s.g) {
+    var gk = Object.keys(s.g).sort();
+    while (gk.length > 90) { delete s.g[gk.shift()]; }
+  }
 }
 function smSetPortion(date, idx, ratio){
   var s = smStore();
@@ -12642,10 +12738,10 @@ function smResetPortions(date){
 function smRows(date){
   var m = SCHOOL_MENU[date];
   if (!m || m.off) return null;
-  var rows = [], c100 = smStapleC100(m.s);
+  var rows = [], c100 = smStapleC100(m.s), sg = smStapleG(date);
   if (c100 != null) {
-    rows.push({ n: m.s + ' ' + SCHOOL_STAPLE_G + 'g', t: 's',
-                c: Math.round(c100 * SCHOOL_STAPLE_G / 10) / 10, h: 0,
+    rows.push({ n: m.s, t: 's', g: sg,
+                c: Math.round(c100 * sg / 10) / 10, h: 0,
                 r: SCHOOL_STAPLE_SLOW[m.s] ? '低 GI／高油，吸收較慢' : '' });
   }
   (m.d || []).forEach(function(it){ rows.push({ n: it.n, t: it.t, c: it.c, h: it.h || 0, r: it.r || '' }); });
@@ -12654,7 +12750,7 @@ function smRows(date){
 function smTotal(date){
   var rows = smRows(date); if (!rows) return 0;
   var p = smPortions(date), t = 0;
-  rows.forEach(function(r, i){ t += r.c * (p[i] == null ? 1 : p[i]); });
+  rows.forEach(function(r, i){ t += r.c * (r.g != null ? 1 : (p[i] == null ? 1 : p[i])); });
   return Math.round(t * 10) / 10;
 }
 
@@ -12669,20 +12765,33 @@ function smRowsHTML(date){
   var rows = smRows(date) || [], p = smPortions(date);
   var hidden = [], adjusted = false, html = '';
   rows.forEach(function(r, i){
-    var q = (p[i] == null ? 1 : p[i]);
-    if (q !== 1) adjusted = true;
+    var isG = (r.g != null);
+    var q = isG ? 1 : (p[i] == null ? 1 : p[i]);
+    if (!isG && q !== 1) adjusted = true;
+    if (isG && r.g !== smStapleGDefault()) adjusted = true;
     if (r.h && q > 0) hidden.push(r.n);
-    html += '<div class="sl-row' + (q === 0 ? ' sl-row-off' : '') + '">'
+    html += '<div class="sl-row' + ((q === 0 || (isG && r.g === 0)) ? ' sl-row-off' : '') + '">'
       + '<div class="sl-line">'
         + '<span class="sl-tag sl-t-' + r.t + '">' + SM_TYPE_LABEL[r.t] + '</span>'
         + '<span class="sl-name">' + r.n + (r.h ? ' <span class="sl-warn">&#9888;</span>' : '') + '</span>'
         + '<span class="sl-carb">' + (Math.round(r.c * q * 10) / 10) + ' g</span>'
       + '</div>'
       + (r.r ? '<div class="sl-note">' + r.r + '</div>' : '')
-      + '<div class="sl-ratio">' + SM_RATIOS.map(function(o){
-          return '<button type="button" class="sl-rbtn' + (q === o.v ? ' on' : '') + '"'
-               + ' onclick="smSetPortion(\'' + date + '\',' + i + ',' + o.v + ')">' + o.l + '</button>';
-        }).join('') + '</div>'
+      + (isG
+          ? '<div class="sl-gram">'
+              + '<span class="sl-gram-lbl">實際飯量</span>'
+              + '<input type="number" class="sl-gram-in" min="0" max="500" step="5" value="' + r.g + '"'
+                + ' onchange="smSetStapleG(\'' + date + '\', this.value)" />'
+              + '<span class="sl-gram-unit">克</span>'
+              + (r.g !== smStapleGDefault()
+                  ? '<button type="button" class="sl-gram-btn" onclick="smSetStapleGDefault(\'' + date + '\')">設為預設</button>'
+                    + '<button type="button" class="sl-gram-btn" onclick="smResetStapleG(\'' + date + '\')">回 ' + smStapleGDefault() + ' 克</button>'
+                  : '')
+            + '</div>'
+          : '<div class="sl-ratio">' + SM_RATIOS.map(function(o){
+              return '<button type="button" class="sl-rbtn' + (q === o.v ? ' on' : '') + '"'
+                   + ' onclick="smSetPortion(\'' + date + '\',' + i + ',' + o.v + ')">' + o.l + '</button>';
+            }).join('') + '</div>')
     + '</div>';
   });
   return { html: html, hidden: hidden, adjusted: adjusted };
@@ -12714,10 +12823,60 @@ function renderSchoolLunch(){
       + '施打時機若要調整，請依醫療團隊指示。</div>';
   }
   html += '<div class="sl-foot">'
-    + '<span>保守估算（不確定的往低算）；預設為整份吃完，沒吃完請點份量</span>'
+    + '<span>保守估算（不確定的往低算）。主食填實際公克數，配菜沒吃完請點份量</span>'
     + (adjusted ? '<button type="button" class="sl-reset" onclick="smResetPortions(\'' + date + '\')">還原份量</button>' : '')
     + '</div></div>';
   slot.innerHTML = html;
+}
+
+/* ── 設定頁：預設飯量 ── */
+function loadStapleGUI(){
+  var el = document.getElementById('set-staple-g');
+  if (!el) return;
+  el.value = smStapleGDefault();
+  renderStapleGPreview();
+}
+function renderStapleGPreview(){
+  var box = document.getElementById('set-staple-preview');
+  var el  = document.getElementById('set-staple-g');
+  if (!box || !el) return;
+  var g = parseFloat(el.value);
+  if (!isFinite(g) || g < 0) { box.innerHTML = '<span style="color:#dc2626">請輸入 0～500 之間的數字</span>'; return; }
+  var show = ['白米飯', '十穀飯', '麵食'];
+  box.innerHTML = '此設定下的主食醣量：<br>' + show.map(function(n){
+    return '　' + n + ' ' + g + ' 克 → ' + (Math.round(smStapleC100(n) * g / 10) / 10) + ' 克醣';
+  }).join('<br>');
+}
+function saveStapleG(){
+  var el = document.getElementById('set-staple-g');
+  if (!el) return;
+  var g = parseFloat(el.value);
+  if (!isFinite(g) || g < 0 || g > 500) {
+    if (typeof showToast === 'function') showToast('❌ 請輸入 0～500 之間的數字');
+    return;
+  }
+  g = Math.round(g * 10) / 10;
+  var old = smStapleGDefault();
+  if (g === old) { if (typeof showToast === 'function') showToast('數值沒有變更'); return; }
+  // 調高 = 每餐劑量增加 → 依「打太多最致命」原則，先讓使用者確認影響量
+  if (g > old) {
+    var cir = 10;
+    try { var pr = getMealPreset('lunch'); if (pr && pr.cir) cir = parseFloat(pr.cir) || 10; } catch(e){}
+    var dCarb = Math.round(smStapleC100('白米飯') * (g - old) / 100 * 10) / 10;
+    var dU    = Math.round(dCarb / cir * 100) / 100;
+    var msg = '要把預設飯量從 ' + old + ' 克調高到 ' + g + ' 克嗎？\n\n'
+            + '白飯日每餐會多算約 ' + dCarb + ' 克醣，\n'
+            + '以午餐 CIR ' + cir + ' 換算約多 ' + dU + ' 單位。\n\n'
+            + '調高等於每餐打更多，請確認飯量真的增加了。';
+    if (!confirm(msg)) return;
+  }
+  var s = smStore();
+  s.gDefault = g;
+  smSaveStore(s);
+  var dEl = document.getElementById('todayDate');
+  smRefreshAll(dEl ? dEl.value : '');
+  renderStapleGPreview();
+  if (typeof showToast === 'function') showToast('✅ 預設飯量已設為 ' + g + ' 克');
 }
 
 /* ── 劑量計算機串接 ── */
@@ -12758,7 +12917,7 @@ function smRenderCalcChip(periodId){
       + '</div>'
       + st.html
       + (st.hidden.length ? '<div class="sl-alert">&#9888; 隱藏醣：' + st.hidden.join('、') + '</div>' : '')
-      + '<div class="sl-foot"><span>沒吃完就按份量鍵下修，劑量會即時重算</span>'
+      + '<div class="sl-foot"><span>主食改公克數、配菜按份量鍵，劑量會即時重算</span>'
       + (st.adjusted ? '<button type="button" class="sl-reset" onclick="smResetPortions(\'' + date + '\')">還原份量</button>' : '')
       + '</div>';
   }
@@ -13561,7 +13720,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.63.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.64.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
