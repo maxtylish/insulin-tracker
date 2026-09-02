@@ -3459,6 +3459,11 @@
 .sl-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:.68rem;color:var(--text-muted,#94a3b8);}
 .sl-reset{font-size:.68rem;padding:2px 8px;border-radius:6px;border:1px solid var(--border,#e2e8f0);background:transparent;color:var(--text-muted,#94a3b8);cursor:pointer;}
 .sl-alert-slow{background:#eff6ff;color:#1d4ed8;margin-top:6px;}
+.sl-calc-list{margin-top:8px;border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:8px 10px;}
+.sl-calc-list:empty{display:none;}
+.sl-calc-head{display:flex;align-items:center;justify-content:space-between;font-size:.76rem;font-weight:700;color:var(--text-muted,#94a3b8);margin-bottom:4px;}
+.sl-calc-sum{color:#d97706;font-size:.95rem;}
+.sl-calc-list .sl-note,.sl-calc-list .sl-ratio{margin-left:44px;}
 .sl-calc-box{margin:0 0 10px;}
 .sl-calc-btn{width:100%;padding:9px;border-radius:10px;border:1px dashed var(--primary,#2563eb);background:transparent;color:var(--primary,#2563eb);font-size:.86rem;font-weight:700;cursor:pointer;}
 .sl-calc-btn.on{background:var(--primary,#2563eb);color:#fff;border-style:solid;}
@@ -4320,6 +4325,21 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.63.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.63.0</span>
+          <span class="cl-date">2026-09-02</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【學校午餐】劑量計算機內的「帶入今日校餐」原本只顯示總醣量，看不到組成也無法調整，必須關掉計算機回今日記錄頁改份量再重開。現在計算機裡直接列出當日每一道菜（主食、加菜、主菜、副菜、湯品、水果）的個別醣量</li>
+          <li>【學校午餐】計算機內的明細可直接按份量鍵（全／2/3／1/2／沒吃），總醣量與建議劑量即時重算，不用離開計算視窗</li>
+          <li>【學校午餐】計算機明細同樣標示隱藏醣菜色，調過份量會出現「還原份量」</li>
+          <li>【學校午餐】修正已帶入校餐後改份量，按鈕上的數字可能停在舊快照值的問題，改為永遠跟著目前份量重算</li>
+        </ul>
+      </div>
 
       <!-- v2.62.0 -->
       <div class="cl-entry">
@@ -12582,7 +12602,6 @@ function smSetPortion(date, idx, ratio){
   s.portions[date][idx] = ratio;
   smPrune(s); smSaveStore(s);
   renderSchoolLunch();
-  if (_smCalcCarbs > 0) { _smCalcCarbs = smTotal(date); }
   smRenderCalcChip('noon');
   if (typeof calcRecalc === 'function' && document.getElementById('calcOverlay')
       && document.getElementById('calcOverlay').classList.contains('open')) calcRecalc();
@@ -12591,8 +12610,11 @@ function smResetPortions(date){
   var s = smStore();
   if (s.portions && s.portions[date]) { delete s.portions[date]; smSaveStore(s); }
   renderSchoolLunch();
-  if (_smCalcCarbs > 0) { _smCalcCarbs = smTotal(date); }
   smRenderCalcChip('noon');
+  if (typeof calcRecalc === 'function') {
+    var ov2 = document.getElementById('calcOverlay');
+    if (ov2 && ov2.classList.contains('open')) calcRecalc();
+  }
 }
 
 /* ── 計算層 ── rows[0] 一定是主食 ── */
@@ -12619,21 +12641,11 @@ function smTotal(date){
 var SM_TYPE_LABEL = { s:'主食', x:'加菜', m:'主菜', a:'副菜', p:'湯品', f:'水果' };
 var SM_RATIOS = [ {v:1,l:'全'}, {v:0.67,l:'2/3'}, {v:0.5,l:'1/2'}, {v:0,l:'x'} ];
 
-function renderSchoolLunch(){
-  var slot = document.getElementById('school-lunch-slot');
-  if (!slot) return;
-  var dEl = document.getElementById('todayDate');
-  var date = dEl ? dEl.value : '';
-  var m = SCHOOL_MENU[date];
-  if (!m) { slot.innerHTML = ''; return; }
-  if (m.off) {
-    slot.innerHTML = '<div class="sl-card sl-card-off">🏫 今日無學校午餐（' + m.off + '）</div>';
-    return;
-  }
-  var rows = smRows(date), p = smPortions(date), hidden = [], adjusted = false;
-  var html = '<div class="sl-card">'
-    + '<div class="sl-head"><span class="sl-title">🏫 今日學校午餐</span>'
-    + '<span class="sl-total">' + smTotal(date) + ' g</span></div>';
+// 逐項列渲染（今日記錄卡片與劑量計算機共用）
+// 回傳 { html, hidden:[隱藏醣菜名], adjusted:是否有調過份量 }
+function smRowsHTML(date){
+  var rows = smRows(date) || [], p = smPortions(date);
+  var hidden = [], adjusted = false, html = '';
   rows.forEach(function(r, i){
     var q = (p[i] == null ? 1 : p[i]);
     if (q !== 1) adjusted = true;
@@ -12651,6 +12663,25 @@ function renderSchoolLunch(){
         }).join('') + '</div>'
     + '</div>';
   });
+  return { html: html, hidden: hidden, adjusted: adjusted };
+}
+
+function renderSchoolLunch(){
+  var slot = document.getElementById('school-lunch-slot');
+  if (!slot) return;
+  var dEl = document.getElementById('todayDate');
+  var date = dEl ? dEl.value : '';
+  var m = SCHOOL_MENU[date];
+  if (!m) { slot.innerHTML = ''; return; }
+  if (m.off) {
+    slot.innerHTML = '<div class="sl-card sl-card-off">🏫 今日無學校午餐（' + m.off + '）</div>';
+    return;
+  }
+  var st = smRowsHTML(date), hidden = st.hidden, adjusted = st.adjusted;
+  var html = '<div class="sl-card">'
+    + '<div class="sl-head"><span class="sl-title">🏫 今日學校午餐</span>'
+    + '<span class="sl-total">' + smTotal(date) + ' g</span></div>'
+    + st.html;
   if (hidden.length) {
     html += '<div class="sl-alert">&#9888; 隱藏醣：' + hidden.join('、') + '</div>';
   }
@@ -12678,15 +12709,36 @@ function smCalcAvailable(periodId){
 function smRenderCalcChip(periodId){
   var box = document.getElementById('sl-calc-box');
   if (!box) return;
-  if (!smCalcAvailable(periodId)) { box.style.display = 'none'; _smCalcCarbs = 0; return; }
-  var date = document.getElementById('todayDate').value;
+  if (!smCalcAvailable(periodId)) {
+    box.style.display = 'none'; _smCalcCarbs = 0;
+    var el0 = document.getElementById('sl-calc-list'); if (el0) el0.innerHTML = '';
+    return;
+  }
+  var date  = document.getElementById('todayDate').value;
+  var total = smTotal(date);
+  // 已帶入時永遠跟著目前份量走，避免顯示過期的快照值
+  if (_smCalcCarbs > 0) _smCalcCarbs = total;
   box.style.display = '';
   var btn = document.getElementById('sl-calc-btn');
   if (btn) {
     btn.textContent = _smCalcCarbs > 0
-      ? '✅ 已帶入校餐 ' + _smCalcCarbs + ' g（點此取消）'
-      : '🏫 帶入今日校餐 ' + smTotal(date) + ' g';
+      ? '\u2705 已帶入校餐 ' + total + ' g（點此取消）'
+      : '\uD83C\uDFEB 帶入今日校餐 ' + total + ' g';
     btn.classList.toggle('on', _smCalcCarbs > 0);
+  }
+  // 逐項明細：在計算機裡就能看到每道菜的醣量並直接改份量
+  var list = document.getElementById('sl-calc-list');
+  if (list) {
+    var st = smRowsHTML(date);
+    list.innerHTML = '<div class="sl-calc-head">'
+        + '<span>今日菜色明細</span>'
+        + '<span class="sl-calc-sum">' + total + ' g</span>'
+      + '</div>'
+      + st.html
+      + (st.hidden.length ? '<div class="sl-alert">&#9888; 隱藏醣：' + st.hidden.join('、') + '</div>' : '')
+      + '<div class="sl-foot"><span>沒吃完就按份量鍵下修，劑量會即時重算</span>'
+      + (st.adjusted ? '<button type="button" class="sl-reset" onclick="smResetPortions(\'' + date + '\')">還原份量</button>' : '')
+      + '</div>';
   }
 }
 function smApplyToCalc(){
@@ -13487,7 +13539,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.62.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.63.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -16980,6 +17032,7 @@ function checkTodoAlerts() {
 
       <div id="sl-calc-box" class="sl-calc-box" style="display:none">
         <button type="button" id="sl-calc-btn" class="sl-calc-btn" onclick="smApplyToCalc()">🏫 帶入今日校餐</button>
+        <div id="sl-calc-list" class="sl-calc-list"></div>
       </div>
       <!-- 劑量計算 -->
       <div class="calc-section">
