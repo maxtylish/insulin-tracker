@@ -3443,12 +3443,16 @@
 .sl-head{flex-wrap:wrap;}
 .sl-date{font-size:.76rem;font-weight:600;color:var(--text-muted,#94a3b8);}
 .sl-head .sl-total{margin-left:auto;}
-.sl-inj{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;padding:7px 9px;border-radius:8px;background:var(--bg,#f1f5f9);}
-.sl-inj-item{display:flex;align-items:baseline;gap:5px;flex:1 1 auto;min-width:88px;}
-.sl-inj-lbl{font-size:.66rem;color:var(--text-muted,#94a3b8);white-space:nowrap;}
-.sl-inj-val{font-size:.82rem;font-weight:700;}
+.sl-inj{display:flex;align-items:flex-start;gap:8px;margin:0 0 8px;padding:7px 0;
+  border-top:1px dashed var(--border,#e2e8f0);border-bottom:1px dashed var(--border,#e2e8f0);}
+.sl-inj-item{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:2px;}
+.sl-inj-item:first-child{align-items:flex-start;text-align:left;}
+.sl-inj-item:nth-child(2){align-items:center;text-align:center;}
+.sl-inj-item:last-child{align-items:flex-end;text-align:right;}
+.sl-inj-lbl{font-size:.66rem;line-height:1.2;color:var(--text-muted,#94a3b8);white-space:nowrap;}
+.sl-inj-val{font-size:.9rem;font-weight:700;line-height:1.25;}
 .sl-inj-none{color:var(--text-muted,#94a3b8);font-weight:400;}
-.sl-inj-sub{display:block;font-size:.62rem;font-weight:400;color:var(--text-muted,#94a3b8);margin-top:1px;}
+.sl-inj-sub{display:block;font-size:.64rem;font-weight:700;color:var(--text-muted,#94a3b8);line-height:1.25;margin-top:2px;white-space:nowrap;}
 .sl-row{padding:6px 0;border-top:1px dashed var(--border,#e2e8f0);}
 .sl-row:first-of-type{border-top:none;}
 .sl-row-off{opacity:.42;}
@@ -4356,6 +4360,21 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.65.1 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.65.1</span>
+          <span class="cl-date">2026-09-03</span>
+          <span class="cl-tag">修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【學校午餐】施打資訊列改為三等分欄位、置中對齊。原本標籤與數值並排且「生效時間」多一行小字，三欄高低不一看起來凌亂</li>
+          <li>【學校午餐】改為標籤在上、數值在下的直式排列，數值字級略為放大</li>
+          <li>【學校午餐】拿掉原本的灰底方塊改用上下虛線分隔，讓「施打部位」的左緣與上方標題「🏫 今日學校午餐」切齊；三欄採靠左／置中／靠右，最右的施打劑量也與標題列的總醣量對齊</li>
+          <li>【學校午餐】「注射 11:10 +20 分」改為粗體</li>
+        </ul>
+      </div>
 
       <!-- v2.65.0 -->
       <div class="cl-entry">
@@ -13824,7 +13843,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.65.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.65.1';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
