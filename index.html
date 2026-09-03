@@ -3440,8 +3440,8 @@
 .sl-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
 .sl-title{font-weight:700;font-size:.92rem;}
 .sl-total{font-weight:800;font-size:1.05rem;color:#d97706;}
-.sl-head{flex-wrap:wrap;}
-.sl-date{font-size:.76rem;font-weight:600;color:var(--text-muted,#94a3b8);}
+.sl-head{flex-wrap:wrap;gap:4px 10px;}
+.sl-date{font-size:.76rem;font-weight:600;color:var(--text-muted,#94a3b8);white-space:nowrap;}
 .sl-head .sl-total{margin-left:auto;}
 .sl-inj{display:flex;align-items:flex-start;gap:8px;margin:0 0 8px;padding:7px 0;
   border-top:1px dashed var(--border,#e2e8f0);border-bottom:1px dashed var(--border,#e2e8f0);}
@@ -3468,6 +3468,20 @@
 .sl-ratio{display:flex;gap:4px;margin:5px 0 0 46px;}
 .sl-rbtn{font-size:.68rem;padding:2px 8px;border-radius:6px;border:1px solid var(--border,#e2e8f0);background:transparent;color:var(--text-muted,#94a3b8);cursor:pointer;}
 .sl-rbtn.on{background:var(--primary,#2563eb);border-color:var(--primary,#2563eb);color:#fff;font-weight:700;}
+.sl-dose{margin-top:10px;padding:9px 10px;border-radius:10px;border:1.5px solid #d97706;background:rgba(217,119,6,.06);}
+.sl-dose-top{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.sl-dose-lbl{font-size:.82rem;font-weight:700;}
+.sl-dose-val{font-size:1.45rem;font-weight:800;color:#d97706;line-height:1;}
+.sl-dose-val small{font-size:.72rem;font-weight:700;}
+.sl-dose-raw{font-size:.7rem;color:var(--text-muted,#94a3b8);margin-top:3px;}
+.sl-dose-brk{font-size:.68rem;color:var(--text-muted,#94a3b8);line-height:1.6;margin-top:4px;}
+.sl-dose-nobg{color:#b45309;}
+.sl-dose-act{display:flex;align-items:center;flex-wrap:wrap;gap:5px;margin-top:8px;}
+.sl-dose-ioblbl{font-size:.68rem;color:var(--text-muted,#94a3b8);}
+.sl-dose-iob{width:56px;padding:2px 6px;border-radius:6px;border:1px solid var(--border,#e2e8f0);background:var(--card,#fff);color:inherit;font-size:.8rem;font-weight:700;text-align:right;}
+.sl-dose-unit{font-size:.68rem;color:var(--text-muted,#94a3b8);}
+.sl-dose-btn{margin-left:auto;padding:5px 12px;border-radius:8px;border:none;background:#d97706;color:#fff;font-size:.78rem;font-weight:700;cursor:pointer;}
+.sl-dose-foot{font-size:.66rem;color:var(--text-muted,#94a3b8);margin-top:7px;}
 .sl-alert{margin-top:8px;padding:6px 9px;border-radius:8px;background:#fef2f2;color:#b91c1c;font-size:.74rem;line-height:1.45;}
 .sl-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:.68rem;color:var(--text-muted,#94a3b8);}
 .sl-reset{font-size:.68rem;padding:2px 8px;border-radius:6px;border:1px solid var(--border,#e2e8f0);background:transparent;color:var(--text-muted,#94a3b8);cursor:pointer;}
@@ -3480,7 +3494,7 @@
 .sl-calc-list .sl-gram{margin-left:44px;}
 .sl-calc-list{margin-top:8px;border:1px solid var(--border,#e2e8f0);border-radius:10px;padding:8px 10px;}
 .sl-calc-list:empty{display:none;}
-.sl-calc-head{display:flex;align-items:center;justify-content:space-between;font-size:.76rem;font-weight:700;color:var(--text-muted,#94a3b8);margin-bottom:4px;}
+.sl-calc-head{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.76rem;font-weight:700;color:var(--text-muted,#94a3b8);margin-bottom:4px;}
 .sl-calc-sum{color:#d97706;font-size:.95rem;}
 .sl-calc-list .sl-note,.sl-calc-list .sl-ratio{margin-left:44px;}
 .sl-calc-box{margin:0 0 10px;}
@@ -4360,6 +4374,38 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.66.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.66.0</span>
+          <span class="cl-date">2026-09-03</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【學校午餐】卡片底部直接顯示建議劑量，不必再開劑量計算機。菜單已知醣量、血糖從上方欄位帶入，資訊本來就齊全</li>
+          <li>【學校午餐】公式與劑量計算機完全一致（醣量 ÷ CIR ＋ 血糖校正 − IOB），係數直接讀「餐前計算參數」的午餐設定，不另建一套算法</li>
+          <li>【學校午餐】捨入沿用既有規則：.1~.2 打整數、.3~.7 打 .5、.8~.9 打整數並補糖，並顯示試算原始值與套用的規則</li>
+          <li>【學校午餐】列出計算過程（醣量 ÷ CIR、血糖校正、IOB），數字怎麼來的一眼看得到</li>
+          <li>【學校午餐】血糖未填時只算醣量劑量，並明確標示「血糖未填，未計入校正」，不會默默當成 0 校正</li>
+          <li>【學校午餐】區塊內含 IOB 輸入欄（預設 0，換日自動歸零，不留舊值），以及「帶入 N U」按鈕可直接寫入午餐劑量欄位</li>
+          <li>【學校午餐】沿用計算機的低／高血糖警示（&lt;70、&ge;250），並常駐標示為試算值，需依醫療團隊指示確認後再施打</li>
+          <li>【學校午餐】改份量、改公克數、改血糖時，建議劑量即時重算</li>
+        </ul>
+      </div>
+
+      <!-- v2.65.2 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.65.2</span>
+          <span class="cl-date">2026-09-03</span>
+          <span class="cl-tag">修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【學校午餐】標題與日期之間缺少間距，顯示成「今日學校午餐2026/9/3 (四)」黏在一起，補上間隔</li>
+          <li>【學校午餐】日期加上不換行設定，窄畫面時「2026/9/3 (四)」不會被拆成兩行</li>
+        </ul>
+      </div>
 
       <!-- v2.65.1 -->
       <div class="cl-entry">
@@ -12740,6 +12786,7 @@ function smResetStapleG(date){
 function smRefreshAll(date){
   renderSchoolLunch();
   smRenderCalcChip('noon');
+  smUpdateDose();
   if (typeof calcRecalc === 'function') {
     var ov = document.getElementById('calcOverlay');
     if (ov && ov.classList.contains('open')) calcRecalc();
@@ -12841,6 +12888,101 @@ function smMealTime(){
            eat: (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm };
 }
 
+/* ── 卡片底部：直接在菜單頁試算建議劑量 ──
+   ⚠️ 只讀取現有欄位與 getMealPreset('lunch')，公式與劑量計算機完全一致，
+      不另建一套算法。捨入規則沿用 buildRoundHint() 的 .1~.2↓ / .3~.7→.5 / .8~.9↑ */
+var _smIOB = 0, _smIOBDate = '';
+function smIOB(date){
+  if (date && _smIOBDate !== date) { _smIOB = 0; _smIOBDate = date; }
+  return _smIOB;
+}
+function smSetIOB(v){
+  var n = parseFloat(v);
+  _smIOB = (isFinite(n) && n > 0) ? Math.round(n * 10) / 10 : 0;
+  var dEl = document.getElementById('todayDate');
+  _smIOBDate = dEl ? dEl.value : '';
+  smUpdateDose();
+}
+function smRoundDose(raw){
+  if (!(raw > 0)) return 0;
+  var i = Math.floor(raw), dec10 = Math.round((raw % 1) * 10);
+  if (dec10 === 0 || dec10 <= 2) return i;
+  if (dec10 <= 7) return i + 0.5;
+  return i + 1;
+}
+function smRoundNote(raw){
+  var dec10 = Math.round((raw % 1) * 10);
+  if (dec10 === 0) return '整數，直接打';
+  if (dec10 <= 2) return '.1~.2 → 打整數';
+  if (dec10 <= 7) return '.3~.7 → 打 .5';
+  return '.8~.9 → 打整數並補糖';
+}
+function smDoseCalc(date){
+  var preset = null;
+  try { preset = getMealPreset('lunch'); } catch(e){}
+  if (!preset) return null;
+  var cir = parseFloat(preset.cir) || 0,
+      isf = parseFloat(preset.isf) || 0,
+      tgt = parseFloat(preset.target) || 0;
+  if (!(cir > 0)) return null;
+  var carbs = smTotal(date);
+  var bgEl = document.getElementById('noon-bg');
+  var bg = bgEl ? parseFloat(bgEl.value) : NaN;
+  var hasBG = isFinite(bg) && bg > 0;
+  var iob = smIOB(date);
+  var meal = carbs / cir;
+  var corr = (hasBG && isf > 0) ? (bg - tgt) / isf : 0;
+  var raw  = Math.max(0, meal + corr - iob);
+  return { carbs:carbs, cir:cir, isf:isf, target:tgt, bg:(hasBG?bg:null),
+           iob:iob, meal:meal, corr:corr, raw:raw, sugg:smRoundDose(raw) };
+}
+function smDoseHTML(date){
+  var d = smDoseCalc(date);
+  if (!d) return '';
+  var warn = [];
+  if (d.bg != null && d.bg < 70)   warn.push('目前血糖偏低。通常應先處理低血糖，不建議只依試算結果施打餐前胰島素。');
+  if (d.bg != null && d.bg >= 250) warn.push('目前血糖偏高。若有酮體、嘔吐、腹痛或不適，請依醫療團隊的高血糖處置流程。');
+  var brk = '醣量 ' + d.carbs + ' g ÷ CIR ' + d.cir + ' = ' + d.meal.toFixed(1) + ' U';
+  brk += (d.bg != null)
+    ? '　·　血糖校正 (' + d.bg + ' − ' + d.target + ') ÷ ' + d.isf + ' = ' + (d.corr >= 0 ? '+' : '') + d.corr.toFixed(1) + ' U'
+    : '　·　<span class="sl-dose-nobg">血糖未填，未計入校正</span>';
+  if (d.iob > 0) brk += '　·　IOB − ' + d.iob + ' U';
+  return '<div class="sl-dose">'
+    + '<div class="sl-dose-top">'
+      + '<span class="sl-dose-lbl">💊 建議劑量</span>'
+      + '<span class="sl-dose-val">' + d.sugg + '<small> U</small></span>'
+    + '</div>'
+    + '<div class="sl-dose-raw">試算 ' + d.raw.toFixed(1) + ' U（' + smRoundNote(d.raw) + '）</div>'
+    + '<div class="sl-dose-brk">' + brk + '</div>'
+    + '<div class="sl-dose-act">'
+      + '<span class="sl-dose-ioblbl">有效胰島素 IOB</span>'
+      + '<input type="number" class="sl-dose-iob" min="0" max="50" step="0.1" value="' + d.iob + '"'
+        + ' onchange="smSetIOB(this.value)" />'
+      + '<span class="sl-dose-unit">U</span>'
+      + '<button type="button" class="sl-dose-btn" onclick="smApplyDose()">帶入 ' + d.sugg + ' U</button>'
+    + '</div>'
+    + warn.map(function(w){ return '<div class="sl-alert">&#9888; ' + w + '</div>'; }).join('')
+    + '<div class="sl-dose-foot">試算值，實際劑量請依醫療團隊指示確認後再施打</div>'
+  + '</div>';
+}
+function smUpdateDose(){
+  var slot = document.getElementById('sl-dose-slot');
+  if (!slot) return;
+  var dEl = document.getElementById('todayDate');
+  slot.innerHTML = smDoseHTML(dEl ? dEl.value : '');
+}
+function smApplyDose(){
+  var dEl = document.getElementById('todayDate');
+  var d = smDoseCalc(dEl ? dEl.value : '');
+  if (!d) return;
+  var el = document.getElementById('noon-insulin');
+  if (!el) return;
+  el.value = d.sugg;
+  if (typeof onInsInput === 'function') { try { onInsInput('noon'); } catch(e){} }
+  smUpdateInjRow();
+  if (typeof showToast === 'function') showToast('已帶入 ' + d.sugg + ' U，確認後請按儲存');
+}
+
 /* ── 卡片第二列：由上方午餐欄位帶入的施打資訊 ── */
 function smInjHTML(){
   var g = function(id){ var e = document.getElementById(id); return e ? (e.value || '') : ''; };
@@ -12869,11 +13011,12 @@ var _smInjBound = false;
 function smBindInjWatch(){
   if (_smInjBound) return;
   var ok = true;
-  ['noon-time', 'noon-insulin', 'noon-site', 'noon-alarm-min'].forEach(function(id){
+  var sync = function(){ smUpdateInjRow(); smUpdateDose(); };
+  ['noon-time', 'noon-insulin', 'noon-site', 'noon-alarm-min', 'noon-bg'].forEach(function(id){
     var e = document.getElementById(id);
     if (!e) { ok = false; return; }
-    e.addEventListener('input',  smUpdateInjRow);
-    e.addEventListener('change', smUpdateInjRow);
+    e.addEventListener('input',  sync);
+    e.addEventListener('change', sync);
   });
   if (ok) _smInjBound = true;
 }
@@ -12944,6 +13087,7 @@ function renderSchoolLunch(){
       + ' 屬低 GI／高油，醣類吸收比胰島素慢，餐後 1～2 小時可能先偏低、之後才回升。'
       + '施打時機若要調整，請依醫療團隊指示。</div>';
   }
+  html += '<div id="sl-dose-slot">' + smDoseHTML(date) + '</div>';
   html += '<div class="sl-foot">'
     + '<span>保守估算（不確定的往低算）。主食填實際公克數，配菜沒吃完請點份量</span>'
     + (adjusted ? '<button type="button" class="sl-reset" onclick="smResetPortions(\'' + date + '\')">還原份量</button>' : '')
@@ -13843,7 +13987,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.65.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.66.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
