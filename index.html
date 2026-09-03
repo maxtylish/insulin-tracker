@@ -3440,6 +3440,15 @@
 .sl-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
 .sl-title{font-weight:700;font-size:.92rem;}
 .sl-total{font-weight:800;font-size:1.05rem;color:#d97706;}
+.sl-head{flex-wrap:wrap;}
+.sl-date{font-size:.76rem;font-weight:600;color:var(--text-muted,#94a3b8);}
+.sl-head .sl-total{margin-left:auto;}
+.sl-inj{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;padding:7px 9px;border-radius:8px;background:var(--bg,#f1f5f9);}
+.sl-inj-item{display:flex;align-items:baseline;gap:5px;flex:1 1 auto;min-width:88px;}
+.sl-inj-lbl{font-size:.66rem;color:var(--text-muted,#94a3b8);white-space:nowrap;}
+.sl-inj-val{font-size:.82rem;font-weight:700;}
+.sl-inj-none{color:var(--text-muted,#94a3b8);font-weight:400;}
+.sl-inj-sub{display:block;font-size:.62rem;font-weight:400;color:var(--text-muted,#94a3b8);margin-top:1px;}
 .sl-row{padding:6px 0;border-top:1px dashed var(--border,#e2e8f0);}
 .sl-row:first-of-type{border-top:none;}
 .sl-row-off{opacity:.42;}
@@ -4347,6 +4356,22 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.65.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.65.0</span>
+          <span class="cl-date">2026-09-03</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【學校午餐】卡片標題右側顯示日期與星期（例：2026/9/3 (四)），放假日的卡片也一併顯示，避免翻日期時看錯是哪一天的菜單</li>
+          <li>【學校午餐】卡片第二列新增施打資訊摘要：施打部位、生效時間、施打劑量，數值由上方午餐欄位即時帶入，尚未填寫顯示「—」</li>
+          <li>【學校午餐】「生效時間」顯示的是<strong>推算的開始用餐時間</strong>＝注射時間 ＋ 該部位的等待分鐘數（肚子 15 分／手臂 20 分／大腿 30 分），下方小字標示「注射 11:10 +20 分」讓來源一目了然。若有自行設定用餐倒計時，優先採用倒計時的分鐘數</li>
+          <li>【學校午餐】上方午餐欄位一改動，第二列立即同步（採 addEventListener 監聽，不影響既有欄位行為）</li>
+          <li>【學校午餐】劑量計算機的菜色明細標頭也一併顯示日期</li>
+        </ul>
+      </div>
 
       <!-- v2.64.0 -->
       <div class="cl-entry">
@@ -12761,6 +12786,79 @@ var SM_RATIOS = [ {v:1,l:'全'}, {v:0.5,l:'1/2'}, {v:0.33,l:'1/3'}, {v:0,l:'x'} 
 
 // 逐項列渲染（今日記錄卡片與劑量計算機共用）
 // 回傳 { html, hidden:[隱藏醣菜名], adjusted:是否有調過份量 }
+/* ── 卡片標頭：日期 ── */
+var SM_WD = ['日','一','二','三','四','五','六'];
+function smDateLabel(date){
+  var p = (date || '').split('-');
+  if (p.length !== 3) return '';
+  var d = new Date(date + 'T00:00:00');
+  if (isNaN(d.getTime())) return '';
+  return p[0] + '/' + parseInt(p[1], 10) + '/' + parseInt(p[2], 10) + ' (' + SM_WD[d.getDay()] + ')';
+}
+
+/* ── 生效時間 = 注射時間 + 該部位的等待分鐘數 ── */
+function smMealTime(){
+  var tEl = document.getElementById('noon-time');
+  var t = tEl ? (tEl.value || '') : '';
+  var m = /^(\d{1,2}):(\d{2})$/.exec(t);
+  if (!m) return null;
+  var site = '';
+  var sEl = document.getElementById('noon-site');
+  if (sEl && sEl.selectedIndex >= 0 && sEl.options[sEl.selectedIndex]) {
+    var op = sEl.options[sEl.selectedIndex];
+    site = op.value || op.text || '';
+  }
+  // 優先用使用者在「用餐倒計時」選的分鐘數，其次用該部位的預設等待時間
+  var wait = 0;
+  var aEl = document.getElementById('noon-alarm-min');
+  if (aEl && aEl.value) wait = parseInt(aEl.value, 10) || 0;
+  if (wait <= 0 && typeof SITE_ALARM_MAP !== 'undefined' && SITE_ALARM_MAP[site]) {
+    wait = SITE_ALARM_MAP[site].def || 0;
+  }
+  var tot = parseInt(m[1], 10) * 60 + parseInt(m[2], 10) + wait;
+  tot = ((tot % 1440) + 1440) % 1440;
+  var hh = Math.floor(tot / 60), mm = tot % 60;
+  return { inj: t, wait: wait,
+           eat: (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm };
+}
+
+/* ── 卡片第二列：由上方午餐欄位帶入的施打資訊 ── */
+function smInjHTML(){
+  var g = function(id){ var e = document.getElementById(id); return e ? (e.value || '') : ''; };
+  var site = '';
+  var sEl = document.getElementById('noon-site');
+  if (sEl && sEl.selectedIndex >= 0 && sEl.options[sEl.selectedIndex]) site = sEl.options[sEl.selectedIndex].text;
+  var ins = g('noon-insulin');
+  var dash = '<span class="sl-inj-none">—</span>';
+  var item = function(lbl, val, sub){
+    return '<div class="sl-inj-item"><span class="sl-inj-lbl">' + lbl + '</span>'
+         + '<span class="sl-inj-val">' + (val || dash)
+         + (val && sub ? '<span class="sl-inj-sub">' + sub + '</span>' : '')
+         + '</span></div>';
+  };
+  var mt = smMealTime();
+  var eatVal = mt ? mt.eat : '';
+  var eatSub = mt ? (mt.wait > 0 ? '注射 ' + mt.inj + ' +' + mt.wait + ' 分' : '注射 ' + mt.inj) : '';
+  return item('施打部位', site) + item('生效時間', eatVal, eatSub) + item('施打劑量', ins ? ins + ' U' : '');
+}
+function smUpdateInjRow(){
+  var el = document.getElementById('sl-inj');
+  if (el) el.innerHTML = smInjHTML();
+}
+// 上方午餐欄位變動時同步第二列（用 addEventListener，不動既有 inline handler）
+var _smInjBound = false;
+function smBindInjWatch(){
+  if (_smInjBound) return;
+  var ok = true;
+  ['noon-time', 'noon-insulin', 'noon-site', 'noon-alarm-min'].forEach(function(id){
+    var e = document.getElementById(id);
+    if (!e) { ok = false; return; }
+    e.addEventListener('input',  smUpdateInjRow);
+    e.addEventListener('change', smUpdateInjRow);
+  });
+  if (ok) _smInjBound = true;
+}
+
 function smRowsHTML(date){
   var rows = smRows(date) || [], p = smPortions(date);
   var hidden = [], adjusted = false, html = '';
@@ -12805,13 +12903,18 @@ function renderSchoolLunch(){
   var m = SCHOOL_MENU[date];
   if (!m) { slot.innerHTML = ''; return; }
   if (m.off) {
-    slot.innerHTML = '<div class="sl-card sl-card-off">🏫 今日無學校午餐（' + m.off + '）</div>';
+    slot.innerHTML = '<div class="sl-card sl-card-off">🏫 ' + smDateLabel(date)
+      + ' 無學校午餐（' + m.off + '）</div>';
     return;
   }
   var st = smRowsHTML(date), hidden = st.hidden, adjusted = st.adjusted;
   var html = '<div class="sl-card">'
-    + '<div class="sl-head"><span class="sl-title">🏫 今日學校午餐</span>'
-    + '<span class="sl-total">' + smTotal(date) + ' g</span></div>'
+    + '<div class="sl-head">'
+      + '<span class="sl-title">🏫 今日學校午餐</span>'
+      + '<span class="sl-date">' + smDateLabel(date) + '</span>'
+      + '<span class="sl-total">' + smTotal(date) + ' g</span>'
+    + '</div>'
+    + '<div class="sl-inj" id="sl-inj">' + smInjHTML() + '</div>'
     + st.html;
   if (hidden.length) {
     html += '<div class="sl-alert">&#9888; 隱藏醣：' + hidden.join('、') + '</div>';
@@ -12827,6 +12930,7 @@ function renderSchoolLunch(){
     + (adjusted ? '<button type="button" class="sl-reset" onclick="smResetPortions(\'' + date + '\')">還原份量</button>' : '')
     + '</div></div>';
   slot.innerHTML = html;
+  smBindInjWatch();
 }
 
 /* ── 設定頁：預設飯量 ── */
@@ -12912,7 +13016,7 @@ function smRenderCalcChip(periodId){
   if (list) {
     var st = smRowsHTML(date);
     list.innerHTML = '<div class="sl-calc-head">'
-        + '<span>今日菜色明細</span>'
+        + '<span>今日菜色明細 <span class="sl-date">' + smDateLabel(date) + '</span></span>'
         + '<span class="sl-calc-sum">' + total + ' g</span>'
       + '</div>'
       + st.html
@@ -13720,7 +13824,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.64.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.65.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
