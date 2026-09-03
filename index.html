@@ -3443,6 +3443,14 @@
 .sl-head{flex-wrap:wrap;gap:4px 10px;}
 .sl-date{font-size:.76rem;font-weight:600;color:var(--text-muted,#94a3b8);white-space:nowrap;}
 .sl-head .sl-total{margin-left:auto;}
+.sl-now{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin:0 0 7px;font-size:.74rem;}
+.sl-now-time{color:var(--text-muted,#94a3b8);}
+.sl-now-cgm{margin-left:auto;color:var(--text-muted,#94a3b8);}
+.sl-now-cgm strong{font-size:.94rem;color:#0369a1;}
+.sl-now-stale strong,.sl-now-stale{color:#b45309;}
+.sl-now-ago{font-size:.66rem;}
+.sl-dose-cgm{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:6px;padding:5px 8px;border-radius:7px;background:rgba(3,105,161,.08);font-size:.7rem;color:#0369a1;}
+.sl-dose-cgmbtn{margin-left:auto;padding:2px 9px;border-radius:6px;border:1px solid #0369a1;background:transparent;color:#0369a1;font-size:.68rem;font-weight:700;cursor:pointer;}
 .sl-inj{display:flex;align-items:flex-start;gap:8px;margin:0 0 8px;padding:7px 0;
   border-top:1px dashed var(--border,#e2e8f0);border-bottom:1px dashed var(--border,#e2e8f0);}
 .sl-inj-item{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:2px;}
@@ -4374,6 +4382,40 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.68.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.68.0</span>
+          <span class="cl-date">2026-09-04</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【學校午餐】卡片新增「現在時間 ＋ 目前血糖」一列，顯示 CGM 即時數值、趨勢箭頭與資料時間（超過 20 分鐘未更新會變色標示）。此頁面是每天與老師溝通劑量與用餐量的介面，需要看得到當下狀態</li>
+          <li>【學校午餐／重要說明】建議劑量的血糖校正<strong>採用午餐欄位裡填的血糖值，不是即時 CGM 值</strong>。若該欄位填的是稍早的數值，校正就是用那個舊值算的</li>
+          <li>【學校午餐】劑量區塊新增血糖來源對照：當計算用的血糖與目前 CGM 相差 20 mg/dL 以上時，明確列出兩個數值與差距，並提供「改用 N」一鍵以目前血糖重算</li>
+          <li>【學校午餐】血糖欄位空白時，直接顯示目前 CGM 值與「帶入 N」按鈕</li>
+          <li>【學校午餐】時間與血糖每 30 秒自動更新；使用者正在輸入 IOB 時不重繪，避免輸入被中斷</li>
+        </ul>
+      </div>
+
+      <!-- v2.67.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.67.0</span>
+          <span class="cl-date">2026-09-03</span>
+          <span class="cl-tag">修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【重大／劑量安全】開啟午餐劑量計算機時，若當天有學校菜單，「預計碳水量」自動帶入實際醣量，不再沿用預設值 60 克</li>
+          <li>【問題說明】60 克只是欄位的佔位預設值。以 9/3 為例實際校餐醣量 47.4 克，計算機若停在 60 克，以 CIR 10 換算會多算 1.3 單位（試算 6.7 對 5.4）。菜單卡片與計算機的公式本來就一致，差異全來自這個沒被取代的預設值</li>
+          <li>【計算劑量】自動帶入後按鈕顯示「✅ 已帶入校餐 N g（點此改回手動輸入）」，仍可點一下取消改為手動輸入</li>
+          <li>【計算劑量】僅在午餐、當天有菜單、且不是還原上次輸入內容時才自動帶入，不影響早餐／晚餐既有的內容還原行為</li>
+          <li>【重大／劑量安全】「預計碳水量」欄位的預設值 60 全面移除，改為空白並顯示提示文字。早餐與晚餐沒有菜單可自動帶入，若忘記修改就直接看建議劑量，同樣會得到一個偏高的數字</li>
+          <li>【計算劑量／點心】修正點心劑量計算會沿用午餐留下的碳水量與校餐帶入值的問題。開啟點心計算時碳水量一律清空、校餐帶入自動取消，calcRecalc() 內也再擋一層，確保點心不會誤加整餐校餐的醣量</li>
+          <li>【計算劑量】碳水量空白時結果只含血糖校正劑量，並明確警示「尚未輸入預計碳水量，目前結果只含血糖校正，不含餐食劑量」，不會默默給出看似完整的建議值</li>
+        </ul>
+      </div>
 
       <!-- v2.66.1 -->
       <div class="cl-entry">
@@ -12416,6 +12458,10 @@ function openSnackCalcModal(sectionId) {
   document.getElementById('calc-other-carbs').value = '';
   _fdbItems = []; if (typeof fdbRender === 'function') fdbRender();
   document.getElementById('calc-iob').value = '';
+  // v2.67.0：點心模式不沿用午餐留下的碳水量與校餐帶入值
+  document.getElementById('calc-carbs').value = '';
+  if (typeof _smCalcCarbs !== 'undefined') _smCalcCarbs = 0;
+  if (typeof smRenderCalcChip === 'function') smRenderCalcChip(null);
   calcUpdateMeal();
   calcRecalc();
   document.getElementById('calcOverlay').classList.add('open');
@@ -12490,7 +12536,7 @@ function _calcRestore(s) {
     set('calc-other-name',  s.otherName  || '');
     set('calc-other-carbs', s.otherCarbs || '');
     set('calc-iob',   s.iob   || 0);
-    set('calc-carbs', s.carbs || 60);       // 若有選食物，calcRecalc() 會重算覆蓋
+    set('calc-carbs', s.carbs || '');       // 若有選食物，calcRecalc() 會重算覆蓋
     calcRecalc();
     return true;
   } catch(e) { return false; }
@@ -12506,7 +12552,7 @@ function _calcResetFields() {
   set('calc-iob', 0);
   set('calc-other-carbs', '');
   set('calc-other-name', '');
-  set('calc-carbs', 60);
+  set('calc-carbs', '');   // v2.67.0：不再預填 60，避免忘記修改就直接看建議劑量
   if (typeof _smCalcCarbs !== 'undefined') _smCalcCarbs = 0;
   var w = document.getElementById('calc-warnings');
   if (w) w.innerHTML = '';
@@ -12564,6 +12610,10 @@ function openCalcModal(periodId) {
       var _msEl = document.getElementById('calc-meal-set');
       if (_msEl) _msEl.value = '';
       calcUpdateMeal();
+      // v2.67.0：當天有學校菜單就自動帶入實際醣量，不留預設值 60
+      if (typeof smAutoApplyOnOpen === 'function' && smAutoApplyOnOpen(periodId)) {
+        if (typeof calcRecalc === 'function') calcRecalc();
+      }
     }
     _calcSetRestoredHint(restored);
 
@@ -12963,6 +13013,19 @@ function smDoseHTML(date){
     ? '　·　血糖校正 (' + d.bg + ' − ' + d.target + ') ÷ ' + d.isf + ' = ' + (d.corr >= 0 ? '+' : '') + d.corr.toFixed(1) + ' U'
     : '　·　<span class="sl-dose-nobg">血糖未填，未計入校正</span>';
   if (d.iob > 0) brk += '　·　IOB − ' + d.iob + ' U';
+  // 計算用的是午餐欄位填的血糖，不是即時值 → 與目前 CGM 對照
+  var c = smCgmNow(), cmp = '';
+  if (d.bg != null && c) {
+    var diff = c.sgv - d.bg;
+    if (Math.abs(diff) >= 20) {
+      cmp = '<div class="sl-dose-cgm">計算用血糖 <strong>' + d.bg + '</strong>，'
+          + '目前 ' + c.sgv + '（' + (diff > 0 ? '+' : '') + diff + '）'
+          + '<button type="button" class="sl-dose-cgmbtn" onclick="smUseCgmBG()">改用 ' + c.sgv + '</button></div>';
+    }
+  } else if (d.bg == null && c) {
+    cmp = '<div class="sl-dose-cgm">血糖未填，目前 ' + c.sgv
+        + '<button type="button" class="sl-dose-cgmbtn" onclick="smUseCgmBG()">帶入 ' + c.sgv + '</button></div>';
+  }
   return '<div class="sl-dose">'
     + '<div class="sl-dose-top">'
       + '<span class="sl-dose-lbl">💊 建議劑量</span>'
@@ -12970,6 +13033,7 @@ function smDoseHTML(date){
     + '</div>'
     + '<div class="sl-dose-raw">試算 ' + d.raw.toFixed(1) + ' U（' + smRoundNote(d.raw) + '）</div>'
     + '<div class="sl-dose-brk">' + brk + '</div>'
+    + cmp
     + '<div class="sl-dose-act">'
       + '<span class="sl-dose-ioblbl">有效胰島素 IOB</span>'
       + '<input type="number" class="sl-dose-iob" min="0" max="50" step="0.1" value="' + d.iob + '"'
@@ -12997,6 +13061,55 @@ function smApplyDose(){
   if (typeof onInsInput === 'function') { try { onInsInput('noon'); } catch(e){} }
   smUpdateInjRow();
   if (typeof showToast === 'function') showToast('已帶入 ' + d.sugg + ' U，確認後請按儲存');
+}
+
+/* ── 現在時間 + 目前 CGM 血糖（此頁面用於每日與老師溝通劑量） ── */
+function smCgmNow(){
+  var e = (typeof lastCGMEntry !== 'undefined') ? lastCGMEntry : null;
+  if (!e || !e.sgv) return null;
+  var ms = e.date || (e.dateString ? new Date(e.dateString).getTime() : Date.now());
+  return { sgv: Math.round(e.sgv),
+           trend: (typeof NS_TREND !== 'undefined' && NS_TREND[e.direction]) || '',
+           mins: Math.round((Date.now() - ms) / 60000) };
+}
+function smNowHTML(){
+  var n = new Date();
+  var out = '<span class="sl-now-time">現在 '
+    + ('0' + n.getHours()).slice(-2) + ':' + ('0' + n.getMinutes()).slice(-2) + '</span>';
+  var c = smCgmNow();
+  if (c) {
+    var ago = (typeof _fmtTimeAgo === 'function') ? _fmtTimeAgo(c.mins) : c.mins + ' 分鐘前';
+    out += '<span class="sl-now-cgm' + (c.mins > 20 ? ' sl-now-stale' : '') + '">'
+         + '目前血糖 <strong>' + c.sgv + '</strong> ' + c.trend
+         + ' <span class="sl-now-ago">' + ago + '</span></span>';
+  } else {
+    out += '<span class="sl-now-cgm sl-now-stale">目前血糖 無 CGM 資料</span>';
+  }
+  return out;
+}
+function smUpdateNow(){
+  var el = document.getElementById('sl-now');
+  if (el) el.innerHTML = smNowHTML();
+}
+function smUseCgmBG(){
+  var c = smCgmNow();
+  if (!c) return;
+  var el = document.getElementById('noon-bg');
+  if (!el) return;
+  el.value = c.sgv;
+  if (typeof onBGInput === 'function') { try { onBGInput('noon'); } catch(e){} }
+  smUpdateNow(); smUpdateDose();
+  if (typeof showToast === 'function') showToast('已帶入目前血糖 ' + c.sgv);
+}
+var _smNowTimer = null;
+function smStartNowTicker(){
+  if (_smNowTimer) return;
+  _smNowTimer = setInterval(function(){
+    smUpdateNow();
+    // 使用者正在輸入 IOB 時不重繪劑量區塊，避免打到一半被清掉
+    var ae = document.activeElement;
+    if (!(ae && ae.classList && ae.classList.contains('sl-dose-iob'))) smUpdateDose();
+  }, 30000);
 }
 
 /* ── 卡片第二列：由上方午餐欄位帶入的施打資訊 ── */
@@ -13092,6 +13205,7 @@ function renderSchoolLunch(){
       + '<span class="sl-date">' + smDateLabel(date) + '</span>'
       + '<span class="sl-total">' + smTotal(date) + ' g</span>'
     + '</div>'
+    + '<div class="sl-now" id="sl-now">' + smNowHTML() + '</div>'
     + '<div class="sl-inj" id="sl-inj">' + smInjHTML() + '</div>'
     + st.html;
   if (hidden.length) {
@@ -13110,6 +13224,7 @@ function renderSchoolLunch(){
     + '</div></div>';
   slot.innerHTML = html;
   smBindInjWatch();
+  smStartNowTicker();
 }
 
 /* ── 設定頁：預設飯量 ── */
@@ -13186,7 +13301,7 @@ function smRenderCalcChip(periodId){
   var btn = document.getElementById('sl-calc-btn');
   if (btn) {
     btn.textContent = _smCalcCarbs > 0
-      ? '\u2705 已帶入校餐 ' + total + ' g（點此取消）'
+      ? '\u2705 已帶入校餐 ' + total + ' g（點此改回手動輸入）'
       : '\uD83C\uDFEB 帶入今日校餐 ' + total + ' g';
     btn.classList.toggle('on', _smCalcCarbs > 0);
   }
@@ -13204,6 +13319,16 @@ function smRenderCalcChip(periodId){
       + (st.adjusted ? '<button type="button" class="sl-reset" onclick="smResetPortions(\'' + date + '\')">還原份量</button>' : '')
       + '</div>';
   }
+}
+// 開啟午餐計算機時自動帶入當天校餐醣量，取代「預計碳水量」的預設值 60。
+// 60 只是佔位數字，若當天實際醣量較低會直接高估劑量。回傳是否有帶入。
+function smAutoApplyOnOpen(periodId){
+  if (!smCalcAvailable(periodId)) return false;
+  var dEl = document.getElementById('todayDate');
+  var t = smTotal(dEl ? dEl.value : '');
+  if (!(t > 0)) return false;
+  _smCalcCarbs = t;
+  return true;
 }
 function smApplyToCalc(){
   var date = document.getElementById('todayDate').value;
@@ -13376,8 +13501,9 @@ function calcRecalc() {
   // 加上食材庫小計
   var fdbC = (typeof fdbTotal === 'function') ? fdbTotal() : 0;
   if (fdbC > 0) { totalCarbs += fdbC; hasFood = true; }
-  // v2.59.0 學校午餐帶入量
-  var smC = (typeof _smCalcCarbs === 'number') ? _smCalcCarbs : 0;
+  // v2.59.0 學校午餐帶入量（v2.67.0：點心模式不計入）
+  var smC = (typeof calcIsSnackMode !== 'undefined' && calcIsSnackMode) ? 0
+          : ((typeof _smCalcCarbs === 'number') ? _smCalcCarbs : 0);
   if (smC > 0) { totalCarbs += smC; hasFood = true; }
 
   if (hasFood) {
@@ -13400,6 +13526,7 @@ function calcRecalc() {
 
   // Warnings
   const warns = [];
+  if (!(carbs > 0)) warns.push('尚未輸入預計碳水量，目前結果只含血糖校正，不含餐食劑量。');
   if (bg > 0 && bg < 70)  warns.push('目前血糖偏低。通常應先處理低血糖，不建議只依計算結果施打餐前胰島素。');
   if (bg >= 250)           warns.push('目前血糖偏高。若有酮體、嘔吐、腹痛或不適，請依照醫療團隊的高血糖處置流程。');
   if (bg > 0 && preset.target > bg) warns.push('目標血糖高於目前血糖，校正劑量會是負值，結果主要來自碳水劑量。');
@@ -14003,7 +14130,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.66.1';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.68.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
@@ -17504,7 +17631,7 @@ function checkTodoAlerts() {
         <div class="calc-grid-2">
           <div class="calc-field">
             <label>預計碳水量 (克)</label>
-            <input type="number" id="calc-carbs" min="0" step="1" value="60" oninput="calcRecalc()" />
+            <input type="number" id="calc-carbs" min="0" step="1" value="" placeholder="請輸入" oninput="calcRecalc()" />
           </div>
           <div class="calc-field">
             <label>有效胰島素 IOB (單位)</label>
