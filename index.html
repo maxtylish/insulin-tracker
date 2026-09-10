@@ -3508,6 +3508,10 @@
 .sl-calc-box{margin:0 0 10px;}
 .sl-calc-btn{width:100%;padding:9px;border-radius:10px;border:1px dashed var(--primary,#2563eb);background:transparent;color:var(--primary,#2563eb);font-size:.86rem;font-weight:700;cursor:pointer;}
 .sl-calc-btn.on{background:var(--primary,#2563eb);color:#fff;border-style:solid;}
+/* v2.72.0 顯示日期防呆 */
+.date-warn-bar{display:flex;align-items:center;flex-wrap:wrap;gap:6px 10px;margin:0 0 10px;padding:8px 11px;border-radius:10px;background:#fef2f2;border:1px solid #fecaca;}
+.date-warn-txt{flex:1 1 200px;font-size:.76rem;line-height:1.5;color:#b91c1c;}
+.date-warn-btn{padding:5px 12px;border-radius:8px;border:none;background:#dc2626;color:#fff;font-size:.76rem;font-weight:700;cursor:pointer;}
 /* v2.70.0 總碳水手動覆寫 */
 .sl-total-ov{color:#7c3aed;}
 .sl-ov{display:flex;align-items:center;flex-wrap:wrap;gap:5px 7px;margin:0 0 8px;padding:6px 8px;border-radius:9px;background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);}
@@ -3660,6 +3664,8 @@
     <input type="date" id="todayDate" onchange="loadDayData()" />
     <button class="date-nav-btn" onclick="changeDate(1)">›</button>
   </div>
+  <!-- v2.72.0：PWA 開著過夜時日期欄不會自動跳到今天，紀錄會被存進昨天 -->
+  <div id="date-warn"></div>
 
   <!-- ── 左書籤 + 內容 ── -->
   <div class="today-layout">
@@ -4399,6 +4405,20 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.72.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.72.0</span>
+          <span class="cl-date">2026-09-10</span>
+          <span class="cl-tag">重要修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【資料正確性】<strong>日期停在昨天的防呆</strong>：App 掛著不關時日期欄不會跨日自動更新，隔天早上輸入的紀錄會整筆存進昨天。現在顯示日期不是今天時，日期列下方會出現紅色警示條與「跳到今天」按鈕，從背景切回前景也會重新判斷</li>
+          <li>【資料正確性】儲存到非今天的日期時，提示訊息一律標出實際存入的日期</li>
+          <li>【資料正確性】雲端合併收緊：空白紀錄只有在兩邊都有更新時間戳時，才准蓋掉有資料的版本。避免一筆剛存的空白紀錄把尚未帶時間戳的舊資料抹掉</li>
+        </ul>
+      </div>
 
       <!-- v2.71.0 -->
       <div class="cl-entry">
@@ -7471,7 +7491,10 @@ function _mergeDayData(base, inc) {
       // 期別紀錄：先用 _ts 判新舊（可正確處理「使用者刻意清空」）
       var it = Number(iv._ts) || 0;
       var bt = Number((bv && bv._ts) || 0) || 0;
-      if (it || bt)                  out[key] = (it >= bt) ? iv : bv;
+      // v2.72.0 收緊：空白紀錄只有在「兩邊都有 _ts」時才准蓋掉有資料的版本。
+      // 否則一筆剛存的空白紀錄（有 _ts）會把還沒有 _ts 的舊資料整筆抹掉。
+      var emptyOverwrite = (!_periodHasData(iv) && _periodHasData(bv) && !(it && bt));
+      if ((it || bt) && !emptyOverwrite) out[key] = (it >= bt) ? iv : bv;
       else if (_periodHasData(iv))   out[key] = iv;
       else if (_periodHasData(bv))   out[key] = bv;   // 空白不覆蓋有資料的舊紀錄
       else                           out[key] = iv;
@@ -9427,10 +9450,46 @@ function onCorrSiteChange(idx) {
 // ══════════════════════════════════════════
 //  TODAY PAGE — LOAD / SAVE
 // ══════════════════════════════════════════
+/* ── v2.72.0 顯示日期防呆 ──────────────────────────────────────────
+   App 當成 PWA 掛著不關時，todayDate 不會跨日自動更新。隔天早上輸入的紀錄
+   會整筆存進昨天（9/10 早上 09:10 存進 9/9 就是這樣來的）。 */
+function _todayStr(){
+  var d = new Date();
+  return d.getFullYear() + '-' + ('0'+(d.getMonth()+1)).slice(-2) + '-' + ('0'+d.getDate()).slice(-2);
+}
+function _isViewingToday(){
+  var el = document.getElementById('todayDate');
+  return !el || el.value === _todayStr();
+}
+function jumpToToday(){
+  var el = document.getElementById('todayDate');
+  if (!el) return;
+  el.value = _todayStr();
+  loadDayData();
+  if (typeof showToast === 'function') showToast('已跳到今天 ' + _todayStr());
+}
+function updateDateWarn(){
+  var box = document.getElementById('date-warn');
+  if (!box) return;
+  if (_isViewingToday()) { box.innerHTML = ''; return; }
+  var el = document.getElementById('todayDate');
+  box.innerHTML = '<div class="date-warn-bar">'
+    + '<span class="date-warn-txt">&#9888; 目前顯示的是 <strong>' + el.value + '</strong>，不是今天。'
+    + '現在儲存會存進這一天。</span>'
+    + '<button type="button" class="date-warn-btn" onclick="jumpToToday()">跳到今天</button>'
+  + '</div>';
+}
+// 從背景切回前景時重新判斷（跨夜的當下不會有任何事件，只能在回來時提醒）
+document.addEventListener('visibilitychange', function(){
+  if (!document.hidden) updateDateWarn();
+});
+window.addEventListener('focus', updateDateWarn);
+
 function loadDayData() {
   const date = document.getElementById('todayDate').value;
   const all = getAllData();
   const dayData = all[date] || {};
+  updateDateWarn();
 
   PERIODS.forEach(p => {
     const rec = dayData[p.id] || {};
@@ -9531,6 +9590,9 @@ function savePeriod(periodId) {
     //（8/12 與 8/14、8/20 與 8/22、8/24 與 8/26、8/29 與 8/31 都是這樣重複的）。
     loadDayData();
     showToast('✅ ' + mealName + ' 已儲存（跨夜 → 歸入 ' + date + '）');
+  } else if (date !== _todayStr()) {
+    // v2.72.0: 存到非今天時一律把日期講出來，避免日期停在昨天而不自覺
+    showToast('✅ ' + mealName + ' 已儲存 → ' + date + '（不是今天）');
   } else {
     showToast('✅ ' + mealName + ' 已儲存！');
   }
@@ -9582,6 +9644,7 @@ function saveDayData() {
   });
   setAllData(all);
   syncDayToCloud(date, all[date]);
+  if (date !== _todayStr()) showToast('✅ 已儲存 → ' + date + '（不是今天）');
   if (_addedCorr.length) {
     _logSettingChanges(_addedCorr.map(function(r) {
       return { field: '補打', from: '', to: r.dose + ' U' + (r.time ? ' @' + r.time : '') + (r.site ? ' · ' + r.site : '') };
@@ -14385,7 +14448,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.71.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.72.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
