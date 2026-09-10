@@ -3508,6 +3508,23 @@
 .sl-calc-box{margin:0 0 10px;}
 .sl-calc-btn{width:100%;padding:9px;border-radius:10px;border:1px dashed var(--primary,#2563eb);background:transparent;color:var(--primary,#2563eb);font-size:.86rem;font-weight:700;cursor:pointer;}
 .sl-calc-btn.on{background:var(--primary,#2563eb);color:#fff;border-style:solid;}
+/* v2.70.0 總碳水手動覆寫 */
+.sl-total-ov{color:#7c3aed;}
+.sl-ov{display:flex;align-items:center;flex-wrap:wrap;gap:5px 7px;margin:0 0 8px;padding:6px 8px;border-radius:9px;background:var(--card,#fff);border:1px solid var(--border,#e2e8f0);}
+.sl-ov-lbl{font-size:.7rem;font-weight:700;color:var(--text-muted,#94a3b8);}
+.sl-ov-in{width:78px;padding:3px 7px;border-radius:7px;border:1px solid var(--border,#e2e8f0);background:transparent;color:inherit;font-size:.95rem;font-weight:800;text-align:right;}
+.sl-ov-in.on{border-color:#7c3aed;color:#7c3aed;background:rgba(124,58,237,.07);}
+.sl-ov-unit{font-size:.68rem;color:var(--text-muted,#94a3b8);}
+.sl-ov-badge{font-size:.63rem;font-weight:800;padding:2px 7px;border-radius:999px;background:#7c3aed;color:#fff;}
+.sl-ov-btn{font-size:.66rem;padding:2px 8px;border-radius:6px;border:1px solid var(--border,#e2e8f0);background:transparent;color:var(--text-muted,#94a3b8);cursor:pointer;}
+.sl-ov-tip,.sl-ov-same{font-size:.66rem;color:var(--text-muted,#94a3b8);}
+.sl-ov-hint{flex:1 1 100%;font-size:.68rem;}
+.sl-ov-diff{color:#0369a1;font-weight:700;}
+.sl-ov-diff.up{color:#b45309;}
+/* v2.70.0 計算用血糖 */
+.sl-dose-bgrow{display:flex;align-items:center;flex-wrap:wrap;gap:5px 7px;margin-top:8px;}
+.sl-dose-bg{width:74px;padding:2px 6px;border-radius:6px;border:1px solid #0369a1;background:var(--card,#fff);color:#0369a1;font-size:.85rem;font-weight:800;text-align:right;}
+.sl-dose-bgtip{flex:1 1 100%;font-size:.64rem;color:var(--text-muted,#94a3b8);}
 </style>
   <audio id="mealAlarmAudio" src="data:audio/wav;base64,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AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA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AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA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" preload="auto"></audio>
 </head>
@@ -4382,6 +4399,40 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.70.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.70.0</span>
+          <span class="cl-date">2026-09-10</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【學校午餐】<strong>總碳水可直接手動輸入覆寫</strong>：老師回報實際吃的量、臨時加菜或沒吃完時，直接改總碳水，下方建議劑量即時重算。菜單試算值一律保留，旁邊顯示「手動」標記與「回菜單 N g」一鍵還原</li>
+          <li>【學校午餐】手動覆寫時會顯示與菜單試算的差距，並直接換算成單位數（例：+8.6 g ≈ +0.9 U），調高前看得到影響</li>
+          <li>【學校午餐】劑量區塊新增<strong>「計算用血糖」可編輯欄位</strong>：測了指尖血就直接改這裡，以手動輸入為準，並同步寫回上方午餐血糖欄位，確保「算的」與「存的」是同一個值</li>
+          <li>【修正】改上方午餐血糖後，下方建議劑量有時不會跟著重算 —— 舊版把事件綁在個別欄位上，欄位一被重建監聽就永久失效。改為 document 層級委派監聽</li>
+          <li>【修正】正在輸入總碳水／血糖／IOB 時，30 秒自動更新只改數字不重繪，游標不再被踢掉</li>
+        </ul>
+      </div>
+
+      <!-- v2.69.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.69.0</span>
+          <span class="cl-date">2026-09-10</span>
+          <span class="cl-tag">重要修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【資料遺失修正】<strong>計算機「帶入」後那一餐不會被存檔</strong>：帶入是直接寫入欄位，不會觸發自動填時間，儲存鈕因此一直是灰的（disabled）。現在帶入後會自動補上時間並解鎖儲存鈕，提示文字也改為「請按該餐的儲存才會存檔」</li>
+          <li>【資料遺失修正】儲存鈕改為「有血糖或劑量就能按」，不再只看時間欄位</li>
+          <li>【資料遺失修正】沒填時間但有血糖／劑量時，儲存會自動補上現在時間，不再存成 <code>time:''</code> 的隱形紀錄</li>
+          <li>【資料遺失修正】「儲存今日紀錄」不再用空白欄位覆蓋既有紀錄：改以血糖／劑量／備註／時間綜合判斷，任一有值才算有資料（舊版只看時間，是 9/5～9/7 早餐消失的主因）</li>
+          <li>【資料遺失修正】雲端合併改以每筆紀錄的更新時間 <code>_ts</code> 判定新舊，沒有 <code>_ts</code> 的舊資料則「有資料的版本勝出」</li>
+          <li>【資料遺失修正】上傳雲端前先讀回該日雲端版本合併再寫入，避免舊的本機快取整天覆蓋另一台裝置剛存的紀錄</li>
+          <li>【防呆】某一餐原本有紀錄、但目前欄位全空就按儲存時，會先跳出確認視窗</li>
+        </ul>
+      </div>
 
       <!-- v2.68.0 -->
       <div class="cl-entry">
@@ -7262,29 +7313,11 @@ async function loadFromCloud() {
           }
         } else {
           // Merge cloud into local: prefer whichever period record has actual time data
+          // v2.69.0: 統一走 _mergeDayData —— 期別紀錄以 _ts 判新舊，
+          // 沒有 _ts 的舊資料則「有資料的贏」，不再用 time 當唯一判準。
           var existing = allDataCache[row.date] || {};
           var cloudDay = row.data || {};
-          var merged = Object.assign({}, existing);
-          Object.keys(cloudDay).forEach(function(key) {
-            var cv = cloudDay[key];
-            var lv = existing[key];
-            // For period records with time field: prefer the one with real data
-            if (cv && typeof cv === 'object' && !Array.isArray(cv)) {
-              if (cv.time) {
-                merged[key] = cv;  // cloud has real data
-              } else if (lv && lv.time) {
-                merged[key] = lv;  // local has real data, keep it
-              } else {
-                merged[key] = cv;  // neither has time, cloud wins
-              }
-            } else if (Array.isArray(cv) && Array.isArray(lv)) {
-              // P1 fix: 保留項目較多的版本，避免本機未 sync 的補打被 cloud 舊版覆蓋
-              merged[key] = cv.length >= lv.length ? cv : lv;
-            } else {
-              merged[key] = cv;  // primitives: cloud wins
-            }
-          });
-          allDataCache[row.date] = merged;
+          allDataCache[row.date] = _mergeDayData(existing, cloudDay);
         }
       });
       localStorage.setItem('insulin_records', JSON.stringify(allDataCache));
@@ -7304,10 +7337,23 @@ async function loadFromCloud() {
 async function syncDayToCloud(date, dayData) {
   if (!sbClient || !currentUserId) return;
   try {
+    // v2.69.0: upsert 是「整天覆蓋」。若本機快取比雲端舊（另一台裝置剛寫入、
+    // 本機還沒 loadFromCloud 完成），會把雲端整天的紀錄抹掉。上傳前先讀回合併。
+    var _outgoing = dayData;
+    try {
+      var _cur = await sbClient.from('insulin_records')
+        .select('data').eq('user_id', currentUserId).eq('date', date).maybeSingle();
+      if (_cur && !_cur.error && _cur.data && _cur.data.data) {
+        _outgoing = _mergeDayData(_cur.data.data, dayData);
+        var _allNow = getAllData();
+        _allNow[date] = _outgoing;
+        setAllData(_allNow);
+      }
+    } catch(_e1) { _outgoing = dayData; }
     await sbClient.from('insulin_records').upsert({
       user_id: currentUserId,
       date: date,
-      data: dayData,
+      data: _outgoing,
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id,date' });
     setSyncBadge('☁️ 已同步', 'sync-ok');
@@ -7390,6 +7436,38 @@ function getAllData() {
 function setAllData(data) {
   allDataCache = data;
   localStorage.setItem('insulin_records', JSON.stringify(data));
+}
+
+// ── v2.69.0 資料合併工具 ───────────────────────────────────────────
+// 舊版一律用 rec.time 當「這筆有沒有資料」的判準，但時間欄位可能空白
+// （計算機帶入、或使用者沒碰時間欄），造成有血糖/劑量的紀錄被當成空紀錄覆蓋。
+function _periodHasData(rec) {
+  if (!rec || typeof rec !== 'object' || Array.isArray(rec)) return false;
+  return !!(String(rec.time || '').trim() || String(rec.bg || '').trim()
+         || String(rec.insulin || '').trim() || String(rec.note || '').trim());
+}
+// base = 既有版本，inc = 傳入版本。平手時 inc 勝。不修改參數。
+function _mergeDayData(base, inc) {
+  var out = Object.assign({}, base || {});
+  var incoming = inc || {};
+  Object.keys(incoming).forEach(function(key) {
+    var iv = incoming[key];
+    var bv = out[key];
+    if (iv && typeof iv === 'object' && !Array.isArray(iv)) {
+      // 期別紀錄：先用 _ts 判新舊（可正確處理「使用者刻意清空」）
+      var it = Number(iv._ts) || 0;
+      var bt = Number((bv && bv._ts) || 0) || 0;
+      if (it || bt)                  out[key] = (it >= bt) ? iv : bv;
+      else if (_periodHasData(iv))   out[key] = iv;
+      else if (_periodHasData(bv))   out[key] = bv;   // 空白不覆蓋有資料的舊紀錄
+      else                           out[key] = iv;
+    } else if (Array.isArray(iv) && Array.isArray(bv)) {
+      out[key] = iv.length >= bv.length ? iv : bv;
+    } else {
+      out[key] = iv;
+    }
+  });
+  return out;
 }
 function loadSettings() {
   try {
@@ -7614,7 +7692,12 @@ function updatePeriodSaveBtnState(periodId) {
   var btn    = document.getElementById('save-btn-' + periodId);
   var timeEl = document.getElementById(periodId + '-time');
   if (!btn || !timeEl) return;
-  btn.disabled = timeEl.value.trim().length < 4;
+  // v2.69.0: 舊版只看時間欄位，計算機「帶入」是直接寫 DOM（不觸發 oninput），
+  // 時間不會自動填，儲存鈕就一直是 disabled，使用者以為存了其實沒存。
+  var bgEl  = document.getElementById(periodId + '-bg');
+  var insEl = document.getElementById(periodId + '-insulin');
+  var hasVal = !!((bgEl && String(bgEl.value).trim()) || (insEl && String(insEl.value).trim()));
+  btn.disabled = (timeEl.value.trim().length < 4) && !hasVal;
 }
 
 // ══════════════════════════════════════════
@@ -9394,7 +9477,18 @@ function savePeriod(periodId) {
   }
 
   all[date]           = all[date] || {};
-  all[date][periodId] = { time: (bg || insulin) ? time : '', bg, insulin, note, site };
+  // v2.69.0: 有血糖或劑量卻沒填時間時自動補現在時間，避免存成 time:'' 的
+  // 「隱形紀錄」（後續合併與整天儲存都會把它當空紀錄蓋掉）。
+  var _prevRec = all[date][periodId];
+  if (!bg && !insulin && !String(note || '').trim() && _periodHasData(_prevRec)) {
+    var _mn = { morning:'早餐', noon:'午餐', evening:'晚餐', bedtime:'睡前紀錄' }[periodId] || periodId;
+    if (!confirm('⚠️ 這筆「' + _mn + '」原本已有紀錄，現在欄位是空的。' + String.fromCharCode(10)
+               + '繼續儲存會把原本的紀錄清空，確定嗎？')) return;
+  }
+  all[date][periodId] = {
+    time: (bg || insulin) ? (time || getNowTime()) : time,
+    bg, insulin, note, site, _ts: Date.now()
+  };
 
   setAllData(all);
   syncDayToCloud(date, all[date]);
@@ -9442,10 +9536,12 @@ function saveDayData() {
     // preserve any existing record that already has real data.
     // Prevents global save from wiping bedtime (Tresiba) records accidentally.
     const existing = all[date][p.id];
-    if (!time && existing && existing.time) return;
+    // v2.69.0: 舊版只檢查 existing.time，時間空白但有血糖/劑量的紀錄
+    // （例：計算機帶入的早餐）會被空白 UI 整筆覆蓋 —— 9/5~9/7 早餐消失的主因。
+    if (!time && !bg && !insulin && !String(note || '').trim() && _periodHasData(existing)) return;
     all[date][p.id] = {
-      time:    (bg || insulin) ? time : '',
-      bg, insulin, note, site,
+      time:    (bg || insulin) ? (time || getNowTime()) : time,
+      bg, insulin, note, site, _ts: Date.now(),
     };
   });
 
@@ -12868,6 +12964,10 @@ function smPrune(s){
     var gk = Object.keys(s.g).sort();
     while (gk.length > 90) { delete s.g[gk.shift()]; }
   }
+  if (s.cOv) {
+    var ck = Object.keys(s.cOv).sort();
+    while (ck.length > 90) { delete s.cOv[ck.shift()]; }
+  }
 }
 function smSetPortion(date, idx, ratio){
   var s = smStore();
@@ -12904,11 +13004,76 @@ function smRows(date){
   (m.d || []).forEach(function(it){ rows.push({ n: it.n, t: it.t, c: it.c, h: it.h || 0, r: it.r || '' }); });
   return rows;
 }
-function smTotal(date){
+// 菜單逐項試算出來的總碳水（不含手動覆寫）
+function smComputedTotal(date){
   var rows = smRows(date); if (!rows) return 0;
   var p = smPortions(date), t = 0;
   rows.forEach(function(r, i){ t += r.c * (r.g != null ? 1 : (p[i] == null ? 1 : p[i])); });
   return Math.round(t * 10) / 10;
+}
+/* ── v2.70.0 總碳水手動覆寫 ──────────────────────────────────────────
+   臨時得知孩子實際吃的量（老師回報、加菜、沒吃完）時可直接指定總碳水，
+   菜單試算值一律保留，隨時可一鍵還原。存在 insulin_school_lunch.cOv[date]，
+   與 portions 同一支 key，不經過 getAllData()/setAllData()。 */
+function smCarbOv(date){
+  var s = smStore(), v = s.cOv && s.cOv[date];
+  return (typeof v === 'number' && isFinite(v) && v >= 0) ? v : null;
+}
+function smSetCarbOv(date, v){
+  var s = smStore();
+  if (!s.cOv) s.cOv = {};
+  var n = parseFloat(v);
+  if (v === '' || v == null || !isFinite(n) || n < 0) delete s.cOv[date];
+  else s.cOv[date] = Math.round(Math.min(n, 300) * 10) / 10;
+  smPrune(s); smSaveStore(s);
+}
+// 有效總碳水：有手動值就用手動值，否則用菜單試算
+function smTotal(date){
+  var ov = smCarbOv(date);
+  return (ov != null) ? ov : smComputedTotal(date);
+}
+function smOvInput(v){
+  var dEl = document.getElementById('todayDate'), date = dEl ? dEl.value : '';
+  smSetCarbOv(date, v);
+  smPatchDose(date);           // 即時算劑量，但不重繪整張卡（避免游標被踢掉）
+}
+function smOvCommit(v){
+  var dEl = document.getElementById('todayDate'), date = dEl ? dEl.value : '';
+  smSetCarbOv(date, v);
+  smRefreshAll(date);
+}
+function smClearCarbOv(date){
+  var s = smStore();
+  if (s.cOv) { delete s.cOv[date]; smSaveStore(s); }
+  smRefreshAll(date);
+  if (typeof showToast === 'function') showToast('已還原菜單試算 ' + smComputedTotal(date) + ' g');
+}
+// 手動值與菜單試算的差距，直接換算成單位數讓使用者看到影響
+function smOvHintHTML(date){
+  var ov = smCarbOv(date); if (ov == null) return '';
+  var base = smComputedTotal(date), diff = Math.round((ov - base) * 10) / 10;
+  if (diff === 0) return '<span class="sl-ov-same">與菜單試算相同</span>';
+  var cir = 10;
+  try { var pr = getMealPreset('lunch'); if (pr && pr.cir) cir = parseFloat(pr.cir) || 10; } catch(e){}
+  var dU = Math.round(diff / cir * 10) / 10;
+  return '<span class="sl-ov-diff' + (diff > 0 ? ' up' : '') + '">菜單試算 ' + base + ' g　'
+       + (diff > 0 ? '+' : '') + diff + ' g（約 ' + (dU > 0 ? '+' : '') + dU + ' U）</span>';
+}
+function smOvRowHTML(date){
+  var ov = smCarbOv(date), base = smComputedTotal(date);
+  return '<div class="sl-ov">'
+    + '<span class="sl-ov-lbl">總碳水</span>'
+    + '<input type="number" class="sl-ov-in' + (ov != null ? ' on' : '') + '"'
+      + ' min="0" max="300" step="0.1" inputmode="decimal"'
+      + ' value="' + (ov != null ? ov : base) + '"'
+      + ' oninput="smOvInput(this.value)" onchange="smOvCommit(this.value)" />'
+    + '<span class="sl-ov-unit">g</span>'
+    + (ov != null
+        ? '<span class="sl-ov-badge">手動</span>'
+          + '<button type="button" class="sl-ov-btn" onclick="smClearCarbOv(\'' + date + '\')">回菜單 ' + base + ' g</button>'
+        : '<span class="sl-ov-tip">可直接改成實際吃的量</span>')
+    + '<span class="sl-ov-hint" id="sl-ov-hint">' + smOvHintHTML(date) + '</span>'
+  + '</div>';
 }
 
 /* ── 今日記錄頁卡片 ── */
@@ -13002,38 +13167,59 @@ function smDoseCalc(date){
   return { carbs:carbs, cir:cir, isf:isf, target:tgt, bg:(hasBG?bg:null),
            iob:iob, meal:meal, corr:corr, raw:raw, sugg:smRoundDose(raw) };
 }
-function smDoseHTML(date){
-  var d = smDoseCalc(date);
-  if (!d) return '';
-  var warn = [];
-  if (d.bg != null && d.bg < 70)   warn.push('目前血糖偏低。通常應先處理低血糖，不建議只依試算結果施打餐前胰島素。');
-  if (d.bg != null && d.bg >= 250) warn.push('目前血糖偏高。若有酮體、嘔吐、腹痛或不適，請依醫療團隊的高血糖處置流程。');
+function smDoseBrkHTML(d){
   var brk = '醣量 ' + d.carbs + ' g ÷ CIR ' + d.cir + ' = ' + d.meal.toFixed(1) + ' U';
   brk += (d.bg != null)
     ? '　·　血糖校正 (' + d.bg + ' − ' + d.target + ') ÷ ' + d.isf + ' = ' + (d.corr >= 0 ? '+' : '') + d.corr.toFixed(1) + ' U'
     : '　·　<span class="sl-dose-nobg">血糖未填，未計入校正</span>';
   if (d.iob > 0) brk += '　·　IOB − ' + d.iob + ' U';
-  // 計算用的是午餐欄位填的血糖，不是即時值 → 與目前 CGM 對照
-  var c = smCgmNow(), cmp = '';
+  return brk;
+}
+// 計算用的是午餐欄位填的血糖，不是即時 CGM → 差距大時明確對照
+function smDoseCmpHTML(d){
+  var c = smCgmNow();
   if (d.bg != null && c) {
     var diff = c.sgv - d.bg;
     if (Math.abs(diff) >= 20) {
-      cmp = '<div class="sl-dose-cgm">計算用血糖 <strong>' + d.bg + '</strong>，'
-          + '目前 ' + c.sgv + '（' + (diff > 0 ? '+' : '') + diff + '）'
-          + '<button type="button" class="sl-dose-cgmbtn" onclick="smUseCgmBG()">改用 ' + c.sgv + '</button></div>';
+      return '<div class="sl-dose-cgm">計算用血糖 <strong>' + d.bg + '</strong>，'
+        + '目前 CGM ' + c.sgv + '（' + (diff > 0 ? '+' : '') + diff + '）'
+        + '<button type="button" class="sl-dose-cgmbtn" onclick="smUseCgmBG()">改用 ' + c.sgv + '</button></div>';
     }
-  } else if (d.bg == null && c) {
-    cmp = '<div class="sl-dose-cgm">血糖未填，目前 ' + c.sgv
-        + '<button type="button" class="sl-dose-cgmbtn" onclick="smUseCgmBG()">帶入 ' + c.sgv + '</button></div>';
+    return '';
   }
+  if (d.bg == null && c) {
+    return '<div class="sl-dose-cgm">血糖未填，目前 CGM ' + c.sgv
+      + '<button type="button" class="sl-dose-cgmbtn" onclick="smUseCgmBG()">帶入 ' + c.sgv + '</button></div>';
+  }
+  return '';
+}
+function smDoseWarnHTML(d){
+  var warn = [];
+  if (d.bg != null && d.bg < 70)   warn.push('目前血糖偏低。通常應先處理低血糖，不建議只依試算結果施打餐前胰島素。');
+  if (d.bg != null && d.bg >= 250) warn.push('目前血糖偏高。若有酮體、嘔吐、腹痛或不適，請依醫療團隊的高血糖處置流程。');
+  return warn.map(function(w){ return '<div class="sl-alert">&#9888; ' + w + '</div>'; }).join('');
+}
+function smDoseHTML(date){
+  var d = smDoseCalc(date);
+  if (!d) return '';
   return '<div class="sl-dose">'
     + '<div class="sl-dose-top">'
       + '<span class="sl-dose-lbl">💊 建議劑量</span>'
-      + '<span class="sl-dose-val">' + d.sugg + '<small> U</small></span>'
+      + '<span class="sl-dose-val" id="sl-dose-val">' + d.sugg + '<small> U</small></span>'
     + '</div>'
-    + '<div class="sl-dose-raw">試算 ' + d.raw.toFixed(1) + ' U（' + smRoundNote(d.raw) + '）</div>'
-    + '<div class="sl-dose-brk">' + brk + '</div>'
-    + cmp
+    + '<div class="sl-dose-raw" id="sl-dose-raw">試算 ' + d.raw.toFixed(1) + ' U（' + smRoundNote(d.raw) + '）</div>'
+    + '<div class="sl-dose-brk" id="sl-dose-brk">' + smDoseBrkHTML(d) + '</div>'
+    + '<div id="sl-dose-cmp">' + smDoseCmpHTML(d) + '</div>'
+    // v2.70.0：計算用血糖獨立成可編輯欄位。指尖血比 CGM 準時以這裡輸入的為主，
+    // 並同步寫回上方午餐血糖欄位，確保「算的」與「存的」是同一個值。
+    + '<div class="sl-dose-bgrow">'
+      + '<span class="sl-dose-ioblbl">計算用血糖</span>'
+      + '<input type="number" class="sl-dose-bg" min="20" max="600" step="1" inputmode="numeric"'
+        + ' placeholder="--" value="' + (d.bg != null ? d.bg : '') + '"'
+        + ' oninput="smSetDoseBG(this.value)" onchange="smSetDoseBG(this.value, true)" />'
+      + '<span class="sl-dose-unit">mg/dL</span>'
+      + '<span class="sl-dose-bgtip">指尖血請直接改這裡，會同步到上方午餐欄位</span>'
+    + '</div>'
     + '<div class="sl-dose-act">'
       + '<span class="sl-dose-ioblbl">有效胰島素 IOB</span>'
       + '<input type="number" class="sl-dose-iob" min="0" max="50" step="0.1" value="' + d.iob + '"'
@@ -13041,15 +13227,47 @@ function smDoseHTML(date){
       + '<span class="sl-dose-unit">U</span>'
       + '<button type="button" class="sl-dose-btn" onclick="smApplyDose()">帶入 ' + d.sugg + ' U</button>'
     + '</div>'
-    + warn.map(function(w){ return '<div class="sl-alert">&#9888; ' + w + '</div>'; }).join('')
+    + '<div id="sl-dose-warn">' + smDoseWarnHTML(d) + '</div>'
     + '<div class="sl-dose-foot">試算值，實際劑量請依醫療團隊指示確認後再施打</div>'
   + '</div>';
 }
+// 只更新唯讀數字，不碰任何 input —— 使用者打字時用這支，游標不會被重繪打掉
+function smPatchDose(date){
+  var d = smDoseCalc(date);
+  var set = function(id, html){ var e = document.getElementById(id); if (e) e.innerHTML = html; };
+  set('sl-total', smTotal(date) + ' g');
+  set('sl-ov-hint', smOvHintHTML(date));
+  if (!d) return;
+  set('sl-dose-val', d.sugg + '<small> U</small>');
+  set('sl-dose-raw', '試算 ' + d.raw.toFixed(1) + ' U（' + smRoundNote(d.raw) + '）');
+  set('sl-dose-brk', smDoseBrkHTML(d));
+  set('sl-dose-cmp',  smDoseCmpHTML(d));
+  set('sl-dose-warn', smDoseWarnHTML(d));
+  var btn = document.querySelector('.sl-dose-btn');
+  if (btn) btn.textContent = '帶入 ' + d.sugg + ' U';
+}
+var SM_LIVE_INPUTS = ['sl-dose-iob', 'sl-dose-bg', 'sl-ov-in'];
 function smUpdateDose(){
   var slot = document.getElementById('sl-dose-slot');
   if (!slot) return;
   var dEl = document.getElementById('todayDate');
-  slot.innerHTML = smDoseHTML(dEl ? dEl.value : '');
+  var date = dEl ? dEl.value : '';
+  var ae = document.activeElement;
+  var typing = !!(ae && ae.classList && SM_LIVE_INPUTS.some(function(c){ return ae.classList.contains(c); }));
+  if (typing) { smPatchDose(date); return; }
+  slot.innerHTML = smDoseHTML(date);
+}
+// 計算用血糖：以使用者輸入為準，並同步回上方午餐欄位（存檔用的也是這個值）
+function smSetDoseBG(v, commit){
+  var el = document.getElementById('noon-bg');
+  if (el) {
+    el.value = (v == null) ? '' : String(v);
+    if (typeof onBGInput === 'function') { try { onBGInput('noon'); } catch(e){} }
+    if (typeof updatePeriodSaveBtnState === 'function') { try { updatePeriodSaveBtnState('noon'); } catch(e){} }
+  }
+  var dEl = document.getElementById('todayDate'), date = dEl ? dEl.value : '';
+  smUpdateInjRow();
+  if (commit) smUpdateDose(); else smPatchDose(date);
 }
 function smApplyDose(){
   var dEl = document.getElementById('todayDate');
@@ -13106,9 +13324,7 @@ function smStartNowTicker(){
   if (_smNowTimer) return;
   _smNowTimer = setInterval(function(){
     smUpdateNow();
-    // 使用者正在輸入 IOB 時不重繪劑量區塊，避免打到一半被清掉
-    var ae = document.activeElement;
-    if (!(ae && ae.classList && ae.classList.contains('sl-dose-iob'))) smUpdateDose();
+    smUpdateDose();   // 使用者正在輸入時 smUpdateDose 會自動只更新數字，不重繪
   }, 30000);
 }
 
@@ -13139,15 +13355,17 @@ function smUpdateInjRow(){
 var _smInjBound = false;
 function smBindInjWatch(){
   if (_smInjBound) return;
-  var ok = true;
-  var sync = function(){ smUpdateInjRow(); smUpdateDose(); };
-  ['noon-time', 'noon-insulin', 'noon-site', 'noon-alarm-min', 'noon-bg'].forEach(function(id){
-    var e = document.getElementById(id);
-    if (!e) { ok = false; return; }
-    e.addEventListener('input',  sync);
-    e.addEventListener('change', sync);
-  });
-  if (ok) _smInjBound = true;
+  // v2.70.0: 改用 document 層級委派。舊版對個別元素 addEventListener，
+  // 只要上方欄位被重建，監聽就永久失效 —— 改了血糖但下方劑量沒重算的原因之一。
+  var WATCH = { 'noon-time':1, 'noon-insulin':1, 'noon-site':1, 'noon-alarm-min':1, 'noon-bg':1 };
+  var sync = function(e){
+    if (!e || !e.target || !WATCH[e.target.id]) return;
+    smUpdateInjRow();
+    smUpdateDose();
+  };
+  document.addEventListener('input',  sync, true);
+  document.addEventListener('change', sync, true);
+  _smInjBound = true;
 }
 
 function smRowsHTML(date){
@@ -13203,8 +13421,10 @@ function renderSchoolLunch(){
     + '<div class="sl-head">'
       + '<span class="sl-title">🏫 今日學校午餐</span>'
       + '<span class="sl-date">' + smDateLabel(date) + '</span>'
-      + '<span class="sl-total">' + smTotal(date) + ' g</span>'
+      + '<span class="sl-total' + (smCarbOv(date) != null ? ' sl-total-ov' : '') + '" id="sl-total">'
+        + smTotal(date) + ' g</span>'
     + '</div>'
+    + smOvRowHTML(date)
     + '<div class="sl-now" id="sl-now">' + smNowHTML() + '</div>'
     + '<div class="sl-inj" id="sl-inj">' + smInjHTML() + '</div>'
     + st.html;
@@ -13309,10 +13529,17 @@ function smRenderCalcChip(periodId){
   var list = document.getElementById('sl-calc-list');
   if (list) {
     var st = smRowsHTML(date);
+    // v2.70.0：總碳水被手動覆寫時，逐項明細的加總不等於採用值，必須標示清楚
+    var _ov = smCarbOv(date);
     list.innerHTML = '<div class="sl-calc-head">'
         + '<span>今日菜色明細 <span class="sl-date">' + smDateLabel(date) + '</span></span>'
-        + '<span class="sl-calc-sum">' + total + ' g</span>'
+        + '<span class="sl-calc-sum">' + (_ov != null ? '手動 ' : '') + total + ' g</span>'
       + '</div>'
+      + (_ov != null
+          ? '<div class="sl-alert sl-alert-slow">總碳水已手動指定為 ' + _ov
+            + ' g，以下明細僅供參考（菜單試算 ' + smComputedTotal(date) + ' g）。'
+            + '<button type="button" class="sl-reset" onclick="smClearCarbOv(\'' + date + '\')">回菜單試算</button></div>'
+          : '')
       + st.html
       + (st.hidden.length ? '<div class="sl-alert">&#9888; 隱藏醣：' + st.hidden.join('、') + '</div>' : '')
       + '<div class="sl-foot"><span>主食改公克數、配菜按份量鍵，劑量會即時重算</span>'
@@ -14087,6 +14314,7 @@ function calcApply() {
 
   // Fill dose
   document.getElementById(calcTargetPeriod + '-insulin').value = dose;
+  if (typeof renderInsChips === 'function') renderInsChips(calcTargetPeriod);
 
   // Fill BG if empty
   const bgField = document.getElementById(calcTargetPeriod + '-bg');
@@ -14122,15 +14350,21 @@ function calcApply() {
     noteField.value = noteLines.join('\n');
   }
 
+  // v2.69.0 關鍵修正：以上都是直接寫 DOM 的 .value，不會觸發 oninput，
+  // 因此 autoFillTime() 不會執行、時間欄位留白、儲存鈕維持 disabled。
+  // 使用者看到劑量已帶入就關掉視窗，那一餐其實從未寫進 localStorage/雲端。
+  autoFillTime(calcTargetPeriod);
+  updatePeriodSaveBtnState(calcTargetPeriod);
+
   closeCalcModal();
-  showToast('✅ 計算結果已帶入！');
+  showToast('✅ 已帶入，請按該餐的「💾 儲存」才會存檔');
 }
 
 
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.68.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.70.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
