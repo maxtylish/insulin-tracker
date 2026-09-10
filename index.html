@@ -4400,6 +4400,20 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.71.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.71.0</span>
+          <span class="cl-date">2026-09-10</span>
+          <span class="cl-tag">重要修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【資料正確性】<strong>移除睡前硬編的預設 3 U</strong>。那是顯示用的預設值，卻會被「儲存今日紀錄」當成真實輸入寫進紀錄。8 月起基礎劑量已改 3.5 U，雲端因此留下 12 筆假的 3 U（全部沒有時間、沒有血糖）。改由下方常用劑量按鈕一鍵帶入，帶入時會自動補上時間</li>
+          <li>【資料正確性】常用劑量按鈕不再採計「沒有時間」的紀錄，避免預設值殘留與被覆蓋的空紀錄污染建議值</li>
+          <li>【修正】跨夜睡前紀錄（00:00~03:59 自動歸入前一天）儲存後會重新載入畫面。舊版把數值留在欄位裡，之後按「儲存今日紀錄」會把同一針再寫進今天，造成基礎胰島素重複記錄兩天</li>
+        </ul>
+      </div>
+
       <!-- v2.70.0 -->
       <div class="cl-entry">
         <div class="cl-header">
@@ -7673,7 +7687,8 @@ function renderInsChips(periodId) {
   var dates = Object.keys(allD).sort().reverse();
   for (var i = 0; i < dates.length && recent.length < 4; i++) {
     var rec = allD[dates[i]][periodId];
-    if (rec && rec.insulin) {
+    // v2.71.0: 沒有時間的紀錄多半是被空白覆蓋或預設值殘留，不列入常用劑量
+    if (rec && rec.insulin && rec.time) {
       var v = Math.round(parseFloat(rec.insulin) * 2) / 2;
       if (v > 0 && recent.indexOf(v) === -1) recent.push(v);
     }
@@ -9423,8 +9438,10 @@ function loadDayData() {
     // Time is auto-filled by autoFillTime() only when user focuses BG/insulin.
     document.getElementById(p.id + '-time').value    = rec.time    || '';
     document.getElementById(p.id + '-bg').value      = rec.bg      || '';
-    var defaultInsulin = (p.id === 'bedtime' && !rec.insulin) ? '3' : (rec.insulin || '');
-    document.getElementById(p.id + '-insulin').value = defaultInsulin;
+    // v2.71.0: 移除睡前硬編預設 3 U。這個「顯示用」預設值會被 saveDayData() 當成
+    // 真實輸入寫進紀錄 —— 8 月起基礎劑量已改 3.5 U，雲端卻留下 12 筆假的 3 U
+    // （全部沒有時間、沒有血糖）。改由下方常用劑量 chip 一鍵帶入，帶入時會自動補時間。
+    document.getElementById(p.id + '-insulin').value = rec.insulin || '';
     renderInsChips(p.id);
     document.getElementById(p.id + '-note').value    = rec.note    || '';
     var siteEl = document.getElementById(p.id + '-site');
@@ -9509,6 +9526,10 @@ function savePeriod(periodId) {
   const p = PERIODS.find(function(x) { return x.id === periodId; });
   var mealName = { morning:'早餐', noon:'午餐', evening:'晚餐', bedtime:'睡前紀錄' }[periodId] || (p ? p.label : periodId);
   if (crossNight) {
+    // v2.71.0: 資料已歸入前一天，但畫面仍停在今天。舊版把值留在欄位裡，
+    // 之後按「儲存今日紀錄」會把同一針再寫進今天 → 基礎胰島素被記錄兩次
+    //（8/12 與 8/14、8/20 與 8/22、8/24 與 8/26、8/29 與 8/31 都是這樣重複的）。
+    loadDayData();
     showToast('✅ ' + mealName + ' 已儲存（跨夜 → 歸入 ' + date + '）');
   } else {
     showToast('✅ ' + mealName + ' 已儲存！');
@@ -14364,7 +14385,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.70.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.71.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
