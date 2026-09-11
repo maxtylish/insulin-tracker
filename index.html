@@ -3490,6 +3490,11 @@
 .sl-dose-unit{font-size:.68rem;color:var(--text-muted,#94a3b8);}
 .sl-dose-btn{margin-left:auto;padding:5px 12px;border-radius:8px;border:none;background:#d97706;color:#fff;font-size:.78rem;font-weight:700;cursor:pointer;}
 .sl-dose-foot{font-size:.66rem;color:var(--text-muted,#94a3b8);margin-top:7px;}
+.sl-dose-cut{color:#0f766e;font-weight:700;}
+.sl-dose-trend{margin-top:6px;padding:5px 9px;border-radius:8px;background:#ecfeff;color:#0e7490;font-size:.7rem;line-height:1.5;}
+.sl-dose-iobrow{margin-top:4px;}
+.sl-dose-iobsrc{font-size:.66rem;color:var(--text-muted,#94a3b8);line-height:1.6;}
+.sl-dose-autobtn{font-size:.64rem;padding:1px 7px;border-radius:6px;border:1px solid var(--border,#e2e8f0);background:transparent;color:inherit;cursor:pointer;}
 .sl-alert{margin-top:8px;padding:6px 9px;border-radius:8px;background:#fef2f2;color:#b91c1c;font-size:.74rem;line-height:1.45;}
 .sl-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;font-size:.68rem;color:var(--text-muted,#94a3b8);}
 .sl-reset{font-size:.68rem;padding:2px 8px;border-radius:6px;border:1px solid var(--border,#e2e8f0);background:transparent;color:var(--text-muted,#94a3b8);cursor:pointer;}
@@ -4405,6 +4410,22 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.73.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.73.0</span>
+          <span class="cl-date">2026-09-11</span>
+          <span class="cl-tag">功能新增</span>
+        </div>
+        <ul class="cl-list">
+          <li>【學校午餐／IOB】「有效胰島素 IOB」<strong>改為自動計算並帶入</strong>：掃今天與昨天的早／午／晚餐、補打、點心速效劑量，以<strong>線性消退、作用時間 4 小時</strong>推算目前殘留量（例：3U 打完 1 小時 → 殘 2.25U）。欄位下方列出是哪幾針貢獻的，手動輸入仍可覆寫，旁邊有「改回自動」</li>
+          <li>【學校午餐／IOB】計算時<strong>排除今天午餐本身</strong>的劑量，避免把「待打的這一針」當成殘留而重複扣除；睡前 Tresiba 是長效基礎量，不列入餐前 bolus 的 IOB</li>
+          <li>【學校午餐／趨勢】CGM 血糖<strong>急降時自動減量</strong>：5 分鐘降幅 ≥15 mg/dL 減 20%、≥25 mg/dL 減 40%，只作用在「血糖校正」那一段，醣量換算的劑量不動。<strong>血糖上升一律不自動加量</strong>，避免疊加造成之後低血糖</li>
+          <li>【學校午餐／趨勢】校正值為負（血糖已低於目標）時不套用減量係數，否則等於把負值縮小＝反而加量。有減量時卡片會顯示「⬇️ 血糖急降 N mg/5min　校正劑量已自動減量 N%」</li>
+          <li>【安全說明】IOB 採線性消退而非既有的 <code>novoRapidActivity()</code>：後者是<strong>活性曲線</strong>不是殘留量（剛打完回傳 0、1.25 小時才回傳 1），若拿來扣除會把剛打完的胰島素當成 0 而導致疊打。兩者語意不同，程式內已加註不可混用</li>
+        </ul>
+      </div>
 
       <!-- v2.72.0 -->
       <div class="cl-entry">
@@ -13206,16 +13227,95 @@ function smMealTime(){
 /* ── 卡片底部：直接在菜單頁試算建議劑量 ──
    ⚠️ 只讀取現有欄位與 getMealPreset('lunch')，公式與劑量計算機完全一致，
       不另建一套算法。捨入規則沿用 buildRoundHint() 的 .1~.2↓ / .3~.7→.5 / .8~.9↑ */
-var _smIOB = 0, _smIOBDate = '';
+/* ── v2.73.0 自動 IOB 引擎（線性消退，DIA 4h）────────────────────────────
+   ⚠️ 劑量安全：這裡算出的殘留量會從建議劑量「扣掉」，
+      扣得多 = 打得少 = 偏安全方向，符合「寧可低估」原則。
+   ⚠️ 不可改用 novoRapidActivity()：那是「活性曲線」不是殘留量
+      （打完當下回傳 0、1.25h 才回傳 1），拿來當 IOB 會把剛打完的
+      胰島素當成 0，導致疊打。兩者語意不同，不要混用。 */
+var IOB_DIA_H = 4;                 // 胰島素作用時間（小時），線性消退
+var IOB_MIN_COUNT = 0.05;          // 小於此殘留量視為 0，不列入明細
+var IOB_TREND_CUT = [              // 急降時對「血糖校正」的減量（只減不加）
+  { delta: -25, factor: 0.6 },
+  { delta: -15, factor: 0.8 }
+];
+
+function _iobRemainFrac(hoursAgo){
+  if (!(hoursAgo >= 0)) return 0;
+  if (hoursAgo >= IOB_DIA_H) return 0;
+  return 1 - hoursAgo / IOB_DIA_H;
+}
+
+/* 掃今天＋昨天的速效注射，回傳目前殘留量。
+   excludePeriod：排除正在計算的那一餐（今天），避免把「待打的劑量」當成殘留。
+   睡前 Tresiba 是長效基礎量，不納入餐前 bolus 的 IOB。 */
+function calcAutoIOB(excludePeriod){
+  var now = Date.now();
+  var all = (typeof getAllData === 'function') ? getAllData() : {};
+  var today = (typeof todayStr === 'function') ? todayStr() : '';
+  if (!today) return { total: 0, items: [] };
+  var items = [], total = 0;
+  function add(ds, label, timeStr, doseStr){
+    var dose = parseFloat(doseStr);
+    if (!timeStr || !(dose > 0)) return;
+    var injMs = new Date(ds + 'T' + timeStr + ':00').getTime();
+    if (!isFinite(injMs) || injMs > now) return;
+    var hAgo = (now - injMs) / 3600000;
+    var remain = dose * _iobRemainFrac(hAgo);
+    if (!(remain > IOB_MIN_COUNT)) return;
+    total += remain;
+    items.push({ label: label, time: timeStr, dose: dose, hoursAgo: hAgo, remain: remain });
+  }
+  for (var i = 0; i < 2; i++) {
+    var d = new Date(today + 'T00:00:00'); d.setDate(d.getDate() - i);
+    var ds = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0')
+           + '-' + String(d.getDate()).padStart(2,'0');
+    var day = all[ds] || {};
+    [['morning','早餐'],['noon','午餐'],['evening','晚餐']].forEach(function(p){
+      if (ds === today && p[0] === excludePeriod) return;
+      var rec = day[p[0]];
+      if (rec) add(ds, p[1], rec.time, rec.insulin);
+    });
+    (day.corrections || []).forEach(function(r){ add(ds, '補打', r.time, r.dose); });
+    ['snack-morning-noon','snack-noon-evening','snack-evening-bedtime'].forEach(function(sid){
+      (day[sid] || []).forEach(function(sk){ add(ds, '點心', sk.time, sk.dose); });
+    });
+  }
+  items.sort(function(a, b){ return a.hoursAgo - b.hoursAgo; });
+  return { total: Math.round(total * 10) / 10, items: items };
+}
+
+/* 急降減量：只在血糖快速下降時縮小「血糖校正」，上升一律不加量。
+   資料來源是 CGM 的 5 分鐘變化量 lastCGMEntry.delta。 */
+function calcTrendCut(){
+  var e = (typeof lastCGMEntry !== 'undefined') ? lastCGMEntry : null;
+  var d = (e && e.delta != null) ? parseFloat(e.delta) : NaN;
+  if (!isFinite(d)) return { factor: 1, delta: null, cut: 0 };
+  for (var i = 0; i < IOB_TREND_CUT.length; i++) {
+    if (d <= IOB_TREND_CUT[i].delta) {
+      return { factor: IOB_TREND_CUT[i].factor, delta: d,
+               cut: Math.round((1 - IOB_TREND_CUT[i].factor) * 100) };
+    }
+  }
+  return { factor: 1, delta: d, cut: 0 };
+}
+
+var _smIOB = 0, _smIOBDate = '', _smIOBManual = false, _smIOBAuto = null;
 function smIOB(date){
-  if (date && _smIOBDate !== date) { _smIOB = 0; _smIOBDate = date; }
-  return _smIOB;
+  if (date && _smIOBDate !== date) { _smIOB = 0; _smIOBDate = date; _smIOBManual = false; }
+  _smIOBAuto = calcAutoIOB('noon');
+  return _smIOBManual ? _smIOB : _smIOBAuto.total;
 }
 function smSetIOB(v){
   var n = parseFloat(v);
   _smIOB = (isFinite(n) && n > 0) ? Math.round(n * 10) / 10 : 0;
+  _smIOBManual = true;
   var dEl = document.getElementById('todayDate');
   _smIOBDate = dEl ? dEl.value : '';
+  smUpdateDose();
+}
+function smIOBAutoBack(){
+  _smIOBManual = false;
   smUpdateDose();
 }
 function smRoundDose(raw){
@@ -13246,18 +13346,62 @@ function smDoseCalc(date){
   var hasBG = isFinite(bg) && bg > 0;
   var iob = smIOB(date);
   var meal = carbs / cir;
-  var corr = (hasBG && isf > 0) ? (bg - tgt) / isf : 0;
+  var corr0 = (hasBG && isf > 0) ? (bg - tgt) / isf : 0;
+  // v2.73.0 急降減量：只縮小「正的」校正劑量。
+  // 校正為負（血糖已低於目標）時不套用，否則等於把負值變小＝反而加量。
+  var tc = calcTrendCut();
+  var corr = (corr0 > 0) ? corr0 * tc.factor : corr0;
   var raw  = Math.max(0, meal + corr - iob);
   return { carbs:carbs, cir:cir, isf:isf, target:tgt, bg:(hasBG?bg:null),
-           iob:iob, meal:meal, corr:corr, raw:raw, sugg:smRoundDose(raw) };
+           iob:iob, iobAuto:_smIOBAuto, iobManual:_smIOBManual,
+           meal:meal, corr0:corr0, corr:corr, trend:tc,
+           raw:raw, sugg:smRoundDose(raw) };
 }
 function smDoseBrkHTML(d){
   var brk = '醣量 ' + d.carbs + ' g ÷ CIR ' + d.cir + ' = ' + d.meal.toFixed(1) + ' U';
-  brk += (d.bg != null)
-    ? '　·　血糖校正 (' + d.bg + ' − ' + d.target + ') ÷ ' + d.isf + ' = ' + (d.corr >= 0 ? '+' : '') + d.corr.toFixed(1) + ' U'
-    : '　·　<span class="sl-dose-nobg">血糖未填，未計入校正</span>';
+  if (d.bg != null) {
+    brk += '　·　血糖校正 (' + d.bg + ' − ' + d.target + ') ÷ ' + d.isf
+         + ' = ' + (d.corr0 >= 0 ? '+' : '') + d.corr0.toFixed(1) + ' U';
+    if (d.trend && d.trend.cut > 0 && d.corr0 > 0) {
+      brk += ' → <span class="sl-dose-cut">急降減量 ' + d.trend.cut + '% = '
+           + (d.corr >= 0 ? '+' : '') + d.corr.toFixed(1) + ' U</span>';
+    }
+  } else {
+    brk += '　·　<span class="sl-dose-nobg">血糖未填，未計入校正</span>';
+  }
   if (d.iob > 0) brk += '　·　IOB − ' + d.iob + ' U';
   return brk;
+}
+
+// 趨勢說明：只在真的有減量時出現，沒減量就不佔版面
+function smTrendHTML(d){
+  if (!d.trend || d.trend.delta == null) return '';
+  if (!(d.trend.cut > 0)) return '';
+  var dv = Math.round(d.trend.delta * 10) / 10;
+  var applied = (d.corr0 > 0);
+  return '<div class="sl-dose-trend">⬇️ 血糖急降 ' + dv + ' mg/5min'
+    + (applied
+        ? '　校正劑量已自動減量 ' + d.trend.cut + '%'
+        : '　血糖未高於目標，無校正可減（劑量未調整）')
+    + '</div>';
+}
+
+// IOB 來源明細：自動算出來的殘留是哪幾針貢獻的
+function smIOBSrcHTML(d){
+  var a = d.iobAuto;
+  if (d.iobManual) {
+    return '<span class="sl-dose-iobsrc">手動輸入'
+      + (a && a.total > 0 ? '　自動試算為 ' + a.total + ' U' : '')
+      + '　<button type="button" class="sl-dose-autobtn" onclick="smIOBAutoBack()">改回自動</button></span>';
+  }
+  if (!a || !a.items.length) {
+    return '<span class="sl-dose-iobsrc">自動　近 ' + IOB_DIA_H + ' 小時內無速效注射紀錄</span>';
+  }
+  var parts = a.items.map(function(it){
+    return it.label + ' ' + it.time + ' ' + (Math.round(it.dose * 10) / 10) + 'U'
+         + '（已過 ' + it.hoursAgo.toFixed(1) + 'h → 殘 ' + (Math.round(it.remain * 10) / 10) + 'U）';
+  });
+  return '<span class="sl-dose-iobsrc">自動　' + parts.join('　·　') + '</span>';
 }
 // 計算用的是午餐欄位填的血糖，不是即時 CGM → 差距大時明確對照
 function smDoseCmpHTML(d){
@@ -13294,6 +13438,7 @@ function smDoseHTML(date){
     + '<div class="sl-dose-raw" id="sl-dose-raw">試算 ' + d.raw.toFixed(1) + ' U（' + smRoundNote(d.raw) + '）</div>'
     + '<div class="sl-dose-brk" id="sl-dose-brk">' + smDoseBrkHTML(d) + '</div>'
     + '<div id="sl-dose-cmp">' + smDoseCmpHTML(d) + '</div>'
+    + '<div id="sl-dose-trend">' + smTrendHTML(d) + '</div>'
     // v2.70.0：計算用血糖獨立成可編輯欄位。指尖血比 CGM 準時以這裡輸入的為主，
     // 並同步寫回上方午餐血糖欄位，確保「算的」與「存的」是同一個值。
     + '<div class="sl-dose-bgrow">'
@@ -13311,6 +13456,7 @@ function smDoseHTML(date){
       + '<span class="sl-dose-unit">U</span>'
       + '<button type="button" class="sl-dose-btn" onclick="smApplyDose()">帶入 ' + d.sugg + ' U</button>'
     + '</div>'
+    + '<div id="sl-dose-iobsrc" class="sl-dose-iobrow">' + smIOBSrcHTML(d) + '</div>'
     + '<div id="sl-dose-warn">' + smDoseWarnHTML(d) + '</div>'
     + '<div class="sl-dose-foot">試算值，實際劑量請依醫療團隊指示確認後再施打</div>'
   + '</div>';
@@ -13326,6 +13472,8 @@ function smPatchDose(date){
   set('sl-dose-raw', '試算 ' + d.raw.toFixed(1) + ' U（' + smRoundNote(d.raw) + '）');
   set('sl-dose-brk', smDoseBrkHTML(d));
   set('sl-dose-cmp',  smDoseCmpHTML(d));
+  set('sl-dose-trend', smTrendHTML(d));
+  set('sl-dose-iobsrc', smIOBSrcHTML(d));
   set('sl-dose-warn', smDoseWarnHTML(d));
   var btn = document.querySelector('.sl-dose-btn');
   if (btn) btn.textContent = '帶入 ' + d.sugg + ' U';
@@ -14448,7 +14596,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.72.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.73.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
