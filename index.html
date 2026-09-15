@@ -4411,6 +4411,21 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.74.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.74.0</span>
+          <span class="cl-date">2026-09-15</span>
+          <span class="cl-tag">重要修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【資料正確性／存錯日期】App 掛整夜不關時，日期欄不會跨日自動更新，隔天早上的紀錄會整筆存進昨天。v2.72.0 只加了紅色提示條，<strong>擋不住儲存</strong>，2026-09-15 又發生一次。現在改成兩道實際的鎖</li>
+          <li>【鎖 1】<strong>從背景切回前景時自動跳回今天</strong>：若顯示日期不是今天，且表單沒有未儲存的輸入，直接跳到今天並提示「日期原本停在 X，已自動跳回今天」。有輸入到一半時不會跳，只顯示原本的警示條，避免打斷</li>
+          <li>【鎖 2】<strong>存進非今日的日期時強制確認</strong>：早餐／午餐／晚餐／睡前的個別儲存與整天儲存，都會先跳確認視窗明講「這筆會存進 2026-09-14，不會存進今天」。要補前幾天的紀錄仍然可以，只是必須點過一次確認</li>
+          <li>【說明】睡前 00:00～03:59 自動歸入前一天的跨夜規則不受影響 —— 判斷的是「畫面顯示的日期」，不是最後寫入的日期</li>
+        </ul>
+      </div>
+
       <!-- v2.73.0 -->
       <div class="cl-entry">
         <div class="cl-header">
@@ -9482,12 +9497,13 @@ function _isViewingToday(){
   var el = document.getElementById('todayDate');
   return !el || el.value === _todayStr();
 }
-function jumpToToday(){
+function jumpToToday(silent){
   var el = document.getElementById('todayDate');
   if (!el) return;
   el.value = _todayStr();
   loadDayData();
-  if (typeof showToast === 'function') showToast('已跳到今天 ' + _todayStr());
+  // v2.74.0: silent=true 時由呼叫端自己出提示，避免自動跳日期時跳兩個 toast
+  if (!silent && typeof showToast === 'function') showToast('已跳到今天 ' + _todayStr());
 }
 function updateDateWarn(){
   var box = document.getElementById('date-warn');
@@ -9500,17 +9516,66 @@ function updateDateWarn(){
     + '<button type="button" class="date-warn-btn" onclick="jumpToToday()">跳到今天</button>'
   + '</div>';
 }
-// 從背景切回前景時重新判斷（跨夜的當下不會有任何事件，只能在回來時提醒）
-document.addEventListener('visibilitychange', function(){
-  if (!document.hidden) updateDateWarn();
+/* ── v2.74.0 非今日日期「硬性」防呆 ────────────────────────────────────
+   v2.72.0 只加了一條紅色提示條，擋不住儲存 —— 2026-09-15 又發生一次
+   「App 掛整夜、日期停在昨天、早上的紀錄存進昨天」。改成兩道實際的鎖：
+     (1) 從背景回到前景時，若日期不是今天且表單沒有未儲存的輸入，直接跳今天
+     (2) 真的要存進非今日的日期時，跳 confirm 明講會存進哪一天
+   ⚠️ 資料安全：這裡只改「存到哪一天」的判斷與提示，不碰 getAllData()/
+      setAllData() 的任何寫入路徑，也不改既有的空白覆蓋保護。 */
+
+// 表單是否有未儲存的輸入 —— 有的話不自動跳日期，免得打到一半被清掉
+var _dayFormDirty = false;
+function _markDayFormDirty(){ _dayFormDirty = true; }
+function _clearDayFormDirty(){ _dayFormDirty = false; }
+
+// 記錄表單的輸入一律標記 dirty（document 層級委派，欄位重建也不會失效）
+document.addEventListener('input', function(ev){
+  var t = ev.target;
+  if (!t || !t.id) return;
+  for (var i = 0; i < PERIODS.length; i++) {
+    var pid = PERIODS[i].id;
+    if (t.id === pid + '-bg' || t.id === pid + '-insulin'
+     || t.id === pid + '-time' || t.id === pid + '-note') { _markDayFormDirty(); return; }
+  }
+  if (t.closest && t.closest('#corrections-rows, #carbs-rows, .snack-rows')) _markDayFormDirty();
 });
-window.addEventListener('focus', updateDateWarn);
+
+// 存進非今日的日期前，強制確認。回傳 false = 使用者取消，呼叫端必須中止儲存。
+function _confirmNonTodaySave(what){
+  if (_isViewingToday()) return true;
+  var el = document.getElementById('todayDate');
+  var shown = el ? el.value : '?';
+  return confirm('\u26a0\ufe0f 目前顯示的日期是 ' + shown + '，不是今天（' + _todayStr() + '）。'
+    + String.fromCharCode(10) + String.fromCharCode(10)
+    + '這筆「' + what + '」會存進 ' + shown + '，不會存進今天。'
+    + String.fromCharCode(10) + String.fromCharCode(10)
+    + '確定要存進 ' + shown + '嗎？');
+}
+
+// 從背景切回前景：跨夜當下不會有任何事件，只能在回來時處理
+function _onAppForeground(){
+  if (!_isViewingToday() && !_dayFormDirty) {
+    var from = document.getElementById('todayDate');
+    var fromVal = from ? from.value : '';
+    jumpToToday(true);
+    if (typeof showToast === 'function')
+      showToast('日期原本停在 ' + fromVal + '，已自動跳回今天');
+    return;
+  }
+  updateDateWarn();
+}
+document.addEventListener('visibilitychange', function(){
+  if (!document.hidden) _onAppForeground();
+});
+window.addEventListener('focus', _onAppForeground);
 
 function loadDayData() {
   const date = document.getElementById('todayDate').value;
   const all = getAllData();
   const dayData = all[date] || {};
   updateDateWarn();
+  _clearDayFormDirty();   // v2.74.0：剛載入 = 沒有未儲存的輸入
 
   PERIODS.forEach(p => {
     const rec = dayData[p.id] || {};
@@ -9541,6 +9606,9 @@ function loadDayData() {
 }
 
 function savePeriod(periodId) {
+  // ── v2.74.0 非今日日期確認（先於其他確認，避免存錯天）──
+  var _pn = { morning:'早餐', noon:'午餐', evening:'晚餐', bedtime:'睡前紀錄' }[periodId] || periodId;
+  if (!_confirmNonTodaySave(_pn)) return;
   // ── 速效 IOB 警告：中/晚餐有劑量時，若前一劑速效未結束則提示 ──
   if (periodId === 'noon' || periodId === 'evening') {
     var _insulinEl = document.getElementById(periodId + '-insulin');
@@ -9625,6 +9693,8 @@ function savePeriod(periodId) {
 }
 
 function saveDayData() {
+  // v2.74.0 非今日日期確認
+  if (!_confirmNonTodaySave('整天紀錄')) return;
   const date = document.getElementById('todayDate').value;
   const all = getAllData();
   all[date] = all[date] || {};
@@ -9649,6 +9719,7 @@ function saveDayData() {
     };
   });
 
+  _clearDayFormDirty();   // v2.74.0：已寫入，不再算未儲存
   // Save supplemental records
   all[date].corrections = collectSupplRows('corrections');
   all[date].carbs       = collectSupplRows('carbs');
@@ -14596,7 +14667,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.73.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.74.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
