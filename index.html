@@ -4411,6 +4411,21 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.75.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.75.0</span>
+          <span class="cl-date">2026-09-17</span>
+          <span class="cl-tag">重要修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【資料正確性／跨裝置互蓋】<strong>早餐紀錄每天被蓋掉的真正原因</strong>：儲存時會給全部四個時段重蓋 <code>_ts</code> 時間戳，連沒碰過的時段也一樣；而雲端合併是「<code>_ts</code> 新的贏」。結果是晚上在 A 手機記晚餐，就會把早上在 B 手機記的早餐蓋掉</li>
+          <li>【實測證據】2026-09-16 晚上 22:26 只記了晚餐，早餐欄內容一字未動，早餐的 <code>_ts</code> 卻從 12:23:57 被重蓋成 22:27:10</li>
+          <li>【修正】新增 <code>_periodSameContent()</code> 與 <code>_stampTs()</code>：儲存時比對時間／血糖／劑量／備註／部位，<strong>內容完全相同就沿用原本的 <code>_ts</code></strong>，不重蓋。這樣「今天沒碰早餐的那台裝置」就不可能在合併時贏過「真的記了早餐的那台」。個別儲存與整天儲存都套用</li>
+          <li>【帳號安全】帳號 ID 只存在 localStorage 與 cookie，<strong>沒有任何認證</strong>。兩者都遺失時舊版會安靜地生一個隨機 <code>tmp-</code> 新帳號，使用者只會看到「資料全不見了」。現在會明確跳出警告，說明舊紀錄還在原本的帳號底下、請到設定把 ID 改回來，並提醒改回來之前先不要輸入新紀錄</li>
+        </ul>
+      </div>
+
       <!-- v2.74.0 -->
       <div class="cl-entry">
         <div class="cl-header">
@@ -7298,7 +7313,12 @@ function initSupabase() {
   // User ID — stored in both localStorage AND cookie for Android persistence
   currentUserId = localStorage.getItem('user_id') || getCookie('insulin_uid');
   if (!currentUserId) {
+    // v2.75.0: 帳號 ID 只存在 localStorage + cookie，沒有任何認證。
+    // 兩者都掉了（清網站資料／iOS 儲存清除／換瀏覽器）就會生一個新的隨機 ID，
+    // 舊版是安靜地開一個全新空帳號，使用者只會看到「資料全不見了」。
+    // 改成記錄旗標，等 UI 起來後明確警告，不要讓人以為資料真的消失。
     currentUserId = 'tmp-' + Math.random().toString(36).slice(2,10);
+    _uidWasReset = true;
   }
   saveUserId(currentUserId);
   // Load local cache first
@@ -7511,6 +7531,29 @@ function setAllData(data) {
 // ── v2.69.0 資料合併工具 ───────────────────────────────────────────
 // 舊版一律用 rec.time 當「這筆有沒有資料」的判準，但時間欄位可能空白
 // （計算機帶入、或使用者沒碰時間欄），造成有血糖/劑量的紀錄被當成空紀錄覆蓋。
+/* ── v2.75.0 期別內容比較 ────────────────────────────────────────────────
+   跨裝置互蓋的根因：saveDayData() 每次儲存都給「全部四個時段」重蓋 _ts，
+   連使用者根本沒碰過的時段也一樣。而 _mergeDayData() 是 _ts 新的贏，
+   結果是「今天沒記早餐的那台裝置」永遠贏過「早上真的記了早餐的那台」。
+   （2026-09-16 實測：晚上 22:26 只記晚餐，早餐內容一字未動，
+     _ts 卻從 12:23:57 被重蓋成 22:27:10。）
+   修法：內容一模一樣就沿用舊的 _ts，不要重蓋。
+   ⚠️ 只改 _ts 的決定方式，不改任何欄位值、不動空白覆蓋保護。 */
+function _periodSameContent(a, b) {
+  if (!a || !b) return false;
+  var f = ['time', 'bg', 'insulin', 'note', 'site'];
+  for (var i = 0; i < f.length; i++) {
+    if (String(a[f[i]] == null ? '' : a[f[i]]) !== String(b[f[i]] == null ? '' : b[f[i]]))
+      return false;
+  }
+  return true;
+}
+// 內容沒變 → 沿用舊 _ts；有變（或本來就沒紀錄）→ 蓋現在時間
+function _stampTs(next, prev) {
+  next._ts = (prev && prev._ts && _periodSameContent(prev, next)) ? prev._ts : Date.now();
+  return next;
+}
+
 function _periodHasData(rec) {
   if (!rec || typeof rec !== 'object' || Array.isArray(rec)) return false;
   return !!(String(rec.time || '').trim() || String(rec.bg || '').trim()
@@ -9650,10 +9693,10 @@ function savePeriod(periodId) {
     if (!confirm('⚠️ 這筆「' + _mn + '」原本已有紀錄，現在欄位是空的。' + String.fromCharCode(10)
                + '繼續儲存會把原本的紀錄清空，確定嗎？')) return;
   }
-  all[date][periodId] = {
+  all[date][periodId] = _stampTs({
     time: (bg || insulin) ? (time || getNowTime()) : time,
-    bg, insulin, note, site, _ts: Date.now()
-  };
+    bg: bg, insulin: insulin, note: note, site: site
+  }, _prevRec);
 
   setAllData(all);
   syncDayToCloud(date, all[date]);
@@ -9713,10 +9756,11 @@ function saveDayData() {
     // v2.69.0: 舊版只檢查 existing.time，時間空白但有血糖/劑量的紀錄
     // （例：計算機帶入的早餐）會被空白 UI 整筆覆蓋 —— 9/5~9/7 早餐消失的主因。
     if (!time && !bg && !insulin && !String(note || '').trim() && _periodHasData(existing)) return;
-    all[date][p.id] = {
+    // v2.75.0: 內容與既有紀錄相同就沿用舊 _ts，避免這台裝置「沒改卻贏過別台」
+    all[date][p.id] = _stampTs({
       time:    (bg || insulin) ? (time || getNowTime()) : time,
-      bg, insulin, note, site, _ts: Date.now(),
-    };
+      bg: bg, insulin: insulin, note: note, site: site,
+    }, existing);
   });
 
   _clearDayFormDirty();   // v2.74.0：已寫入，不再算未儲存
@@ -12139,6 +12183,22 @@ async function saveCloudConfig() {
   }
 }
 
+// v2.75.0: 帳號 ID 這次是「重新生成」的（原本的 localStorage + cookie 都不見了）
+var _uidWasReset = false;
+// 由 init() 在 UI 就緒後呼叫；警告只在真的重生時出現
+function warnIfUidReset() {
+  if (!_uidWasReset) return;
+  var msg = '\u26a0\ufe0f 找不到原本的帳號 ID，已自動建立一個新的：'
+    + String.fromCharCode(10) + currentUserId
+    + String.fromCharCode(10) + String.fromCharCode(10)
+    + '這通常是瀏覽器清掉網站資料造成的。新帳號是空的，舊紀錄並沒有消失，'
+    + '還在原本的帳號底下。' + String.fromCharCode(10) + String.fromCharCode(10)
+    + '請到「設定 → 帳號 ID」把 ID 改回原本的，資料就會回來。'
+    + String.fromCharCode(10) + '在改回來之前記錄的內容會存在這個新帳號，請先不要輸入。';
+  try { alert(msg); } catch(e) {}
+  if (typeof showToast === 'function') showToast('\u26a0\ufe0f 帳號 ID 已重生，請到設定改回原本的 ID');
+}
+
 // ── Cookie helpers for persistent user_id ──
 function setCookie(name, value, days) {
   const exp = new Date(Date.now() + days * 864e5).toUTCString();
@@ -12486,6 +12546,8 @@ function init() {
   });
   startCGMPolling();   // start real-time CGM widget
   loadEvents();        // load event store (migrates todos on first run)
+  // v2.75.0: 帳號 ID 重生時明確警告（延後到 UI 就緒，避免擋住渲染）
+  setTimeout(warnIfUidReset, 1200);
   setTimeout(checkAndNotifyLowSupplies, 4000); // delayed supply check on load
   setTimeout(checkAndNotifyAppt, 4500);         // delayed appt reminder check
   // Handle Google Calendar OAuth2 callback
@@ -14667,7 +14729,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.74.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.75.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
