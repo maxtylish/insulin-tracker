@@ -4411,6 +4411,22 @@ alter table user_todos enable row level security;
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
 
+      <!-- v2.76.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.76.0</span>
+          <span class="cl-date">2026-09-17</span>
+          <span class="cl-tag">資料保護</span>
+        </div>
+        <ul class="cl-list">
+          <li>【變更歷史】新增 <code>insulin_record_history</code> 資料表：<strong>每次同步成功就留一份當天的完整快照</strong>。這個資料庫原本沒有任何版本歷史（整天 upsert 覆蓋、Supabase 只留當前版本），誤覆蓋就永遠救不回來，9/10、9/15、9/17 連續三次追資料遺失都卡在這一點</li>
+          <li>【改不掉的備份】那張表在資料庫層<strong>只開 INSERT 與 SELECT，沒有 UPDATE / DELETE policy</strong>，並已從 anon／authenticated 收回改寫權限。已用 anon 角色實測：可以新增，但改不動也刪不掉</li>
+          <li>【分辨裝置】快照會記錄 <code>device_id</code>（每台裝置一組，存在 localStorage）與當時的 App 版本。這次跨裝置互蓋的 bug 查了三天，就是因為分不出哪一筆是誰的手機寫的</li>
+          <li>【安全性】快照是純備份路徑：不 await、不 throw，任何失敗都只寫 console，<strong>絕不影響主要儲存流程</strong>。補推佇列（離線後重送）成功時也會補留快照</li>
+          <li>【基準快照】建表時已把現有 155 筆紀錄的當前狀態全部寫入一份基準快照</li>
+        </ul>
+      </div>
+
       <!-- v2.75.0 -->
       <div class="cl-entry">
         <div class="cl-header">
@@ -7424,6 +7440,49 @@ async function loadFromCloud() {
   }
 }
 
+/* ── v2.76.0 變更歷史（append-only 快照）─────────────────────────────────
+   這個資料庫原本沒有任何版本歷史：insulin_records 是整天 upsert 覆蓋，
+   Supabase 只留當前版本，一旦誤覆蓋就永遠救不回來
+   （2026-09-10 / 09-15 / 09-17 連續三次追資料遺失都卡在這裡）。
+
+   現在每次同步成功就往 insulin_record_history 丟一份當天的完整快照。
+   那張表在資料庫層只開 INSERT 與 SELECT，沒有 UPDATE / DELETE policy，
+   而且已從 anon / authenticated 收回改寫權限 —— 寫進去就改不掉也刪不掉。
+
+   device_id 是為了分辨是哪一台裝置寫的（太太的手機／先生的手機）。
+   這次跨裝置互蓋的 bug 查了三天，就是因為分不出來是誰寫的。
+
+   ⚠️ 這是純備份路徑，失敗絕對不能影響主要儲存流程：
+      不 await、不 throw、所有錯誤吞掉只留 console.warn。 */
+function _deviceId() {
+  try {
+    var id = localStorage.getItem('insulin_device_id');
+    if (!id) {
+      id = 'dev-' + Math.random().toString(36).slice(2, 8);
+      localStorage.setItem('insulin_device_id', id);
+    }
+    return id;
+  } catch (e) { return 'dev-unknown'; }
+}
+
+function _snapshotHistory(date, data) {
+  try {
+    if (!sbClient || !currentUserId || !data || !date) return;
+    var q = sbClient.from('insulin_record_history').insert({
+      user_id:     currentUserId,
+      date:        date,
+      data:        data,
+      device_id:   _deviceId(),
+      app_version: (typeof APP_VERSION !== 'undefined') ? APP_VERSION : ''
+    });
+    if (q && typeof q.then === 'function') {
+      q.then(function (r) {
+        if (r && r.error) console.warn('[history] ' + r.error.message);
+      }, function (e) { console.warn('[history]', e); });
+    }
+  } catch (e) { console.warn('[history]', e); }
+}
+
 async function syncDayToCloud(date, dayData) {
   if (!sbClient || !currentUserId) return;
   try {
@@ -7446,6 +7505,7 @@ async function syncDayToCloud(date, dayData) {
       data: _outgoing,
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id,date' });
+    _snapshotHistory(date, _outgoing);   // v2.76.0 留一份改不掉的快照
     setSyncBadge('☁️ 已同步', 'sync-ok');
     // Flush pending syncs on successful connection
     if (_pendingSyncs.length) {
@@ -7458,6 +7518,7 @@ async function syncDayToCloud(date, dayData) {
             data:    queue[_pi].data,
             updated_at: queue[_pi].ts
           }, { onConflict: 'user_id,date' });
+          _snapshotHistory(queue[_pi].date, queue[_pi].data);   // v2.76.0
         } catch(e2) {
           _pendingSyncs.push(queue[_pi]); // re-queue if still failing
         }
@@ -14729,7 +14790,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.75.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.76.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
