@@ -3448,6 +3448,7 @@
 .sl-now-cgm{margin-left:auto;color:var(--text-muted,#94a3b8);}
 .sl-now-cgm strong{font-size:.94rem;color:#0369a1;}
 .sl-now-stale strong,.sl-now-stale{color:#b45309;}
+.cgm-value.cgm-status-stale,.cgm-trend.cgm-status-stale{color:#94a3b8 !important;opacity:.7;text-decoration:line-through;text-decoration-thickness:2px;}
 .sl-now-ago{font-size:.66rem;}
 .sl-dose-cgm{display:flex;align-items:center;flex-wrap:wrap;gap:6px;margin-top:6px;padding:5px 8px;border-radius:7px;background:rgba(3,105,161,.08);font-size:.7rem;color:#0369a1;}
 .sl-dose-cgmbtn{margin-left:auto;padding:2px 9px;border-radius:6px;border:1px solid #0369a1;background:transparent;color:#0369a1;font-size:.68rem;font-weight:700;cursor:pointer;}
@@ -4410,6 +4411,22 @@ alter table user_todos enable row level security;
 
     <!-- 版本列表 -->
     <div id="cl-page-container" style="display:flex;flex-direction:column;gap:0;">
+
+      <!-- v2.77.0 -->
+      <div class="cl-entry">
+        <div class="cl-header">
+          <span class="cl-version">v2.77.0</span>
+          <span class="cl-date">2026-09-22</span>
+          <span class="cl-tag">重要修正</span>
+        </div>
+        <ul class="cl-list">
+          <li>【劑量安全／CGM 過期資料】改用甜蜜守護手錶讀感測器後，Nightscout 不再有新資料，但仍會一直回傳<strong>最後那一筆舊讀數</strong>。舊版 App 把它當成「目前血糖」繼續用在計算與判斷上</li>
+          <li>【最危險的一處】補打建議的趨勢調整是<strong>雙向</strong>的（未來 30 分鐘預測），舊讀數若剛好是上升，會<strong>多算劑量</strong>。現在只用 15 分鐘內的新讀數，過期時顯示「CGM 已過期，未計入趨勢」</li>
+          <li>【統一規則】新增 <code>cgmFresh()</code>：超過 15 分鐘、或<strong>沒有時間戳</strong>的讀數一律視為沒有 CGM（舊版有些地方把沒時間戳的讀數當成「剛剛」）。套用在：餐前劑量計算機、點心計算機、補糖計算機、補打列與補糖列的自動帶入、點心列、學校午餐卡片的急降減量、「改用 CGM」按鈕</li>
+          <li>【畫面】CGM 資料過期時，首頁血糖數字變灰並加刪除線，標示「最後 CGM · N 前（已過期）」，<strong>不再顯示任何高低血糖警示或預測</strong>（舊讀數說「正常」比沒資料更危險）。學校午餐卡片改顯示「最後 CGM … 已過期，請量指尖血」</li>
+          <li>【說明】目前血糖改為手動輸入（看手錶或指尖血）；等 CGM 資料來源恢復、有新讀數進來時，上述自動功能會自己恢復，不需要再改程式</li>
+        </ul>
+      </div>
 
       <!-- v2.76.0 -->
       <div class="cl-entry">
@@ -8026,6 +8043,34 @@ const NS_TREND = {
 
 // ── Warning banner state ──────────────────────────────
 var lastCGMEntry = null;  // kept for correction dose calc
+
+/* ── v2.77.0 CGM 新鮮度 ────────────────────────────────────────────────────
+   背景：CGM 原本是 歐態 App → 朋友的橋接 → Nightscout → 本 App。
+   2026-09 改用甜蜜守護手錶讀感測器後，橋接抓不到資料，Nightscout 停在最後一筆，
+   但 /entries/current.json 仍會一直回傳那筆舊讀數。舊版 App 把它當「目前血糖」：
+     - 補打建議的趨勢調整是雙向的，舊讀數若是上升 → 多算劑量（危險方向）
+     - 劑量計算機／補糖計算／點心／補打列會自動帶入舊血糖
+     - 高低血糖警示與 IOB+趨勢預測用舊讀數判斷
+     - 學校午餐卡片的急降減量用舊的 5 分鐘變化量
+   規則：超過 CGM_FRESH_MIN 分鐘、或沒有時間戳的讀數，一律視為「沒有 CGM」。
+   ⚠️ 沒有時間戳絕不能當成新資料（舊版有些地方 fallback 成 Date.now()）。 */
+var CGM_FRESH_MIN = 15;
+function cgmEntryMs(e) {
+  if (!e) return NaN;
+  if (e.date) return Number(e.date);
+  if (e.dateString) return new Date(e.dateString).getTime();
+  return NaN;
+}
+function cgmAgeMin(e) {
+  var ms = cgmEntryMs(e);
+  if (!isFinite(ms)) return Infinity;
+  return Math.max(0, (Date.now() - ms) / 60000);
+}
+// 不帶參數 = 檢查 lastCGMEntry；帶參數 = 檢查傳入的那筆。過期回傳 null。
+function cgmFresh(e) {
+  if (e === undefined) e = lastCGMEntry;
+  return (e && e.sgv && cgmAgeMin(e) <= CGM_FRESH_MIN) ? e : null;
+}
 var warnDismissed  = { hypo: null, hyper: null };  // dismissed-at sgv
 var notifSnoozed   = {};   // key → timestamp (snooze until)
 
@@ -8073,16 +8118,18 @@ function updateCGMWidget(entry) {
   var trend    = NS_TREND[entry.direction] || '→';
   var deltaStr = rawDelta != null
     ? (rawDelta >= 0 ? '+' : '') + Math.round(rawDelta * 10) / 10 + ' mg/dL' : '';
-  var ms   = entry.date || (entry.dateString ? new Date(entry.dateString).getTime() : Date.now());
-  var mins = Math.round((Date.now() - ms) / 60000);
-  var timeAgo = _fmtTimeAgo(mins);
+  // v2.77.0：沒有時間戳不再當成「剛剛」，一律視為過期
+  var _age = cgmAgeMin(entry);
+  var mins = isFinite(_age) ? Math.round(_age) : null;
+  var timeAgo = (mins != null) ? _fmtTimeAgo(mins) : '時間不明';
+  var _stale = !cgmFresh(entry);
 
-  // CGM disconnect / stale data check
-  if (mins > 20) {
+  // CGM disconnect / stale data check（門檻統一為 CGM_FRESH_MIN）
+  if (_stale) {
     setAlertItem('cgm-disc', 2, '📡 CGM 資料過舊',
-      '最後資料 ' + _fmtTimeAgo(mins) + ' (' + sgv + ' mg/dL)，請確認感應器連線');
+      '最後資料 ' + timeAgo + ' (' + sgv + ' mg/dL)，目前不會用它做任何判斷，請以指尖血或手錶讀數為準');
     sendPushNotif('cgm-disc', '📡 CGM 訊號警告',
-      '已 ' + _fmtTimeAgo(mins) + ' 未收到新血糖資料（最後：' + sgv + ' mg/dL），請確認感應器', false);
+      '已 ' + timeAgo + ' 未收到新血糖資料（最後：' + sgv + ' mg/dL），請確認感應器', false);
   } else {
     clearAlertItem('cgm-disc');
   }
@@ -8098,6 +8145,21 @@ function updateCGMWidget(entry) {
   document.getElementById('cgm-delta').textContent = deltaStr;
   document.getElementById('cgm-meta').textContent  = 'CGM · ' + timeAgo;
   updateCGMPip();
+
+  // v2.77.0：資料過期 → 數字灰掉標成「最後讀數」，不做任何高低血糖判斷與預測。
+  // 舊讀數說「正常」比沒有資料更危險；舊讀數說「低血糖」則是假警報。
+  if (_stale) {
+    valEl.className = 'cgm-value cgm-status-stale';
+    document.getElementById('cgm-trend').className = 'cgm-trend cgm-status-stale';
+    document.getElementById('cgm-meta').textContent = '最後 CGM · ' + timeAgo + '（已過期）';
+    widget.dataset.bgStatus = 'stale';
+    hideBanner('hypo');
+    hideBanner('hyper');
+    updateCGMPip();
+    updateBasalTimeBar();
+    buildCgmCarousel();
+    return;
+  }
 
   var low  = settings.low  || 80;
   var high = settings.high || 250;
@@ -9017,6 +9079,19 @@ function _tickCGMTime() {
   var ms   = lastCGMEntry.date;
   var mins = Math.round((Date.now() - ms) / 60000);
   if (mins < 0) mins = 0;
+  // v2.77.0：兩次輪詢之間跨過 15 分鐘時，這裡要負責把畫面切成「已過期」，
+  // 否則會一直顯示原本的顏色與警示，直到下一次成功輪詢
+  if (!cgmFresh()) {
+    el.textContent = '最後 CGM · ' + _fmtTimeAgo(mins) + '（已過期）';
+    var _v = document.getElementById('cgm-value');
+    if (_v && _v.className.indexOf('cgm-status-stale') < 0) {
+      _v.className = 'cgm-value cgm-status-stale';
+      var _t = document.getElementById('cgm-trend');
+      if (_t) _t.className = 'cgm-trend cgm-status-stale';
+      if (typeof hideBanner === 'function') { hideBanner('hypo'); hideBanner('hyper'); }
+    }
+    return;
+  }
   el.textContent = 'CGM · ' + _fmtTimeAgo(mins);
 }
 
@@ -11042,7 +11117,8 @@ function renderSnackSection(sectionId, items) {
 function addSnackRow(sectionId) {
   var current = collectSnackRows(sectionId);
   var newRow = { time: getNowTime() };
-  if (lastCGMEntry && lastCGMEntry.sgv) newRow.bg = String(Math.round(lastCGMEntry.sgv));
+  var _fsn = cgmFresh();   // v2.77.0：只帶 15 分鐘內的新讀數
+  if (_fsn) newRow.bg = String(Math.round(_fsn.sgv));
   current.push(newRow);
   renderSnackSection(sectionId, current);
 }
@@ -11542,8 +11618,10 @@ function calcCorrectionSuggestion(bg, targetOverride) {
   var dose    = (bgNum - target) / isf;
   // Trend adjustment: add expected BG change over next 30 min
   // delta = mg/dL per 5 min → 30 min = 6 periods
-  if (lastCGMEntry && lastCGMEntry.delta != null) {
-    dose += (lastCGMEntry.delta * 6) / isf;
+  // v2.77.0：這裡的趨勢調整是雙向的，舊讀數若剛好是上升就會多算劑量 → 只用新鮮資料
+  var _fcs = cgmFresh();
+  if (_fcs && _fcs.delta != null) {
+    dose += (_fcs.delta * 6) / isf;
   }
   dose = Math.max(0, dose);
   // Round to nearest 0.5
@@ -11553,9 +11631,12 @@ function calcCorrectionSuggestion(bg, targetOverride) {
 function corrSuggMeta(targetOverride) {
   var p = getCorrectionPreset();
   var trendPart = '';
-  if (lastCGMEntry && lastCGMEntry.delta != null) {
-    var d = lastCGMEntry.delta;
+  var _fcm = cgmFresh();
+  if (_fcm && _fcm.delta != null) {
+    var d = _fcm.delta;
     trendPart = '　趨勢 ' + (d >= 0 ? '+' : '') + Math.round(d * 10) / 10 + ' mg/5min';
+  } else if (lastCGMEntry) {
+    trendPart = '　CGM 已過期，未計入趨勢';   // v2.77.0
   }
   // 目標血糖改由下方可編輯欄位顯示，這裡只顯示 ISF + 趨勢
   return 'ISF ' + p.isf + trendPart;
@@ -11624,8 +11705,8 @@ async function autoFillCorrBG(idx) {
   var bgEl = document.querySelector('#corrections-row-' + idx + ' [data-field="bg"]');
   if (!bgEl) return;
   if (bgEl.value) { updateCorrSuggestion(idx); return; } // already filled
-  var src = lastCGMEntry;
-  if (!src && settings.nsUrl) src = await fetchNSCurrent();
+  var src = cgmFresh();   // v2.77.0：過期的不帶，現抓的也要檢查時間
+  if (!src && settings.nsUrl) src = cgmFresh(await fetchNSCurrent());
   if (src && src.sgv) {
     bgEl.value = Math.round(src.sgv);
     updateCorrSuggestion(idx);
@@ -12104,8 +12185,8 @@ async function autoFillCarbBG(rowId) {
   if (timeEl && !timeEl.value) timeEl.value = getNowTime();
   var bgEl = row.querySelector('[data-field="bg"]');
   if (!bgEl || bgEl.value) return;
-  var src = lastCGMEntry;
-  if (!src && settings.nsUrl) src = await fetchNSCurrent();
+  var src = cgmFresh();   // v2.77.0：過期的不帶，現抓的也要檢查時間
+  if (!src && settings.nsUrl) src = cgmFresh(await fetchNSCurrent());
   if (src && src.sgv) bgEl.value = Math.round(src.sgv);
 }
 
@@ -12843,8 +12924,9 @@ function openSnackCalcModal(sectionId) {
   if (titleEl) titleEl.textContent = '🍎 點心劑量計算';
   document.body.classList.add('calc-modal-open');   // v2.58.0: 讓 🧮 浮動鈕浮在 modal 上
   document.getElementById('calc-meal-period').value = mealKey;
-  if (lastCGMEntry && lastCGMEntry.sgv) {
-    document.getElementById('calc-bg').value = Math.round(lastCGMEntry.sgv);
+  var _fsc = cgmFresh();   // v2.77.0
+  if (_fsc) {
+    document.getElementById('calc-bg').value = Math.round(_fsc.sgv);
   }
   [1,2,3,4].forEach(function(i) {
     document.getElementById('calc-food-' + i).value = '';
@@ -12864,8 +12946,9 @@ function openSnackCalcModal(sectionId) {
 
 // ── Carb supplement calculator ───────────────────────────────────────────
 function openCarbCalc() {
-  if (lastCGMEntry && lastCGMEntry.sgv) {
-    document.getElementById('cc-bg').value = Math.round(lastCGMEntry.sgv);
+  var _fcc = cgmFresh();   // v2.77.0
+  if (_fcc) {
+    document.getElementById('cc-bg').value = Math.round(_fcc.sgv);
   }
   var h = new Date().getHours();
   var mealKey = (h >= 6 && h < 11) ? 'breakfast' : (h >= 11 && h < 15) ? 'lunch' : 'dinner';
@@ -12983,9 +13066,9 @@ function openCalcModal(periodId) {
     const bgVal = document.getElementById(periodId + '-bg').value;
     if (bgVal) {
       document.getElementById('calc-bg').value = bgVal;
-    } else if (lastCGMEntry && lastCGMEntry.sgv) {
-      // 自動帶入 CGM 即時血糖
-      const cgmBG = Math.round(lastCGMEntry.sgv);
+    } else if (cgmFresh()) {
+      // 自動帶入 CGM 即時血糖（v2.77.0：只帶 15 分鐘內的新讀數）
+      const cgmBG = Math.round(cgmFresh().sgv);
       document.getElementById('calc-bg').value = cgmBG;
       // 同步填入各餐血糖欄位
       const periodBgEl = document.getElementById(periodId + '-bg');
@@ -13482,7 +13565,7 @@ function calcAutoIOB(excludePeriod){
 /* 急降減量：只在血糖快速下降時縮小「血糖校正」，上升一律不加量。
    資料來源是 CGM 的 5 分鐘變化量 lastCGMEntry.delta。 */
 function calcTrendCut(){
-  var e = (typeof lastCGMEntry !== 'undefined') ? lastCGMEntry : null;
+  var e = cgmFresh();   // v2.77.0：過期的 5 分鐘變化量不能拿來減量
   var d = (e && e.delta != null) ? parseFloat(e.delta) : NaN;
   if (!isFinite(d)) return { factor: 1, delta: null, cut: 0 };
   for (var i = 0; i < IOB_TREND_CUT.length; i++) {
@@ -13600,6 +13683,7 @@ function smIOBSrcHTML(d){
 // 計算用的是午餐欄位填的血糖，不是即時 CGM → 差距大時明確對照
 function smDoseCmpHTML(d){
   var c = smCgmNow();
+  if (c && !c.fresh) c = null;   // v2.77.0：過期的 CGM 不拿來比對，也不提供「改用」按鈕
   if (d.bg != null && c) {
     var diff = c.sgv - d.bg;
     if (Math.abs(diff) >= 20) {
@@ -13711,10 +13795,11 @@ function smApplyDose(){
 function smCgmNow(){
   var e = (typeof lastCGMEntry !== 'undefined') ? lastCGMEntry : null;
   if (!e || !e.sgv) return null;
-  var ms = e.date || (e.dateString ? new Date(e.dateString).getTime() : Date.now());
+  var _a = cgmAgeMin(e);   // v2.77.0：沒有時間戳不再當成剛剛
   return { sgv: Math.round(e.sgv),
            trend: (typeof NS_TREND !== 'undefined' && NS_TREND[e.direction]) || '',
-           mins: Math.round((Date.now() - ms) / 60000) };
+           mins: isFinite(_a) ? Math.round(_a) : null,
+           fresh: !!cgmFresh(e) };
 }
 function smNowHTML(){
   var n = new Date();
@@ -13722,10 +13807,12 @@ function smNowHTML(){
     + ('0' + n.getHours()).slice(-2) + ':' + ('0' + n.getMinutes()).slice(-2) + '</span>';
   var c = smCgmNow();
   if (c) {
-    var ago = (typeof _fmtTimeAgo === 'function') ? _fmtTimeAgo(c.mins) : c.mins + ' 分鐘前';
-    out += '<span class="sl-now-cgm' + (c.mins > 20 ? ' sl-now-stale' : '') + '">'
-         + '目前血糖 <strong>' + c.sgv + '</strong> ' + c.trend
-         + ' <span class="sl-now-ago">' + ago + '</span></span>';
+    var ago = (c.mins == null) ? '時間不明'
+            : ((typeof _fmtTimeAgo === 'function') ? _fmtTimeAgo(c.mins) : c.mins + ' 分鐘前');
+    out += '<span class="sl-now-cgm' + (!c.fresh ? ' sl-now-stale' : '') + '">'
+         + (c.fresh ? '目前血糖 ' : '最後 CGM ') + '<strong>' + c.sgv + '</strong> '
+         + (c.fresh ? c.trend : '')
+         + ' <span class="sl-now-ago">' + ago + (c.fresh ? '' : '（已過期，請量指尖血）') + '</span></span>';
   } else {
     out += '<span class="sl-now-cgm sl-now-stale">目前血糖 無 CGM 資料</span>';
   }
@@ -13737,7 +13824,7 @@ function smUpdateNow(){
 }
 function smUseCgmBG(){
   var c = smCgmNow();
-  if (!c) return;
+  if (!c || !c.fresh) return;   // v2.77.0
   var el = document.getElementById('noon-bg');
   if (!el) return;
   el.value = c.sgv;
@@ -14790,7 +14877,7 @@ function calcApply() {
 var carbTimers = {}; // rowId -> { intervalId, endTime, done, doneAt } | null
 var _pendingSyncs = []; // { date, data, ts } — queued for retry after network failure
 var _insQuickTimer = null; // { timerId, targetTs, label } — insulin onset/end countdown
-const APP_VERSION    = 'v2.76.0';  // must be before init() to avoid TDZ
+const APP_VERSION    = 'v2.77.0';  // must be before init() to avoid TDZ
 const GCAL_CLIENT_ID     = '1015693868400-1t0649hbtei4pf37iop3ubtvrbf66bf4.apps.googleusercontent.com';
 const GCAL_TOKEN_PROXY   = 'https://gcal-token-proxy.maxtylish.workers.dev';
 const GCAL_REDIRECT  = 'https://maxtylish.github.io/insulin-tracker/';
